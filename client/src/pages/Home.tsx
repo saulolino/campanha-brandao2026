@@ -146,7 +146,7 @@ export default function Home() {
             {/* Hero banner */}
             <div className="relative rounded-xl overflow-hidden mb-6 h-40 lg:h-48">
               <img
-                src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/hero-brasilia-8QwDH8oAaTmQPKtHAyKgKa.png"
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/header-brasilia-sketch-NcazQTSj2yHumWs7WBRG7t.webp"
                 alt="Brasília Cidade Parque"
                 className="w-full h-full object-cover"
               />
