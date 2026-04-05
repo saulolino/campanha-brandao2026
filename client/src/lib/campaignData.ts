@@ -9,7 +9,7 @@ export const CAMPAIGN = {
   handle: "@eduardobrandaopv",
   slogan: "Brasília Cidade Parque",
   role: "Deputado Distrital",
-  currentFollowers: 1505,
+  currentFollowers: 1518,
   targetFollowers: 20000,
   startDate: "2026-04-25",
   endDate: "2026-10-31",
@@ -205,10 +205,47 @@ export const CHECKLIST_ITEMS = [
 
 // Dados dos posts de 2026 para referência
 export const POSTS_2026 = [
-  { date: "2026-03-15", type: "VIDEO", caption: "Master x BRB", likes: 85, comments: 19, reach: 717, impressions: 1504 },
-  { date: "2026-03-14", type: "CAROUSEL_ALBUM", caption: "Deputado Israel Batista", likes: 107, comments: 10, reach: 573, impressions: 1051 },
-  { date: "2026-03-12", type: "CAROUSEL_ALBUM", caption: "Conteúdo político", likes: 38, comments: 3, reach: 324, impressions: 578 },
-  { date: "2026-03-08", type: "VIDEO", caption: "Conteúdo ambiental", likes: 19, comments: 3, reach: 327, impressions: 607 },
-  { date: "2026-03-05", type: "CAROUSEL_ALBUM", caption: "Conteúdo social", likes: 26, comments: 2, reach: 230, impressions: 360 },
-  { date: "2026-02-28", type: "CAROUSEL_ALBUM", caption: "Conteúdo institucional", likes: 10, comments: 0, reach: 194, impressions: 270 },
+  { date: "2026-04-05", type: "VIDEO", caption: "Feliz Páscoa! Renascimento e esperança", likes: 50, comments: 7, reach: 142, impressions: 284, shares: 5, saved: 0 },
+  { date: "2026-04-03", type: "CAROUSEL_ALBUM", caption: "Causa animal: Hospital Veterinário Público", likes: 23, comments: 3, reach: 192, impressions: 426, shares: 2, saved: 1 },
+  { date: "2026-04-03", type: "VIDEO", caption: "Você lembra do seu voto para Deputado Distrital?", likes: 53, comments: 4, reach: 481, impressions: 699, shares: 3, saved: 1 },
+  { date: "2026-03-27", type: "IMAGE", caption: "Defesa do Meio Ambiente é inegociável - PV", likes: 25, comments: 1, reach: 650, impressions: 1028, shares: 43, saved: 0 },
+  { date: "2026-03-27", type: "IMAGE", caption: "Boas-vindas ao deputado Bandeira de Mello", likes: 32, comments: 9, reach: 217, impressions: 485, shares: 0, saved: 0 },
+  { date: "2026-03-15", type: "VIDEO", caption: "Master x BRB - Escândalo", likes: 85, comments: 19, reach: 717, impressions: 1504, shares: 0, saved: 0 },
+  { date: "2026-03-14", type: "CAROUSEL_ALBUM", caption: "Deputado Israel Batista", likes: 107, comments: 10, reach: 573, impressions: 1051, shares: 0, saved: 0 },
+  { date: "2026-03-12", type: "CAROUSEL_ALBUM", caption: "Conteúdo político", likes: 38, comments: 3, reach: 324, impressions: 578, shares: 0, saved: 0 },
+  { date: "2026-03-08", type: "VIDEO", caption: "Compensação ambiental e florestal", likes: 49, comments: 6, reach: 327, impressions: 607, shares: 0, saved: 0 },
+  { date: "2026-03-05", type: "CAROUSEL_ALBUM", caption: "Conteúdo social", likes: 26, comments: 2, reach: 230, impressions: 360, shares: 0, saved: 0 },
+  { date: "2026-02-28", type: "CAROUSEL_ALBUM", caption: "Pré-candidatura no Correio Braziliense", likes: 40, comments: 5, reach: 194, impressions: 270, shares: 0, saved: 0 },
+  { date: "2026-02-27", type: "VIDEO", caption: "Compensação ambiental explicada", likes: 49, comments: 6, reach: 327, impressions: 607, shares: 0, saved: 0 },
+  { date: "2026-02-25", type: "VIDEO", caption: "Master x BRB", likes: 85, comments: 19, reach: 717, impressions: 1504, shares: 0, saved: 0 },
+  { date: "2026-01-31", type: "IMAGE", caption: "Convidando Marina Silva para o PV", likes: 83, comments: 7, reach: 0, impressions: 0, shares: 0, saved: 0 },
 ];
+
+// Dados reais da conta Instagram - Atualizado em 05/04/2026
+export const INSTAGRAM_REAL = {
+  lastUpdated: "2026-04-05T19:30:00Z",
+  account: {
+    username: "@eduardobrandaopv",
+    name: "Eduardo Brandão",
+    followers: 1518,
+    following: 2587,
+    totalPosts: 260,
+    bio: "Presidente do Partido Verde DF | Ex-Secretário do Meio Ambiente | Engenheiro e apaixonado por Brasília",
+  },
+  recentMetrics: {
+    avgLikes: 47.5,
+    avgComments: 6.7,
+    avgReach: 363,
+    avgShares: 5.3,
+    totalReach: 4370,
+    totalInteractions: 648,
+    engagementRate: 3.1,
+    bestPost: { caption: "Deputado Israel Batista", likes: 107, comments: 10 },
+    worstPost: { caption: "Causa animal", likes: 23, comments: 3 },
+  },
+  growthSinceStart: {
+    followersGained: 13,
+    percentGrowth: 0.86,
+    daysTracked: 10,
+  },
+};

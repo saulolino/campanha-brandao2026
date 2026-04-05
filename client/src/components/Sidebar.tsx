@@ -26,6 +26,7 @@ const NAV_ITEMS = [
   { id: "growth", label: "Crescimento", icon: BarChart3 },
   { id: "pillars", label: "Pilares", icon: Target },
   { id: "calendar", label: "Calendário", icon: CalendarDays },
+  { id: "monthlycal", label: "Calendário Mensal", icon: CalendarDays },
   { id: "content", label: "Conteúdo", icon: TreePine },
   { id: "contentbank", label: "Banco de Conteúdo", icon: FolderOpen },
   { id: "tracker", label: "Status dos Posts", icon: ClipboardList },
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { id: "team", label: "Equipe", icon: Users },
   { id: "budget", label: "Orçamento", icon: DollarSign },
   { id: "donts", label: "Alertas", icon: ShieldAlert },
+  { id: "competitors", label: "Concorrentes", icon: BarChart3 },
   { id: "checklist", label: "Checklist", icon: CheckSquare },
 ];
 

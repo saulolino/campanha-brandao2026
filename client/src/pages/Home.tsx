@@ -13,6 +13,8 @@ import ContentBankSection from "@/components/ContentBankSection";
 import StatusTrackerSection from "@/components/StatusTrackerSection";
 import MoodboardSection from "@/components/MoodboardSection";
 import WeeklyReportSection from "@/components/WeeklyReportSection";
+import MonthlyCalendarSection from "@/components/MonthlyCalendarSection";
+import CompetitorsSection from "@/components/CompetitorsSection";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -26,6 +28,7 @@ import {
   VIRAL_TYPES,
   CHECKLIST_ITEMS,
   POSTS_2026,
+  INSTAGRAM_REAL,
 } from "@/lib/campaignData";
 import {
   UserPlus,
@@ -48,6 +51,7 @@ import {
   Clock,
   ArrowUpRight,
   ChevronRight,
+  Wifi,
 } from "lucide-react";
 import {
   AreaChart,
@@ -109,6 +113,10 @@ export default function Home() {
                 <span className="text-xs font-mono text-muted-foreground">
                   <span className="text-primary font-bold">{daysRemaining}</span> dias restantes
                 </span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 bg-[#2d6a4f]/15 px-3 py-1.5 rounded-md border border-[#2d6a4f]/30">
+                <Wifi size={12} className="text-[#2d6a4f]" />
+                <span className="text-[10px] font-mono text-[#2d6a4f] font-bold">DADOS REAIS</span>
               </div>
               <div className="hidden md:flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
                 <Target size={12} className="text-primary" />
@@ -446,6 +454,11 @@ export default function Home() {
             </div>
           </section>
 
+          {/* ============ CALENDÁRIO MENSAL ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["monthlycal"] = el; }}>
+            <div className="mt-6"><MonthlyCalendarSection /></div>
+          </section>
+
           {/* ============ CONTEÚDO ============ */}
           <section ref={(el: HTMLElement | null) => { sectionRefs.current["content"] = el; }}>
             <div className="flex items-center gap-2 mb-4 mt-6">
@@ -726,6 +739,11 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* ============ CONCORRENTES ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["competitors"] = el; }}>
+            <div className="mt-6"><CompetitorsSection /></div>
           </section>
 
           {/* ============ ALERTAS (O QUE NÃO FAZER) ============ */}
