@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   CalendarClock,
+  FolderOpen,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { id: "pillars", label: "Pilares", icon: Target },
   { id: "calendar", label: "Calendário", icon: CalendarDays },
   { id: "content", label: "Conteúdo", icon: TreePine },
+  { id: "contentbank", label: "Banco de Conteúdo", icon: FolderOpen },
   { id: "team", label: "Equipe", icon: Users },
   { id: "budget", label: "Orçamento", icon: DollarSign },
   { id: "donts", label: "Alertas", icon: ShieldAlert },

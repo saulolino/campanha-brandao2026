@@ -9,6 +9,7 @@ import MetricCard from "@/components/MetricCard";
 import GaugeChart from "@/components/GaugeChart";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import NextWeekSection from "@/components/NextWeekSection";
+import ContentBankSection from "@/components/ContentBankSection";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -587,6 +588,11 @@ export default function Home() {
                 </table>
               </div>
             </div>
+          </section>
+
+          {/* ============ BANCO DE CONTEÚDO ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["contentbank"] = el; }}>
+            <ContentBankSection />
           </section>
 
           {/* ============ EQUIPE ============ */}
