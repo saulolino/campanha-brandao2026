@@ -19,6 +19,7 @@ import NotificationsSection from "@/components/NotificationsSection";
 import RealTimeMetricsSection from "@/components/RealTimeMetricsSection";
 import PresentationMode from "@/components/PresentationMode";
 import CreativeBriefingSection from "@/components/CreativeBriefingSection";
+import SupportersPage from "@/components/SupportersPage";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -806,6 +807,11 @@ export default function Home() {
           {/* ============ BRIEFING CRIATIVO ============ */}
           <section ref={(el: HTMLElement | null) => { sectionRefs.current["briefing"] = el; }}>
             <div className="mt-6"><CreativeBriefingSection /></div>
+          </section>
+
+          {/* ============ APOIADORES ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["supporters"] = el; }}>
+            <div className="mt-6"><SupportersPage /></div>
           </section>
 
           {/* ============ CHECKLIST ============ */}

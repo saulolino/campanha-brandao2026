@@ -21,6 +21,7 @@ import {
   Activity,
   Presentation,
   Sparkles,
+  Heart,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { id: "notifications", label: "Notificações", icon: Bell },
   { id: "realtime", label: "Métricas Live", icon: Activity },
   { id: "briefing", label: "Briefing Criativo", icon: Sparkles },
+  { id: "supporters", label: "Apoiadores", icon: Heart },
   { id: "checklist", label: "Checklist", icon: CheckSquare },
 ];
 
