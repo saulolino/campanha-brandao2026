@@ -103,7 +103,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/avatar-eduardo-real_e98dc79b.png"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/avatar-eduardo-v2_fed5f8de.png"
               alt="Eduardo Brandão"
               className="w-9 h-9 rounded-full object-cover border border-primary/30"
             />
