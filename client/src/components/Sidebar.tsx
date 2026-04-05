@@ -82,7 +82,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_34177559.svg"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
               alt="Brasília Cidade Parque"
               className="w-11 h-11 object-contain"
             />
@@ -141,7 +141,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-t border-sidebar-border">
           <div className="flex flex-col items-center gap-2">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_34177559.svg"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
               alt="Brasília Cidade Parque"
               className="w-16 h-16 object-contain opacity-40"
             />
