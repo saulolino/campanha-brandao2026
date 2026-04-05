@@ -17,6 +17,9 @@ import {
   ClipboardList,
   Palette,
   FileText,
+  Bell,
+  Activity,
+  Presentation,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -36,6 +39,8 @@ const NAV_ITEMS = [
   { id: "budget", label: "Orçamento", icon: DollarSign },
   { id: "donts", label: "Alertas", icon: ShieldAlert },
   { id: "competitors", label: "Concorrentes", icon: BarChart3 },
+  { id: "notifications", label: "Notificações", icon: Bell },
+  { id: "realtime", label: "Métricas Live", icon: Activity },
   { id: "checklist", label: "Checklist", icon: CheckSquare },
 ];
 

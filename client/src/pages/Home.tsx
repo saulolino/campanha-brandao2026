@@ -15,6 +15,9 @@ import MoodboardSection from "@/components/MoodboardSection";
 import WeeklyReportSection from "@/components/WeeklyReportSection";
 import MonthlyCalendarSection from "@/components/MonthlyCalendarSection";
 import CompetitorsSection from "@/components/CompetitorsSection";
+import NotificationsSection from "@/components/NotificationsSection";
+import RealTimeMetricsSection from "@/components/RealTimeMetricsSection";
+import PresentationMode from "@/components/PresentationMode";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -52,6 +55,7 @@ import {
   ArrowUpRight,
   ChevronRight,
   Wifi,
+  Presentation,
 } from "lucide-react";
 import {
   AreaChart,
@@ -80,6 +84,7 @@ const iconMap: Record<string, any> = {
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [showPresentation, setShowPresentation] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const handleNavigate = (section: string) => {
@@ -97,6 +102,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onNavigate={handleNavigate} />
+      <PresentationMode isOpen={showPresentation} onClose={() => setShowPresentation(false)} />
 
       {/* Main content */}
       <main className="lg:ml-64 min-h-screen">
@@ -122,6 +128,13 @@ export default function Home() {
                 <Target size={12} className="text-primary" />
                 <span className="text-xs font-mono text-primary font-bold">META: 20.000</span>
               </div>
+              <button
+                onClick={() => setShowPresentation(true)}
+                className="flex items-center gap-1.5 bg-[#c9a84c]/15 px-3 py-1.5 rounded-md border border-[#c9a84c]/30 hover:bg-[#c9a84c]/25 transition-colors"
+              >
+                <Presentation size={12} className="text-[#c9a84c]" />
+                <span className="text-[10px] font-mono text-[#c9a84c] font-bold hidden sm:inline">APRESENTAR</span>
+              </button>
             </div>
           </div>
         </header>
@@ -777,6 +790,16 @@ export default function Home() {
                 </div>
               ))}
             </div>
+          </section>
+
+          {/* ============ NOTIFICAÇÕES ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["notifications"] = el; }}>
+            <div className="mt-6"><NotificationsSection /></div>
+          </section>
+
+          {/* ============ MÉTRICAS EM TEMPO REAL ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["realtime"] = el; }}>
+            <div className="mt-6"><RealTimeMetricsSection /></div>
           </section>
 
           {/* ============ CHECKLIST ============ */}
