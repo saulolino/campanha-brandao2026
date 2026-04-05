@@ -14,6 +14,9 @@ import {
   X,
   CalendarClock,
   FolderOpen,
+  ClipboardList,
+  Palette,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -25,6 +28,9 @@ const NAV_ITEMS = [
   { id: "calendar", label: "Calendário", icon: CalendarDays },
   { id: "content", label: "Conteúdo", icon: TreePine },
   { id: "contentbank", label: "Banco de Conteúdo", icon: FolderOpen },
+  { id: "tracker", label: "Status dos Posts", icon: ClipboardList },
+  { id: "moodboard", label: "Referências", icon: Palette },
+  { id: "report", label: "Relatório Semanal", icon: FileText },
   { id: "team", label: "Equipe", icon: Users },
   { id: "budget", label: "Orçamento", icon: DollarSign },
   { id: "donts", label: "Alertas", icon: ShieldAlert },

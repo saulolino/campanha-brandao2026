@@ -10,6 +10,9 @@ import GaugeChart from "@/components/GaugeChart";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import NextWeekSection from "@/components/NextWeekSection";
 import ContentBankSection from "@/components/ContentBankSection";
+import StatusTrackerSection from "@/components/StatusTrackerSection";
+import MoodboardSection from "@/components/MoodboardSection";
+import WeeklyReportSection from "@/components/WeeklyReportSection";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -593,6 +596,21 @@ export default function Home() {
           {/* ============ BANCO DE CONTEÚDO ============ */}
           <section ref={(el: HTMLElement | null) => { sectionRefs.current["contentbank"] = el; }}>
             <ContentBankSection />
+          </section>
+
+          {/* ============ STATUS DOS POSTS ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["tracker"] = el; }}>
+            <StatusTrackerSection />
+          </section>
+
+          {/* ============ REFERÊNCIAS VISUAIS ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["moodboard"] = el; }}>
+            <MoodboardSection />
+          </section>
+
+          {/* ============ RELATÓRIO SEMANAL ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["report"] = el; }}>
+            <WeeklyReportSection />
           </section>
 
           {/* ============ EQUIPE ============ */}
