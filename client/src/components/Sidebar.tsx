@@ -22,6 +22,10 @@ import {
   Presentation,
   Sparkles,
   Heart,
+  Copy,
+  Check,
+  ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -45,12 +49,57 @@ const NAV_ITEMS = [
   { id: "realtime", label: "Métricas Live", icon: Activity },
   { id: "briefing", label: "Briefing Criativo", icon: Sparkles },
   { id: "supporters", label: "Apoiadores", icon: Heart },
+  { id: "testimonials", label: "Depoimentos", icon: MessageCircle },
   { id: "checklist", label: "Checklist", icon: CheckSquare },
 ];
 
 interface SidebarProps {
   activeSection: string;
   onNavigate: (section: string) => void;
+}
+
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false);
+  const link = typeof window !== "undefined" ? `${window.location.origin}/apoiadores` : "/apoiadores";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  return (
+    <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <Heart size={14} className="text-primary" />
+        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Link para Apoiadores</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Compartilhe nos grupos de WhatsApp dos voluntários
+      </p>
+      <div className="flex gap-1.5">
+        <button
+          onClick={handleCopy}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-semibold transition-all ${
+            copied
+              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+              : "bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30"
+          }`}
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? "Link Copiado!" : "Copiar Link"}
+        </button>
+        <a
+          href="/apoiadores"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center px-2 py-1.5 rounded text-[10px] font-semibold bg-white/5 text-muted-foreground hover:bg-white/10 border border-white/10 transition-all"
+        >
+          <ExternalLink size={12} />
+        </a>
+      </div>
+    </div>
+  );
 }
 
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
@@ -138,6 +187,11 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
             );
           })}
         </nav>
+
+        {/* Link Apoiadores */}
+        <div className="px-3 pb-3">
+          <CopyLinkButton />
+        </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border">
