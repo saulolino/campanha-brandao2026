@@ -12,11 +12,13 @@ import {
   TreePine,
   Menu,
   X,
+  CalendarClock,
 } from "lucide-react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "nextweek", label: "Próxima Semana", icon: CalendarClock },
   { id: "growth", label: "Crescimento", icon: BarChart3 },
   { id: "pillars", label: "Pilares", icon: Target },
   { id: "calendar", label: "Calendário", icon: CalendarDays },

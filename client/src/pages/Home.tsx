@@ -8,6 +8,7 @@ import Sidebar from "@/components/Sidebar";
 import MetricCard from "@/components/MetricCard";
 import GaugeChart from "@/components/GaugeChart";
 import AnimatedCounter from "@/components/AnimatedCounter";
+import NextWeekSection from "@/components/NextWeekSection";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -243,6 +244,11 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* ============ PRÓXIMA SEMANA ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["nextweek"] = el; }}>
+            <NextWeekSection />
           </section>
 
           {/* ============ CRESCIMENTO ============ */}
