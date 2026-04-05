@@ -79,11 +79,13 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         }`}
       >
         {/* Logo area */}
-        <div className="p-5 border-b border-sidebar-border">
+        <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-              <TreePine size={22} className="text-primary" />
-            </div>
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_34177559.svg"
+              alt="Brasília Cidade Parque"
+              className="w-11 h-11 object-contain"
+            />
             <div>
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight leading-none">
                 BRASÍLIA
@@ -137,9 +139,16 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border">
-          <div className="text-[10px] text-muted-foreground text-center">
-            <p>Painel Interno da Campanha</p>
-            <p className="mt-0.5">Abr - Out 2026</p>
+          <div className="flex flex-col items-center gap-2">
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_34177559.svg"
+              alt="Brasília Cidade Parque"
+              className="w-16 h-16 object-contain opacity-40"
+            />
+            <div className="text-[10px] text-muted-foreground text-center">
+              <p>Painel Interno da Campanha</p>
+              <p className="mt-0.5">Abr - Out 2026</p>
+            </div>
           </div>
         </div>
       </aside>
