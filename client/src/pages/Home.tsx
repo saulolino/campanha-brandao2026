@@ -18,6 +18,7 @@ import CompetitorsSection from "@/components/CompetitorsSection";
 import NotificationsSection from "@/components/NotificationsSection";
 import RealTimeMetricsSection from "@/components/RealTimeMetricsSection";
 import PresentationMode from "@/components/PresentationMode";
+import CreativeBriefingSection from "@/components/CreativeBriefingSection";
 import {
   CAMPAIGN,
   MONTHLY_PROJECTION,
@@ -800,6 +801,11 @@ export default function Home() {
           {/* ============ MÉTRICAS EM TEMPO REAL ============ */}
           <section ref={(el: HTMLElement | null) => { sectionRefs.current["realtime"] = el; }}>
             <div className="mt-6"><RealTimeMetricsSection /></div>
+          </section>
+
+          {/* ============ BRIEFING CRIATIVO ============ */}
+          <section ref={(el: HTMLElement | null) => { sectionRefs.current["briefing"] = el; }}>
+            <div className="mt-6"><CreativeBriefingSection /></div>
           </section>
 
           {/* ============ CHECKLIST ============ */}
