@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initializeScheduler } from "../scheduler";
+import { initializeCollaborationServer } from "../collaboration";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -59,6 +61,10 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Inicializar scheduler de posts
+    initializeScheduler();
+    // Inicializar WebSocket para colaboração
+    initializeCollaborationServer(server);
   });
 }
 

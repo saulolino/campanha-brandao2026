@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useCollaboration } from "@/hooks/useCollaboration";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -53,7 +54,9 @@ export default function PublicationManager() {
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [newPostData, setNewPostData] = useState({ title: "", scheduledDate: "" });
   const [uploadingPostId, setUploadingPostId] = useState<number | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const collaboration = selectedPostId ? useCollaboration(selectedPostId) : null;
 
   // Queries
   const { data: posts, isLoading, refetch } = trpc.posts.list.useQuery({

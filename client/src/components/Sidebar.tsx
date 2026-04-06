@@ -27,6 +27,7 @@ import {
   ExternalLink,
   MessageCircle,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import InfoTooltip from "./InfoTooltip";
@@ -64,6 +65,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Gerenciador de Publicações",
         tooltip: "Fluxo colaborativo: Designer → Redator → Coordenador → Publicação",
         icon: Copy,
+      },
+      {
+        id: "performance",
+        label: "Performance de Posts",
+        tooltip: "Métricas e análises dos posts publicados",
+        icon: TrendingUp,
       },
     ],
   },
