@@ -88,6 +88,11 @@ const iconMap: Record<string, any> = {
 };
 
 export default function Home() {
+  // Hooks MUST be called before any conditional returns
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [showPresentation, setShowPresentation] = useState(false);
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  
   const { isVisitor } = usePermissions();
 
   // Visitante não tem acesso ao painel
@@ -102,9 +107,6 @@ export default function Home() {
       </div>
     );
   }
-  const [activeSection, setActiveSection] = useState("dashboard");
-  const [showPresentation, setShowPresentation] = useState(false);
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const handleNavigate = (section: string) => {
     setActiveSection(section);
