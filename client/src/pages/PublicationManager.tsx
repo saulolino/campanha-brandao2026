@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -51,6 +52,8 @@ export default function PublicationManager() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [newPostData, setNewPostData] = useState({ title: "", scheduledDate: "" });
+  const [uploadingPostId, setUploadingPostId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Queries
   const { data: posts, isLoading, refetch } = trpc.posts.list.useQuery({
@@ -71,6 +74,31 @@ export default function PublicationManager() {
   const approveAndSchedule = trpc.posts.approveAndSchedule.useMutation({ onSuccess: () => refetch() });
   const reject = trpc.posts.reject.useMutation({ onSuccess: () => refetch() });
   const publish = trpc.posts.publish.useMutation({ onSuccess: () => refetch() });
+  const uploadMedia = trpc.posts.uploadMedia.useMutation({
+    onSuccess: () => {
+      toast.success("Mídia enviada com sucesso!");
+      setUploadingPostId(null);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Erro ao enviar mídia: ${error.message}`);
+      setUploadingPostId(null);
+    },
+  });
+
+  const handleFileUpload = async (postId: number, file: File) => {
+    if (!file) return;
+    
+    const buffer = await file.arrayBuffer();
+    setUploadingPostId(postId);
+    
+    uploadMedia.mutate({
+      id: postId,
+      file: new Uint8Array(buffer) as any,
+      mimeType: file.type,
+      fileName: file.name,
+    });
+  };
 
   const handleCreatePost = () => {
     if (!newPostData.title || !newPostData.scheduledDate) return;
@@ -221,14 +249,34 @@ export default function PublicationManager() {
                   {/* Ações contextuais */}
                   <div className="flex gap-2 flex-wrap pt-2">
                     {post.status === "design" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => sendToCaption.mutate({ id: post.id })}
-                        disabled={sendToCaption.isPending}
-                      >
-                        <ChevronRight size={14} className="mr-1" /> Enviar para Legenda
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingPostId === post.id}
+                        >
+                          <Image size={14} className="mr-1" /> {uploadingPostId === post.id ? "Enviando..." : "Adicionar Mídia"}
+                        </Button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*,video/*"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(post.id, file);
+                          }}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendToCaption.mutate({ id: post.id })}
+                          disabled={sendToCaption.isPending}
+                        >
+                          <ChevronRight size={14} className="mr-1" /> Enviar para Legenda
+                        </Button>
+                      </>
                     )}
 
                     {post.status === "caption" && (

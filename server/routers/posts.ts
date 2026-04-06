@@ -4,6 +4,9 @@ import { getDb } from "../db";
 import { instagramPosts, postStatusHistory } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { uploadMedia, serializeMediaUrls, deserializeMediaUrls } from "../media";
+import { notifyPostStatusChange, notifyPostPublished, notifyPublishError } from "../notifications";
+import { publishToInstagram } from "../instagram";
 
 export const postsRouter = router({
   // Listar todos os posts com filtro por status
@@ -115,6 +118,16 @@ export const postsRouter = router({
 
       await db.update(instagramPosts).set({ status: "caption" }).where(eq(instagramPosts.id, input.id));
 
+      // Notificar mudança de status
+      await notifyPostStatusChange(
+        input.id,
+        post[0].title,
+        post[0].status,
+        "caption",
+        ctx.user.id,
+        input.comment
+      );
+
       return { success: true };
     }),
 
@@ -166,6 +179,16 @@ export const postsRouter = router({
 
       await db.update(instagramPosts).set({ status: "review" }).where(eq(instagramPosts.id, input.id));
 
+      // Notificar mudança de status
+      await notifyPostStatusChange(
+        input.id,
+        post[0].title,
+        post[0].status,
+        "review",
+        ctx.user.id,
+        input.comment
+      );
+
       return { success: true };
     }),
 
@@ -195,6 +218,16 @@ export const postsRouter = router({
       });
 
       await db.update(instagramPosts).set(updates).where(eq(instagramPosts.id, input.id));
+
+      // Notificar mudança de status
+      await notifyPostStatusChange(
+        input.id,
+        post[0].title,
+        post[0].status,
+        "scheduled",
+        ctx.user.id,
+        input.comment
+      );
 
       return { success: true };
     }),
@@ -226,6 +259,61 @@ export const postsRouter = router({
       return { success: true };
     }),
 
+  // Upload de mídia (designer)
+  uploadMedia: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      file: z.instanceof(Buffer),
+      mimeType: z.string(),
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const post = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
+      if (!post.length) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Upload do arquivo
+      const media = await uploadMedia(input.file, input.mimeType, input.fileName);
+
+      // Deserializar URLs existentes
+      const existingUrls = deserializeMediaUrls(post[0].mediaUrls);
+      existingUrls.push(media.url);
+
+      // Atualizar post com nova mídia
+      await db.update(instagramPosts)
+        .set({ mediaUrls: serializeMediaUrls(existingUrls) })
+        .where(eq(instagramPosts.id, input.id));
+
+      return { success: true, media };
+    }),
+
+  // Remover mídia (designer)
+  removeMedia: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      mediaUrl: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const post = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
+      if (!post.length) throw new TRPCError({ code: "NOT_FOUND" });
+
+      // Deserializar URLs e remover a especificada
+      const urls = deserializeMediaUrls(post[0].mediaUrls);
+      const filtered = urls.filter(url => url !== input.mediaUrl);
+
+      // Atualizar post
+      await db.update(instagramPosts)
+        .set({ mediaUrls: serializeMediaUrls(filtered) })
+        .where(eq(instagramPosts.id, input.id));
+
+      return { success: true };
+    }),
+
   // Publicar no Instagram (coordenador)
   publish: protectedProcedure
     .input(z.object({
@@ -238,20 +326,64 @@ export const postsRouter = router({
       const post = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
       if (!post.length) throw new TRPCError({ code: "NOT_FOUND" });
 
-      // TODO: Integrar com API do Instagram para publicar
-      // Por enquanto, apenas marca como publicado
-      await db.insert(postStatusHistory).values({
-        postId: input.id,
-        previousStatus: post[0].status,
-        newStatus: "published",
-        changedBy: ctx.user.id,
-        comment: "Published to Instagram",
-      });
+      try {
+        // Deserializar URLs de mídia
+        const mediaUrls = deserializeMediaUrls(post[0].mediaUrls);
+        
+        // Publicar no Instagram
+        const result = await publishToInstagram(
+          mediaUrls,
+          post[0].caption || "",
+          post[0].hashtags || undefined
+        );
 
-      await db.update(instagramPosts)
-        .set({ status: "published", publishedAt: new Date() })
-        .where(eq(instagramPosts.id, input.id));
+        if (!result.success) {
+          // Registrar erro
+          await db.insert(postStatusHistory).values({
+            postId: input.id,
+            previousStatus: post[0].status,
+            newStatus: "failed",
+            changedBy: ctx.user.id,
+            comment: result.error,
+          });
 
-      return { success: true };
+          await db.update(instagramPosts)
+            .set({ status: "failed", instagramError: result.error })
+            .where(eq(instagramPosts.id, input.id));
+
+          // Notificar erro
+          await notifyPublishError(input.id, post[0].title, result.error || "Erro desconhecido");
+
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: result.error });
+        }
+
+        // Registrar mudança de status
+        await db.insert(postStatusHistory).values({
+          postId: input.id,
+          previousStatus: post[0].status,
+          newStatus: "published",
+          changedBy: ctx.user.id,
+          comment: "Published to Instagram",
+        });
+
+        // Atualizar post com ID do Instagram
+        await db.update(instagramPosts)
+          .set({ 
+            status: "published", 
+            publishedAt: new Date(),
+            instagramPostId: result.postId
+          })
+          .where(eq(instagramPosts.id, input.id));
+
+        // Notificar publicação bem-sucedida
+        await notifyPostPublished(input.id, post[0].title, result.postId);
+
+        return { success: true, postId: result.postId };
+      } catch (error) {
+        throw new TRPCError({ 
+          code: "INTERNAL_SERVER_ERROR", 
+          message: error instanceof Error ? error.message : "Erro ao publicar no Instagram"
+        });
+      }
     }),
 });
