@@ -1,5 +1,5 @@
 // DESIGN: Command Center Militar Verde
-// Sidebar fixa à esquerda com navegação vertical
+// Sidebar fixa à esquerda com navegação vertical reorganizada e intuitiva
 import {
   LayoutDashboard,
   Target,
@@ -26,31 +26,197 @@ import {
   Check,
   ExternalLink,
   MessageCircle,
+  ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
+import InfoTooltip from "./InfoTooltip";
 
-const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "nextweek", label: "Próxima Semana", icon: CalendarClock },
-  { id: "growth", label: "Crescimento", icon: BarChart3 },
-  { id: "pillars", label: "Pilares", icon: Target },
-  { id: "calendar", label: "Calendário", icon: CalendarDays },
-  { id: "monthlycal", label: "Calendário Mensal", icon: CalendarDays },
-  { id: "content", label: "Conteúdo", icon: TreePine },
-  { id: "contentbank", label: "Banco de Conteúdo", icon: FolderOpen },
-  { id: "tracker", label: "Status dos Posts", icon: ClipboardList },
-  { id: "moodboard", label: "Referências", icon: Palette },
-  { id: "report", label: "Relatório Semanal", icon: FileText },
-  { id: "team", label: "Equipe", icon: Users },
-  { id: "budget", label: "Orçamento", icon: DollarSign },
-  { id: "donts", label: "Alertas", icon: ShieldAlert },
-  { id: "competitors", label: "Concorrentes", icon: BarChart3 },
-  { id: "notifications", label: "Notificações", icon: Bell },
-  { id: "realtime", label: "Métricas Live", icon: Activity },
-  { id: "briefing", label: "Briefing Criativo", icon: Sparkles },
-  { id: "supporters", label: "Apoiadores", icon: Heart },
-  { id: "testimonials", label: "Depoimentos", icon: MessageCircle },
-  { id: "checklist", label: "Checklist", icon: CheckSquare },
+interface NavGroup {
+  label: string;
+  description: string;
+  items: Array<{
+    id: string;
+    label: string;
+    tooltip: string;
+    icon: any;
+  }>;
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "VISÃO GERAL",
+    description: "Métricas e progresso da campanha",
+    items: [
+      {
+        id: "dashboard",
+        label: "Painel Principal",
+        tooltip: "Métricas em tempo real, progresso da campanha e indicadores principais",
+        icon: LayoutDashboard,
+      },
+      {
+        id: "realtime",
+        label: "Métricas Live",
+        tooltip: "Dados atualizados do Instagram em tempo real",
+        icon: Activity,
+      },
+    ],
+  },
+  {
+    label: "PLANEJAMENTO",
+    description: "Organize posts e conteúdo",
+    items: [
+      {
+        id: "nextweek",
+        label: "Próxima Semana",
+        tooltip: "Posts planejados para os próximos 7 dias",
+        icon: CalendarClock,
+      },
+      {
+        id: "calendar",
+        label: "Calendário Semanal",
+        tooltip: "Visualize posts por semana com detalhes",
+        icon: CalendarDays,
+      },
+      {
+        id: "monthlycal",
+        label: "Calendário Mensal",
+        tooltip: "Visão geral de todos os posts do mês",
+        icon: CalendarDays,
+      },
+    ],
+  },
+  {
+    label: "CONTEÚDO",
+    description: "Crie e organize materiais",
+    items: [
+      {
+        id: "contentbank",
+        label: "Banco de Conteúdo",
+        tooltip: "Modelos, legendas, hashtags e guias visuais prontos para usar",
+        icon: FolderOpen,
+      },
+      {
+        id: "content",
+        label: "Pilares de Conteúdo",
+        tooltip: "Temas principais e tipos de posts que funcionam melhor",
+        icon: TreePine,
+      },
+      {
+        id: "briefing",
+        label: "Briefing Criativo",
+        tooltip: "Instruções detalhadas para criar posts de impacto",
+        icon: Sparkles,
+      },
+    ],
+  },
+  {
+    label: "ANÁLISE",
+    description: "Acompanhe desempenho",
+    items: [
+      {
+        id: "tracker",
+        label: "Status dos Posts",
+        tooltip: "Acompanhe quais posts foram publicados e seu desempenho",
+        icon: ClipboardList,
+      },
+      {
+        id: "growth",
+        label: "Crescimento",
+        tooltip: "Gráficos de crescimento de seguidores e engajamento",
+        icon: BarChart3,
+      },
+      {
+        id: "report",
+        label: "Relatório Semanal",
+        tooltip: "Resumo de desempenho e recomendações",
+        icon: FileText,
+      },
+    ],
+  },
+  {
+    label: "ESTRATÉGIA",
+    description: "Defina direção e regras",
+    items: [
+      {
+        id: "pillars",
+        label: "Pilares da Campanha",
+        tooltip: "Objetivos principais e temas que devem guiar todos os posts",
+        icon: Target,
+      },
+      {
+        id: "donts",
+        label: "Alertas e Regras",
+        tooltip: "O que fazer e o que evitar para manter a qualidade",
+        icon: ShieldAlert,
+      },
+      {
+        id: "moodboard",
+        label: "Referências Visuais",
+        tooltip: "Inspiração de cores, estilos e design",
+        icon: Palette,
+      },
+    ],
+  },
+  {
+    label: "RECURSOS",
+    description: "Equipe e orçamento",
+    items: [
+      {
+        id: "team",
+        label: "Equipe",
+        tooltip: "Papéis, responsabilidades e horas de trabalho necessárias",
+        icon: Users,
+      },
+      {
+        id: "budget",
+        label: "Orçamento",
+        tooltip: "Investimento mensal em publicidade e produção",
+        icon: DollarSign,
+      },
+    ],
+  },
+  {
+    label: "COMUNICAÇÃO",
+    description: "Engaje com apoiadores",
+    items: [
+      {
+        id: "supporters",
+        label: "Guia do Apoiador",
+        tooltip: "Protocolo de engajamento e missões para voluntários",
+        icon: Heart,
+      },
+      {
+        id: "notifications",
+        label: "Notificações",
+        tooltip: "Alertas sobre posts e lembretes de ações",
+        icon: Bell,
+      },
+      {
+        id: "testimonials",
+        label: "Depoimentos",
+        tooltip: "Histórias e feedback de apoiadores",
+        icon: MessageCircle,
+      },
+    ],
+  },
+  {
+    label: "EXTRAS",
+    description: "Ferramentas adicionais",
+    items: [
+      {
+        id: "competitors",
+        label: "Concorrentes",
+        tooltip: "Compare seu desempenho com outros perfis",
+        icon: BarChart3,
+      },
+      {
+        id: "checklist",
+        label: "Checklist",
+        tooltip: "Lista de verificação antes de publicar",
+        icon: CheckSquare,
+      },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -98,6 +264,65 @@ function CopyLinkButton() {
           <ExternalLink size={12} />
         </a>
       </div>
+    </div>
+  );
+}
+
+function NavGroupComponent({
+  group,
+  activeSection,
+  onNavigate,
+  setMobileOpen,
+}: {
+  group: NavGroup;
+  activeSection: string;
+  onNavigate: (section: string) => void;
+  setMobileOpen: (open: boolean) => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider hover:text-muted-foreground transition-colors"
+      >
+        <span>{group.label}</span>
+        <ChevronDown
+          size={12}
+          className={`transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`}
+        />
+      </button>
+
+      {expanded && (
+        <div className="space-y-0.5">
+          {group.items.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.id;
+            return (
+              <div key={item.id} className="flex items-center gap-2 group/item">
+                <button
+                  onClick={() => {
+                    onNavigate(item.id);
+                    setMobileOpen(false);
+                  }}
+                  className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
+                    isActive
+                      ? "bg-sidebar-primary/15 text-sidebar-primary-foreground border-l-2 border-primary"
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  }`}
+                >
+                  <Icon size={16} className={isActive ? "text-primary" : ""} />
+                  <span className="font-medium text-left">{item.label}</span>
+                </button>
+                <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
+                  <InfoTooltip text={item.tooltip} side="right" />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -164,28 +389,16 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  onNavigate(item.id);
-                  setMobileOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-200 ${
-                  isActive
-                    ? "bg-sidebar-primary/15 text-sidebar-primary-foreground border-l-2 border-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Icon size={16} className={isActive ? "text-primary" : ""} />
-                <span className="font-medium">{item.label}</span>
-              </button>
-            );
-          })}
+        <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
+          {NAV_GROUPS.map((group) => (
+            <NavGroupComponent
+              key={group.label}
+              group={group}
+              activeSection={activeSection}
+              onNavigate={onNavigate}
+              setMobileOpen={setMobileOpen}
+            />
+          ))}
         </nav>
 
         {/* Link Apoiadores */}

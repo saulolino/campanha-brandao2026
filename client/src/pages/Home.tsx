@@ -171,6 +171,7 @@ export default function Home() {
                 value={CAMPAIGN.currentFollowers}
                 icon={Users}
                 subtitle="Base inicial"
+                tooltip="Número de pessoas que seguem o perfil @eduardobrandaopv neste momento"
                 status="ok"
               />
               <MetricCard
@@ -178,6 +179,7 @@ export default function Home() {
                 value={CAMPAIGN.targetFollowers}
                 icon={Target}
                 subtitle="Outubro 2026"
+                tooltip="Objetivo de seguidores a alcançar até o final da campanha"
                 status="ok"
               />
               <MetricCard
@@ -186,6 +188,7 @@ export default function Home() {
                 prefix="+"
                 icon={TrendingUp}
                 subtitle="+1.229%"
+                tooltip="Quantos seguidores ainda precisamos conquistar para atingir a meta"
                 status="warning"
               />
               <MetricCard
@@ -194,6 +197,7 @@ export default function Home() {
                 prefix="+"
                 icon={ArrowUpRight}
                 subtitle={`${CAMPAIGN.dailyGrowth}/dia`}
+                tooltip="Média de novos seguidores que devemos ganhar a cada semana para atingir a meta"
                 status="ok"
               />
             </div>

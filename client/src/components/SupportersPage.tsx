@@ -3,6 +3,7 @@
 // Design: Command Center Verde — seção dedicada aos voluntários
 // ============================================================
 import { useState } from "react";
+import InfoTooltip from "./InfoTooltip";
 import {
   Heart, Clock, Share2, MessageCircle, Globe, Shield,
   ChevronDown, ChevronRight, Copy, CheckCircle2, Zap,
@@ -56,6 +57,15 @@ const categoryBadgeColors: Record<string, string> = {
   "semanal": "bg-blue-500/20 text-blue-400",
   "mensal": "bg-purple-500/20 text-purple-400",
   "especial": "bg-amber-500/20 text-amber-400",
+};
+
+const sectionTooltips = {
+  protocolo: "Siga estes 7 passos em ordem para cada novo post. Cada ação multiplica o alcance!",
+  regras: "O que fazer e o que evitar para manter a qualidade dos posts e da comunidade",
+  missoes: "Tarefas especiais que valem pontos XP e aumentam seu nível de apoiador",
+  acoes: "Ações rápidas que você pode fazer agora para engajar com o perfil",
+  hashtags: "Hashtags aprovadas para usar em posts, histórias e comentários",
+  faq: "Dúvidas frequentes e respostas sobre como engajar corretamente",
 };
 
 export default function SupportersPage() {
@@ -163,18 +173,22 @@ export default function SupportersPage() {
       {/* TABS DE NAVEGAÇÃO */}
       <div className="flex flex-wrap gap-2">
         {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.id
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                : "bg-card/50 text-muted-foreground border border-border/50 hover:bg-card hover:text-white"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
+          <div key={tab.id} className="flex items-center gap-1.5 group/tab">
+            <button
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                  : "bg-card/50 text-muted-foreground border border-border/50 hover:bg-card hover:text-white"
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+            <div className="opacity-0 group-hover/tab:opacity-100 transition-opacity">
+              <InfoTooltip text={sectionTooltips[tab.id]} side="top" />
+            </div>
+          </div>
         ))}
       </div>
 
@@ -187,6 +201,7 @@ export default function SupportersPage() {
             <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
               <Zap className="w-5 h-5 text-emerald-400" />
               Protocolo de Engajamento — 7 Passos
+              <InfoTooltip text="Cada passo multiplica o alcance do post. Execute em ordem!" side="right" />
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               Siga estes passos toda vez que um novo post for publicado. Tempo total: ~10 minutos.
@@ -234,6 +249,7 @@ export default function SupportersPage() {
           <div className="bg-card/50 rounded-xl border border-border/50 p-5">
             <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-emerald-400" />
+              <InfoTooltip text="Copie e adapte estes comentários para engajar com o post" side="right" className="w-4 h-4" />
               Inspiração para Comentários
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
