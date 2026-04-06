@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/_core/hooks/useAuth";
 import InfoTooltip from "./InfoTooltip";
 
 interface NavGroup {
@@ -361,7 +362,8 @@ function NavGroupComponent({
 
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { isSuperAdmin } = usePermissions();
+  const { isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
+  const { user } = useAuth();
 
   return (
     <>
@@ -409,14 +411,14 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         {/* Profile */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/avatar-eduardo-v2_fed5f8de.png"
-              alt="Eduardo Brandão"
-              className="w-9 h-9 rounded-full object-cover border border-primary/30"
-            />
-            <div>
-              <p className="text-xs font-semibold text-sidebar-foreground">Eduardo Brandão</p>
-              <p className="text-[10px] text-muted-foreground">@eduardobrandaopv</p>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm border border-primary/30">
+              {user?.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name || "Usuário"}</p>
+              <p className="text-[10px] text-muted-foreground truncate">
+                {isSuperAdmin ? "🔑 SuperAdmin" : isCoordinator ? "📋 Coordenador" : isTeam ? "👥 Equipe" : "👁️ Visitante"}
+              </p>
             </div>
           </div>
         </div>
