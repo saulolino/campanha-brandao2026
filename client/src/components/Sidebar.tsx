@@ -59,6 +59,12 @@ const NAV_GROUPS: NavGroup[] = [
         tooltip: "Dados atualizados do Instagram em tempo real",
         icon: Activity,
       },
+      {
+        id: "publicacoes",
+        label: "Gerenciador de Publicações",
+        tooltip: "Fluxo colaborativo: Designer → Redator → Coordenador → Publicação",
+        icon: Copy,
+      },
     ],
   },
   {
