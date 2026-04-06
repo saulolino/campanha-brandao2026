@@ -1,9 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./_core/hooks/useAuth";
 import Home from "./pages/Home";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
@@ -14,14 +15,28 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 function Router() {
+  const { user, loading } = useAuth();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setIsReady(true);
+    }
+  }, [loading]);
+
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={() => {
-        // Redirect root to login
+        if (!isReady) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+        // Redirect root to home if authenticated, otherwise to login
         useEffect(() => {
-          window.location.href = '/login';
-        }, []);
+          if (user) {
+            window.location.href = '/home';
+          } else {
+            window.location.href = '/login';
+          }
+        }, [user]);
         return null;
       }} />
       <Route path={"/login"} component={Login} />
