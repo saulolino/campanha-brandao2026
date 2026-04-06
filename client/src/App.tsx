@@ -7,6 +7,8 @@ import Home from "./pages/Home";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
+import Login from "./pages/Login";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -14,10 +16,12 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/login"} component={Login} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
-      <Route path={"/performance"} component={PerformanceDashboard} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path={"/?performance"} component={PerformanceDashboard} />
+      <Route path={"/?users"} component={UserManagement} />
+      <Route path={"/?404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>

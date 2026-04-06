@@ -15,6 +15,13 @@
       "when": 1775489028731,
       "tag": "0001_rapid_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1775493591704,
+      "tag": "0002_exotic_leech",
+      "breakpoints": true
     }
   ]
 }

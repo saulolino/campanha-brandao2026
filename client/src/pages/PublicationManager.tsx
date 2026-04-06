@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { usePermissions } from "@/hooks/usePermissions";
+import NotFound from "./NotFound";
 import { useCollaboration } from "@/hooks/useCollaboration";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -50,6 +52,12 @@ const flowSteps = [
 
 export default function PublicationManager() {
   const { user } = useAuth();
+  const { isVisitor } = usePermissions();
+
+  // Visitante não tem acesso
+  if (isVisitor) {
+    return <NotFound />;
+  }
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [newPostData, setNewPostData] = useState({ title: "", scheduledDate: "" });
