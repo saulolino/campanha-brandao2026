@@ -29,6 +29,7 @@ import {
   ChevronDown,
   TrendingUp,
   Shield,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -363,7 +364,7 @@ function NavGroupComponent({
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   return (
     <>
@@ -450,7 +451,16 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-3">
+          <button
+            onClick={() => {
+              logout?.();
+            }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors border border-red-500/20 hover:border-red-500/40"
+          >
+            <LogOut size={16} />
+            <span>Sair</span>
+          </button>
           <div className="flex flex-col items-center gap-2">
             <img
               src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
