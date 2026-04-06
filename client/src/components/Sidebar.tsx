@@ -28,8 +28,10 @@ import {
   MessageCircle,
   ChevronDown,
   TrendingUp,
+  Shield,
 } from "lucide-react";
 import { useState } from "react";
+import { usePermissions } from "@/hooks/usePermissions";
 import InfoTooltip from "./InfoTooltip";
 
 interface NavGroup {
@@ -232,6 +234,19 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const ADMIN_NAV_GROUP: NavGroup = {
+  label: "ADMINISTRAÇÃO",
+  description: "Gerenciar plataforma",
+  items: [
+    {
+      id: "admin",
+      label: "Painel de Admin",
+      tooltip: "Gerenciar usuários, permissões e configurações da plataforma",
+      icon: Shield,
+    },
+  ],
+};
+
 interface SidebarProps {
   activeSection: string;
   onNavigate: (section: string) => void;
@@ -314,10 +329,14 @@ function NavGroupComponent({
             const isActive = activeSection === item.id;
             return (
               <div key={item.id} className="flex items-center gap-2 group/item">
-                <button
-                  onClick={() => {
-                    onNavigate(item.id);
-                    setMobileOpen(false);
+                <a
+                  href={item.id === "admin" ? "/admin" : "#"}
+                  onClick={(e) => {
+                    if (item.id !== "admin") {
+                      e.preventDefault();
+                      onNavigate(item.id);
+                      setMobileOpen(false);
+                    }
                   }}
                   className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
                     isActive
@@ -327,7 +346,7 @@ function NavGroupComponent({
                 >
                   <Icon size={16} className={isActive ? "text-primary" : ""} />
                   <span className="font-medium text-left">{item.label}</span>
-                </button>
+                </a>
                 <div className="opacity-0 group-hover/item:opacity-100 transition-opacity">
                   <InfoTooltip text={item.tooltip} side="right" />
                 </div>
@@ -342,6 +361,7 @@ function NavGroupComponent({
 
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { isSuperAdmin } = usePermissions();
 
   return (
     <>
@@ -412,6 +432,14 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
               setMobileOpen={setMobileOpen}
             />
           ))}
+          {isSuperAdmin && (
+            <NavGroupComponent
+              group={ADMIN_NAV_GROUP}
+              activeSection={activeSection}
+              onNavigate={onNavigate}
+              setMobileOpen={setMobileOpen}
+            />
+          )}
         </nav>
 
         {/* Link Apoiadores */}
