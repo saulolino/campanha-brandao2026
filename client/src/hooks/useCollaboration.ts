@@ -15,7 +15,7 @@ interface DraftUpdate {
   userName: string;
 }
 
-export function useCollaboration(postId: number) {
+export function useCollaboration(postId: number | null) {
   const { user } = useAuth();
   const socketRef = useRef<Socket | null>(null);
   const [activeUsers, setActiveUsers] = useState<CollaborativeUser[]>([]);
@@ -23,7 +23,7 @@ export function useCollaboration(postId: number) {
   const [lastUpdate, setLastUpdate] = useState<DraftUpdate | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !postId) return;
 
     // Conectar ao servidor WebSocket
     const socket = io(window.location.origin, {

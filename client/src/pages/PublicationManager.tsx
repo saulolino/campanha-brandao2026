@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { usePermissions } from "@/hooks/usePermissions";
 import NotFound from "./NotFound";
-import { useCollaboration } from "@/hooks/useCollaboration";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -53,25 +52,20 @@ const flowSteps = [
 export default function PublicationManager() {
   const { user } = useAuth();
   const { isVisitor } = usePermissions();
-
-  // Visitante não tem acesso
-  if (isVisitor) {
-    return <NotFound />;
-  }
+  
+  // Todos os hooks DEVEM ser chamados antes de qualquer return condicional
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [newPostData, setNewPostData] = useState({ title: "", scheduledDate: "" });
   const [uploadingPostId, setUploadingPostId] = useState<number | null>(null);
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const collaboration = selectedPostId ? useCollaboration(selectedPostId) : null;
 
-  // Queries
+  // Queries - DEVEM estar ANTES do return condicional
   const { data: posts, isLoading, refetch } = trpc.posts.list.useQuery({
     status: selectedStatus as any,
   });
 
-  // Mutations
+  // Mutations - DEVEM estar ANTES do return condicional
   const createPost = trpc.posts.create.useMutation({
     onSuccess: () => {
       setShowNewPostDialog(false);
@@ -96,6 +90,11 @@ export default function PublicationManager() {
       setUploadingPostId(null);
     },
   });
+
+  // Visitante não tem acesso - APÓS todos os hooks
+  if (isVisitor) {
+    return <NotFound />;
+  }
 
   const handleFileUpload = async (postId: number, file: File) => {
     if (!file) return;
@@ -275,17 +274,17 @@ export default function PublicationManager() {
                           accept="image/*,video/*"
                           style={{ display: "none" }}
                           onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleFileUpload(post.id, file);
+                            if (e.target.files?.[0]) {
+                              handleFileUpload(post.id, e.target.files[0]);
+                            }
                           }}
                         />
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => sendToCaption.mutate({ id: post.id })}
                           disabled={sendToCaption.isPending}
                         >
-                          <ChevronRight size={14} className="mr-1" /> Enviar para Legenda
+                          <ChevronRight size={14} className="mr-1" /> Enviar para Redator
                         </Button>
                       </>
                     )}
@@ -295,10 +294,15 @@ export default function PublicationManager() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => sendToReview.mutate({ id: post.id })}
+                          onClick={() => {
+                            const caption = prompt("Digite a legenda do post:");
+                            if (caption) {
+                              sendToReview.mutate({ id: post.id, comment: caption });
+                            }
+                          }}
                           disabled={sendToReview.isPending}
                         >
-                          <ChevronRight size={14} className="mr-1" /> Enviar para Revisão
+                          <Edit size={14} className="mr-1" /> Adicionar Legenda
                         </Button>
                       </>
                     )}
@@ -315,10 +319,10 @@ export default function PublicationManager() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => reject.mutate({ id: post.id, returnTo: "caption", comment: "Revisão necessária" })}
+                          onClick={() => reject.mutate({ id: post.id, comment: "Rejeitado", returnTo: "design" })}
                           disabled={reject.isPending}
                         >
-                          <AlertCircle size={14} className="mr-1" /> Devolver
+                          <X size={14} className="mr-1" /> Rejeitar
                         </Button>
                       </>
                     )}
@@ -328,15 +332,20 @@ export default function PublicationManager() {
                         size="sm"
                         onClick={() => publish.mutate({ id: post.id })}
                         disabled={publish.isPending}
-                        className="bg-green-600 hover:bg-green-700"
                       >
-                        <Send size={14} className="mr-1" /> Publicar Agora
+                        <Send size={14} className="mr-1" /> {publish.isPending ? "Publicando..." : "Publicar Agora"}
                       </Button>
                     )}
 
                     {post.status === "published" && (
                       <Badge className="bg-green-500/20 text-green-400">
-                        ✓ Publicado em {format(new Date(post.publishedAt!), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        ✓ Publicado com sucesso
+                      </Badge>
+                    )}
+
+                    {post.status === "failed" && (
+                      <Badge className="bg-red-500/20 text-red-400">
+                        ✗ Falha na publicação
                       </Badge>
                     )}
                   </div>
