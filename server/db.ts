@@ -58,6 +58,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     } else if (user.openId === ENV.ownerOpenId) {
       values.role = 'superadmin';
       updateSet.role = 'superadmin';
+    } else {
+      values.role = 'visitor';
+      updateSet.role = 'visitor';
     }
 
     if (!values.lastSignedIn) {
