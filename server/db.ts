@@ -52,16 +52,25 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
+    // Map new roles to database roles (database only has 'user' and 'admin')
+    const roleMap: Record<string, 'user' | 'admin'> = {
+      'visitor': 'user',
+      'team': 'user',
+      'coordinator': 'user',
+      'superadmin': 'admin',
+      'user': 'user',
+      'admin': 'admin',
+    };
+
+    let dbRole: 'user' | 'admin' = 'user';
     if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
+      dbRole = roleMap[user.role] || 'user';
     } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'superadmin';
-      updateSet.role = 'superadmin';
-    } else {
-      values.role = 'visitor';
-      updateSet.role = 'visitor';
+      dbRole = 'admin';
     }
+
+    values.role = dbRole as any;
+    updateSet.role = dbRole;
 
     if (!values.lastSignedIn) {
       values.lastSignedIn = new Date();
