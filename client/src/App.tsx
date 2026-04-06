@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
+import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -9,19 +10,28 @@ import PublicationManager from "./pages/PublicationManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
 import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={() => {
+        // Redirect root to login
+        useEffect(() => {
+          window.location.href = '/login';
+        }, []);
+        return null;
+      }} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
-      <Route path={"/?performance"} component={PerformanceDashboard} />
-      <Route path={"/?users"} component={UserManagement} />
-      <Route path={"/?404"} component={NotFound} />
+      <Route path={"/performance"} component={PerformanceDashboard} />
+      <Route path={"/usuarios"} component={UserManagement} />
+      <Route path={"/admin"} component={AdminDashboard} />
+      <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
