@@ -31,11 +31,7 @@ export default function UserManagement() {
       setNewRole(undefined);
     },
   });
-  const toggleActiveMutation = trpc.users.toggleActive.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
-  });
+
 
   const handleUpdateRole = async () => {
     if (!selectedUserId || !newRole) return;
@@ -152,19 +148,7 @@ export default function UserManagement() {
                             </div>
                           </DialogContent>
                         </Dialog>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            toggleActiveMutation.mutateAsync({
-                              userId: u.id,
-                              isActive: !u.isActive,
-                            })
-                          }
-                          disabled={toggleActiveMutation.isPending}
-                        >
-                          {u.isActive ? "Desativar" : "Ativar"}
-                        </Button>
+
                       </td>
                     </tr>
                   ))

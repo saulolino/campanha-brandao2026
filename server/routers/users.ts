@@ -83,55 +83,9 @@ export const usersRouter = router({
   /**
    * Ativar/Desativar usuário (apenas SuperAdmin)
    */
-  toggleActive: protectedProcedure
-    .input(
-      z.object({
-        userId: z.number(),
-        isActive: z.boolean(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      if (ctx.user?.role !== "superadmin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas SuperAdmin pode ativar/desativar usuários" });
-      }
 
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      await db
-        .update(users)
-        .set({ isActive: input.isActive ? 1 : 0 })
-        .where(eq(users.id, input.userId));
 
-      return { success: true, message: `Usuário ${input.isActive ? "ativado" : "desativado"}` };
-    }),
-
-  /**
-   * Atualizar departamento do usuário
-   */
-  updateDepartment: protectedProcedure
-    .input(
-      z.object({
-        userId: z.number(),
-        department: z.string(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-
-      // Usuário só pode atualizar a si mesmo, ou SuperAdmin pode atualizar qualquer um
-      if (ctx.user?.id !== input.userId && ctx.user?.role !== "superadmin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Você não tem permissão para atualizar este usuário" });
-      }
-
-      await db
-        .update(users)
-        .set({ department: input.department })
-        .where(eq(users.id, input.userId));
-
-      return { success: true, message: "Departamento atualizado" };
-    }),
 
   /**
    * Obter permissões do usuário atual
