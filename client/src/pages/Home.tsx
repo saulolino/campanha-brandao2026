@@ -6,6 +6,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
+import { RestrictedSection, ProtectedComponent } from "@/components/ProtectedComponent";
+import { useRoleAccess } from "@/hooks/useRoleAccess";
 import MetricCard from "@/components/MetricCard";
 import GaugeChart from "@/components/GaugeChart";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -94,6 +96,7 @@ export default function Home() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const permissions = useRoleAccess(user?.role);
 
   // Verificar autenticação
   useEffect(() => {
@@ -111,6 +114,9 @@ export default function Home() {
       return;
     }
     setLoading(false);
+    if (parsedUser?.role) {
+      console.log(`[Dashboard] Usuário logado como: ${parsedUser.role}`);
+    }
   }, [navigate]);
 
   if (loading || !user) {
@@ -207,6 +213,7 @@ export default function Home() {
             </div>
 
             {/* Main metrics */}
+            <RestrictedSection requiredRole="visitor" fallbackMessage="Você não tem permissão para visualizar essas métricas">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
               <MetricCard
                 title="Seguidores Atuais"
@@ -243,6 +250,7 @@ export default function Home() {
                 status="ok"
               />
             </div>
+            </RestrictedSection>
 
             {/* Progress + Gauges */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">

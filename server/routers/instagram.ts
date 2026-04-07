@@ -1,5 +1,6 @@
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../\_core/trpc";
 import { publishToInstagram, getInstagramPostInfo, getInstagramPostMetrics } from "../instagram";
+import { instagramService } from "../services/instagramService";
 
 /**
  * Métricas simuladas do Instagram
@@ -77,7 +78,10 @@ export const instagramRouter = router({
    */
   getMetrics: publicProcedure.query(async () => {
     try {
-      // TODO: Substituir por chamada real à API do Instagram
+      // Tentar usar API real se configurada, senão usar dados simulados
+      if (instagramService.isConfigured()) {
+        return await instagramService.getMetrics();
+      }
       return SIMULATED_METRICS;
     } catch (error) {
       console.error('[Instagram] Failed to fetch metrics:', error);
@@ -90,7 +94,10 @@ export const instagramRouter = router({
    */
   getPosts: publicProcedure.query(async () => {
     try {
-      // TODO: Substituir por chamada real à API do Instagram
+      // Tentar usar API real se configurada, senão usar dados simulados
+      if (instagramService.isConfigured()) {
+        return await instagramService.getPosts();
+      }
       return SIMULATED_POSTS;
     } catch (error) {
       console.error('[Instagram] Failed to fetch posts:', error);
@@ -103,7 +110,10 @@ export const instagramRouter = router({
    */
   getGrowth: publicProcedure.query(async () => {
     try {
-      // TODO: Substituir por chamada real à API do Instagram
+      // Tentar usar API real se configurada, senão usar dados simulados
+      if (instagramService.isConfigured()) {
+        return await instagramService.getGrowth();
+      }
       return SIMULATED_GROWTH;
     } catch (error) {
       console.error('[Instagram] Failed to fetch growth data:', error);

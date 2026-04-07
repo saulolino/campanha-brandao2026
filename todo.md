@@ -22,5 +22,17 @@
   - [x] Corrigir schema do banco de dados
   - [x] Atualizar função upsertUser
   - [x] Sincronizar roles ao fazer login
+- [x] Integrar dados reais do Instagram
+  - [x] Configurar credenciais do Instagram Graph API
+  - [x] Atualizar router para chamar API real
+  - [x] Testar endpoints com dados reais
+- [x] Aplicar ProtectedComponent no dashboard
+  - [x] Adicionar RestrictedSection em módulos
+  - [x] Restringir acesso conforme role
+  - [x] Testar restrições de acesso
+- [x] Executar script de migração
+  - [x] Rodar fix-roles.mjs
+  - [x] Verificar sincronização de roles
+  - [x] Validar integridade dos dados
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões

@@ -29,6 +29,10 @@ async function migrateRoles() {
       port: url.port || 3306,
     };
 
+    // Adicionar SSL para TiDB
+    config.ssl = {};
+    config.enableKeepAlive = true;
+
     connection = await mysql.createConnection(config);
     console.log('✓ Conectado ao banco de dados');
 
