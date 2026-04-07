@@ -31,6 +31,9 @@ import {
   X,
   Upload,
   Download,
+  Copy,
+  Search,
+  Filter,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -74,6 +77,14 @@ interface TransitionHistory {
   movedBy: string;
 }
 
+interface Filters {
+  searchTerm: string;
+  status: string | undefined;
+  creator: string | undefined;
+  dateFrom: string;
+  dateTo: string;
+}
+
 export default function PublicationManager() {
   const { user } = useLocalAuth();
   const { isVisitor } = usePermissions();
@@ -81,9 +92,17 @@ export default function PublicationManager() {
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [newPostData, setNewPostData] = useState({ title: "", caption: "", scheduledDate: "" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [filters, setFilters] = useState<Filters>({
+    searchTerm: "",
+    status: undefined,
+    creator: undefined,
+    dateFrom: "",
+    dateTo: "",
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar posts do localStorage
@@ -133,6 +152,27 @@ export default function PublicationManager() {
     setNewPostData({ title: "", caption: "", scheduledDate: "" });
     setPreviewImage(null);
     toast.success("Post criado com sucesso!");
+  };
+
+  const handleDuplicatePost = (postId: number) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const duplicatedPost: Post = {
+      id: Date.now(),
+      title: `${post.title} (cópia)`,
+      caption: post.caption,
+      status: "draft",
+      scheduledDate: "",
+      createdBy: user?.email || "Usuário",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      mediaUrl: post.mediaUrl,
+      history: [],
+    };
+
+    savePosts([...posts, duplicatedPost]);
+    toast.success(`Post "${post.title}" duplicado com sucesso!`);
   };
 
   const handleEditPost = (postId: number) => {
@@ -244,9 +284,58 @@ export default function PublicationManager() {
     reader.readAsDataURL(file);
   };
 
-  const filteredPosts = selectedStatus
-    ? posts.filter((post) => post.status === selectedStatus)
-    : posts;
+  // Aplicar filtros
+  const filteredPosts = posts.filter((post) => {
+    // Filtro de busca (título e legenda)
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      if (
+        !post.title.toLowerCase().includes(searchLower) &&
+        !post.caption.toLowerCase().includes(searchLower)
+      ) {
+        return false;
+      }
+    }
+
+    // Filtro de status
+    if (filters.status && post.status !== filters.status) {
+      return false;
+    }
+
+    // Filtro de criador
+    if (filters.creator && post.createdBy !== filters.creator) {
+      return false;
+    }
+
+    // Filtro de data (data de criação)
+    if (filters.dateFrom) {
+      const postDate = new Date(post.createdAt);
+      const fromDate = new Date(filters.dateFrom);
+      if (postDate < fromDate) return false;
+    }
+
+    if (filters.dateTo) {
+      const postDate = new Date(post.createdAt);
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      if (postDate > toDate) return false;
+    }
+
+    return true;
+  });
+
+  // Obter lista de criadores únicos
+  const creators = Array.from(new Set(posts.map((p) => p.createdBy)));
+
+  const resetFilters = () => {
+    setFilters({
+      searchTerm: "",
+      status: undefined,
+      creator: undefined,
+      dateFrom: "",
+      dateTo: "",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -282,103 +371,198 @@ export default function PublicationManager() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex gap-4 mb-6">
-          <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus size={16} />
-                Novo Post
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Criar Novo Post</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Título</label>
-                  <Input
-                    value={newPostData.title}
-                    onChange={(e) => setNewPostData({ ...newPostData, title: e.target.value })}
-                    placeholder="Título do post"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Legenda</label>
-                  <Textarea
-                    value={newPostData.caption}
-                    onChange={(e) => setNewPostData({ ...newPostData, caption: e.target.value })}
-                    placeholder="Legenda do post"
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Data de Agendamento</label>
-                  <Input
-                    type="datetime-local"
-                    value={newPostData.scheduledDate}
-                    onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Mídia (Imagem ou Vídeo)</label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="gap-2"
-                    >
-                      <Upload size={16} />
-                      Selecionar Arquivo
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
+        {/* Search and Controls */}
+        <div className="space-y-4 mb-6">
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-3 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por título ou legenda..."
+                value={filters.searchTerm}
+                onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
+                className="pl-10"
+              />
+            </div>
+            <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus size={16} />
+                  Novo Post
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Criar Novo Post</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium">Título</label>
+                    <Input
+                      value={newPostData.title}
+                      onChange={(e) => setNewPostData({ ...newPostData, title: e.target.value })}
+                      placeholder="Título do post"
                     />
-                    {previewImage && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setPreviewImage(null)}
-                        className="text-red-400"
-                      >
-                        <X size={16} />
-                      </Button>
-                    )}
                   </div>
-                  {previewImage && (
-                    <div className="mt-3 relative w-full h-40 bg-muted rounded-lg overflow-hidden">
-                      {previewImage.startsWith("data:video") ? (
-                        <video src={previewImage} className="w-full h-full object-cover" />
-                      ) : (
-                        <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                  <div>
+                    <label className="text-sm font-medium">Legenda</label>
+                    <Textarea
+                      value={newPostData.caption}
+                      onChange={(e) => setNewPostData({ ...newPostData, caption: e.target.value })}
+                      placeholder="Legenda do post"
+                      rows={4}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Data de Agendamento</label>
+                    <Input
+                      type="datetime-local"
+                      value={newPostData.scheduledDate}
+                      onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Mídia (Imagem ou Vídeo)</label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="gap-2"
+                      >
+                        <Upload size={16} />
+                        Selecionar Arquivo
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      {previewImage && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => setPreviewImage(null)}
+                          className="text-red-400"
+                        >
+                          <X size={16} />
+                        </Button>
                       )}
                     </div>
-                  )}
+                    {previewImage && (
+                      <div className="mt-3 relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                        {previewImage.startsWith("data:video") ? (
+                          <video src={previewImage} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <Button onClick={handleCreatePost} className="w-full">
+                    Criar Post
+                  </Button>
                 </div>
-                <Button onClick={handleCreatePost} className="w-full">
-                  Criar Post
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant={showFiltersPanel ? "default" : "outline"}
+              onClick={() => setShowFiltersPanel(!showFiltersPanel)}
+              className="gap-2"
+            >
+              <Filter size={16} />
+              Filtros
+            </Button>
+          </div>
+
+          {/* Filters Panel */}
+          {showFiltersPanel && (
+            <Card className="p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Status</label>
+                  <Select
+                    value={filters.status || "all"}
+                    onValueChange={(val) =>
+                      setFilters({ ...filters, status: val === "all" ? undefined : val })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {Object.entries(statusConfig).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          {config.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Criador</label>
+                  <Select
+                    value={filters.creator || "all"}
+                    onValueChange={(val) =>
+                      setFilters({ ...filters, creator: val === "all" ? undefined : val })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {creators.map((creator) => (
+                        <SelectItem key={creator} value={creator}>
+                          {creator}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">De</label>
+                  <Input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Até</label>
+                  <Input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="flex-1"
+                >
+                  Limpar Filtros
+                </Button>
+                <Button
+                  onClick={() => setShowFiltersPanel(false)}
+                  className="flex-1"
+                >
+                  Aplicar
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
+            </Card>
+          )}
+        </div>
 
-          <Select value={selectedStatus || "all"} onValueChange={(val) => setSelectedStatus(val === "all" ? undefined : val)}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              {Object.entries(statusConfig).map(([key, config]) => (
-                <SelectItem key={key} value={key}>
-                  {config.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Results Info */}
+        <div className="mb-4 text-sm text-muted-foreground">
+          Mostrando {filteredPosts.length} de {posts.length} posts
         </div>
 
         {/* Posts Grid */}
@@ -386,7 +570,9 @@ export default function PublicationManager() {
           {filteredPosts.length === 0 ? (
             <div className="col-span-full text-center py-12">
               <AlertCircle size={32} className="mx-auto text-muted-foreground/50 mb-2" />
-              <p className="text-muted-foreground">Nenhum post encontrado</p>
+              <p className="text-muted-foreground">
+                {posts.length === 0 ? "Nenhum post encontrado" : "Nenhum post corresponde aos filtros"}
+              </p>
             </div>
           ) : (
             filteredPosts.map((post) => {
@@ -442,15 +628,24 @@ export default function PublicationManager() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t border-border mt-3">
+                  <div className="flex gap-2 pt-3 border-t border-border mt-3 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleEditPost(post.id)}
-                      className="text-blue-400 hover:text-blue-300 gap-1"
+                      className="text-blue-400 hover:text-blue-300 gap-1 flex-1"
                     >
                       <Edit size={14} />
                       Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDuplicatePost(post.id)}
+                      className="text-green-400 hover:text-green-300 gap-1 flex-1"
+                    >
+                      <Copy size={14} />
+                      Duplicar
                     </Button>
                     {post.status !== "published" && post.status !== "failed" && (
                       <Select value={post.status} onValueChange={(val) => handleUpdateStatus(post.id, val)}>

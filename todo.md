@@ -55,5 +55,24 @@
   - [x] Toast com detalhes: "Post movido de X para Y por [Usuário] às [Hora]"
   - [x] Rastrear timestamp e usuário de cada mudança
   - [x] Testes de histórico passando
+- [x] Implementar busca e filtros avançados — Campo de busca por título/legenda e filtros por data, criador ou status
+  - [x] Campo de busca em tempo real por título e legenda
+  - [x] Filtros avançados: status, criador, data (de/até)
+  - [x] Painel de filtros collapsável
+  - [x] Botão para limpar filtros
+  - [x] Exibição de contagem de posts filtrados
+  - [x] Testes de filtro passando (5/5)
+- [x] Adicionar duplicação de posts — Botão para copiar post existente mantendo mídia e legenda
+  - [x] Botão "Duplicar" em cada post
+  - [x] Cria novo post com sufixo " (cópia)" no título
+  - [x] Copia legenda e mídia do post original
+  - [x] Novo post começa como rascunho
+  - [x] Testes de duplicação passando
+- [x] Integrar com banco de dados — Migrar dados do localStorage para TiDB com sincronização
+  - [x] Adicionar funções de CRUD no server/db.ts
+  - [x] Criar helpers: createPost, getPostById, getAllPosts, updatePost, deletePost
+  - [x] Implementar histórico de transições: addStatusHistory, getPostHistory
+  - [x] Router tRPC de posts já existe com procedures completos
+  - [x] Suporte para sincronização localStorage ↔ TiDB
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões

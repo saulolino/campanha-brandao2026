@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -101,7 +101,115 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Post queries
+export async function createPost(post: InsertInstagramPost): Promise<number | null> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot create post: database not available");
+    return null;
+  }
+
+  try {
+    const result = await db.insert(instagramPosts).values(post);
+    return (result as any).insertId as number || null;
+  } catch (error) {
+    console.error("[Database] Failed to create post:", error);
+    throw error;
+  }
+}
+
+export async function getPostById(postId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get post: database not available");
+    return undefined;
+  }
+
+  try {
+    const result = await db.select().from(instagramPosts).where(eq(instagramPosts.id, postId)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get post:", error);
+    throw error;
+  }
+}
+
+export async function getAllPosts() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get posts: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(instagramPosts).orderBy(desc(instagramPosts.createdAt));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get posts:", error);
+    throw error;
+  }
+}
+
+export async function updatePost(postId: number, updates: Partial<InsertInstagramPost>): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update post: database not available");
+    return;
+  }
+
+  try {
+    await db.update(instagramPosts).set(updates).where(eq(instagramPosts.id, postId));
+  } catch (error) {
+    console.error("[Database] Failed to update post:", error);
+    throw error;
+  }
+}
+
+export async function deletePost(postId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot delete post: database not available");
+    return;
+  }
+
+  try {
+    await db.delete(instagramPosts).where(eq(instagramPosts.id, postId));
+  } catch (error) {
+    console.error("[Database] Failed to delete post:", error);
+    throw error;
+  }
+}
+
+export async function addStatusHistory(history: InsertPostStatusHistory): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot add status history: database not available");
+    return;
+  }
+
+  try {
+    await db.insert(postStatusHistory).values(history);
+  } catch (error) {
+    console.error("[Database] Failed to add status history:", error);
+    throw error;
+  }
+}
+
+export async function getPostHistory(postId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get post history: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(postStatusHistory).where(eq(postStatusHistory.postId, postId)).orderBy(desc(postStatusHistory.createdAt));
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get post history:", error);
+    throw error;
+  }
+}
 
 export async function updateUserRole(userId: number, newRole: "visitor" | "team" | "coordinator" | "superadmin"): Promise<void> {
   const db = await getDb();
