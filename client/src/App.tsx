@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
+import PostPerformance from "./pages/PostPerformance";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -21,7 +22,8 @@ function Router() {
       <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
-      <Route path={"/performance"} component={PerformanceDashboard} />
+      <Route path={"/performance"} component={PostPerformance} />
+      <Route path={"/performance-dashboard"} component={PerformanceDashboard} />
       <Route path={"/usuarios"} component={UserManagement} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
