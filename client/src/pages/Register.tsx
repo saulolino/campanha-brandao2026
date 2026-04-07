@@ -24,6 +24,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
 
 export default function Register() {
   const [, setLocation] = useLocation();
+  const [step, setStep] = useState<"info" | "role">("info");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -32,7 +33,7 @@ export default function Register() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("visitor");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !email || !whatsapp || !password || !confirmPassword) {
@@ -50,6 +51,11 @@ export default function Register() {
       return;
     }
 
+    setStep("role");
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
 
     try {
@@ -98,123 +104,150 @@ export default function Register() {
           <p className="text-lg text-muted-foreground">Registre-se no Painel de Campanha</p>
         </div>
 
-        <Card className="p-8 border-2 border-primary/20">
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Nome Completo</label>
-              <Input
-                type="text"
-                placeholder="Seu nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 text-muted-foreground" size={20} />
+        {step === "info" ? (
+          // Step 1: User Information
+          <Card className="p-8 border-2 border-primary/20">
+            <form onSubmit={handleInfoSubmit} className="space-y-6">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Nome Completo</label>
                 <Input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  type="text"
+                  placeholder="Seu nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
               </div>
-            </div>
 
-            {/* WhatsApp */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">WhatsApp</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 text-muted-foreground" size={20} />
-                <Input
-                  type="tel"
-                  placeholder="(61) 99999-9999"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 text-muted-foreground" size={20} />
+                  <Input
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-muted-foreground" size={20} />
-                <Input
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+              {/* WhatsApp */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">WhatsApp</label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-3 text-muted-foreground" size={20} />
+                  <Input
+                    type="tel"
+                    placeholder="(61) 99999-9999"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Confirmar Senha</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-muted-foreground" size={20} />
-                <Input
-                  type="password"
-                  placeholder="Confirme sua senha"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 text-muted-foreground" size={20} />
+                  <Input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-3">Nível de Acesso</label>
-              <div className="grid grid-cols-2 gap-3">
-                {(["visitor", "team", "coordinator", "superadmin"] as UserRole[]).map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => setSelectedRole(role)}
-                    className={`p-3 rounded-lg border-2 transition-all duration-200 text-left ${
-                      ROLE_COLORS[role]
-                    } ${selectedRole === role ? "ring-2 ring-primary" : ""}`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-primary">{ROLE_ICONS[role]}</span>
-                      <span className="text-xs font-bold">{ROLE_DESCRIPTIONS[role].label}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTIONS[role].description}</p>
-                  </button>
-                ))}
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">Confirmar Senha</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 text-muted-foreground" size={20} />
+                  <Input
+                    type="password"
+                    placeholder="Confirme sua senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
               </div>
+
+              {/* Next Button */}
+              <Button type="submit" className="w-full">
+                Próximo
+              </Button>
+            </form>
+
+            {/* Login Link */}
+            <div className="mt-6 text-center">
+              <p className="text-muted-foreground">
+                Já tem uma conta?{" "}
+                <a href="/login" className="text-primary hover:underline font-medium">
+                  Faça login aqui
+                </a>
+              </p>
+            </div>
+          </Card>
+        ) : (
+          // Step 2: Role Selection
+          <>
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">Selecione seu nível de acesso</h2>
+              <p className="text-muted-foreground">Escolha o nível de acesso que melhor se adequa ao seu papel</p>
             </div>
 
-            {/* Register Button */}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Registrando..." : "Registrar"}
-            </Button>
-          </form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              {(["visitor", "team", "coordinator", "superadmin"] as UserRole[]).map((role) => (
+                <Card
+                  key={role}
+                  className={`p-6 cursor-pointer border-2 transition-all duration-200 ${ROLE_COLORS[role]} ${
+                    selectedRole === role ? "ring-2 ring-primary" : ""
+                  }`}
+                  onClick={() => setSelectedRole(role)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-primary">{ROLE_ICONS[role]}</div>
+                    <Badge>{ROLE_DESCRIPTIONS[role].label}</Badge>
+                  </div>
 
-          {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-muted-foreground">
-              Já tem uma conta?{" "}
-              <a href="/login" className="text-primary hover:underline font-medium">
-                Faça login aqui
-              </a>
-            </p>
-          </div>
-        </Card>
+                  <h3 className="text-lg font-bold text-foreground mb-2">
+                    {ROLE_DESCRIPTIONS[role].label}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {ROLE_DESCRIPTIONS[role].description}
+                  </p>
+                </Card>
+              ))}
+            </div>
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Registrando..." : "Registrar"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setStep("info")}
+                disabled={isLoading}
+              >
+                Voltar
+              </Button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );

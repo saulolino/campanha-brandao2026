@@ -1,45 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, TrendingUp, Users, Heart, MessageCircle, Eye, Share2, LogOut } from "lucide-react";
-import { useEffect, useState } from "react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-
-// Dados de exemplo para gráficos
-const FOLLOWERS_DATA = [
-  { date: "Seg", followers: 1200, engagement: 45 },
-  { date: "Ter", followers: 1350, engagement: 52 },
-  { date: "Qua", followers: 1450, engagement: 48 },
-  { date: "Qui", followers: 1580, engagement: 61 },
-  { date: "Sex", followers: 1750, engagement: 55 },
-  { date: "Sab", followers: 1900, engagement: 72 },
-  { date: "Dom", followers: 2050, engagement: 68 },
-];
-
-const POSTS_DATA = [
-  { name: "Carrossel", value: 35, color: "#10b981" },
-  { name: "Vídeo", value: 28, color: "#3b82f6" },
-  { name: "Foto", value: 22, color: "#f59e0b" },
-  { name: "Story", value: 15, color: "#8b5cf6" },
-];
-
-const ENGAGEMENT_DATA = [
-  { type: "Curtidas", value: 2450, icon: Heart, color: "text-red-500" },
-  { type: "Comentários", value: 380, icon: MessageCircle, color: "text-blue-500" },
-  { type: "Compartilhamentos", value: 156, icon: Share2, color: "text-green-500" },
-  { type: "Visualizações", value: 12500, icon: Eye, color: "text-purple-500" },
-];
+import { Card } from "@/components/ui/card";
+import { Loader2, LogOut, User, Settings } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Home() {
   const { user, loading, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [stats, setStats] = useState({
-    followers: 2050,
-    growth: 12.5,
-    posts: 127,
-    avgEngagement: 62,
-  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,6 +27,16 @@ export default function Home() {
     return null;
   }
 
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      visitor: "Visitante",
+      team: "Equipe",
+      coordinator: "Coordenador",
+      superadmin: "SuperAdmin",
+    };
+    return labels[role] || role;
+  };
+
   const handleLogout = async () => {
     await logout();
     setLocation("/login");
@@ -67,7 +45,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header */}
-      <header className="border-b border-primary/10 bg-background/50 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-primary/10 bg-background/50 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -75,16 +53,18 @@ export default function Home() {
               alt="Brasília Cidade Parque"
               className="w-10 h-10"
             />
-            <div>
-              <h1 className="text-xl font-bold">Brasília Cidade Parque</h1>
-              <p className="text-xs text-muted-foreground">Painel de Campanha</p>
-            </div>
+            <h1 className="text-2xl font-bold">Brasília Cidade Parque</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium">{user.name}</p>
-              <p className="text-xs text-muted-foreground">{user.email}</p>
-            </div>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/profile")}
+              className="gap-2"
+            >
+              <User className="w-4 h-4" />
+              Perfil
+            </Button>
             <Button
               variant="destructive"
               size="sm"
@@ -99,142 +79,129 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Bem-vindo, {user.name}! 👋</h2>
-          <p className="text-muted-foreground">Acompanhe o desempenho da sua campanha em tempo real</p>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Seguidores</h3>
-              <Users className="w-5 h-5 text-primary" />
+      <main className="max-w-7xl mx-auto px-4 py-12">
+        {/* Welcome Card */}
+        <Card className="p-8 mb-8 border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold mb-2">
+                Bem-vindo, {user.name}!
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Nível de Acesso: <span className="font-semibold text-primary">{getRoleLabel(user.role)}</span>
+              </p>
             </div>
-            <p className="text-3xl font-bold mb-2">{stats.followers.toLocaleString()}</p>
-            <p className="text-xs text-green-500 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              +{stats.growth}% esta semana
-            </p>
-          </Card>
-
-          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Posts Publicados</h3>
-              <Eye className="w-5 h-5 text-blue-500" />
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Email</p>
+              <p className="font-medium">{user.email}</p>
+              <p className="text-sm text-muted-foreground mt-2">WhatsApp</p>
+              <p className="font-medium">{user.whatsapp}</p>
             </div>
-            <p className="text-3xl font-bold mb-2">{stats.posts}</p>
-            <p className="text-xs text-muted-foreground">Total de publicações</p>
-          </Card>
-
-          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Engajamento Médio</h3>
-              <Heart className="w-5 h-5 text-red-500" />
-            </div>
-            <p className="text-3xl font-bold mb-2">{stats.avgEngagement}%</p>
-            <p className="text-xs text-muted-foreground">Taxa de engajamento</p>
-          </Card>
-
-          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-medium text-muted-foreground">Próxima Semana</h3>
-              <MessageCircle className="w-5 h-5 text-purple-500" />
-            </div>
-            <p className="text-3xl font-bold mb-2">8</p>
-            <p className="text-xs text-muted-foreground">Posts agendados</p>
-          </Card>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Growth Chart */}
-          <Card className="lg:col-span-2 p-6 border-primary/20">
-            <h3 className="text-lg font-semibold mb-4">Crescimento de Seguidores</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={FOLLOWERS_DATA}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" />
-                <YAxis stroke="rgba(255,255,255,0.5)" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.2)" }}
-                  labelStyle={{ color: "#fff" }}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="followers" 
-                  stroke="#10b981" 
-                  strokeWidth={2}
-                  dot={{ fill: "#10b981", r: 4 }}
-                  name="Seguidores"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Posts Distribution */}
-          <Card className="p-6 border-primary/20">
-            <h3 className="text-lg font-semibold mb-4">Distribuição de Posts</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={POSTS_DATA}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {POSTS_DATA.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
-
-        {/* Engagement Metrics */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-4">Métricas de Engajamento</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {ENGAGEMENT_DATA.map((metric) => {
-              const Icon = metric.icon;
-              return (
-                <Card key={metric.type} className="p-6 border-primary/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-muted-foreground">{metric.type}</h4>
-                    <Icon className={`w-5 h-5 ${metric.color}`} />
-                  </div>
-                  <p className="text-2xl font-bold">{metric.value.toLocaleString()}</p>
-                </Card>
-              );
-            })}
           </div>
+        </Card>
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Painel Principal */}
+          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+            <h3 className="text-lg font-semibold mb-4">Painel Principal</h3>
+            <p className="text-muted-foreground mb-4">
+              Acesse o painel de controle da campanha com métricas em tempo real.
+            </p>
+            <Button
+              onClick={() => setLocation("/home")}
+              className="w-full"
+            >
+              Ir para Painel
+            </Button>
+          </Card>
+
+          {/* Publicações */}
+          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+            <h3 className="text-lg font-semibold mb-4">Gerenciador de Publicações</h3>
+            <p className="text-muted-foreground mb-4">
+              Gerencie todas as publicações da campanha em um único lugar.
+            </p>
+            <Button
+              onClick={() => setLocation("/publicacoes")}
+              className="w-full"
+            >
+              Ir para Publicações
+            </Button>
+          </Card>
+
+          {/* Performance */}
+          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+            <h3 className="text-lg font-semibold mb-4">Performance</h3>
+            <p className="text-muted-foreground mb-4">
+              Analise o desempenho da campanha com gráficos e relatórios.
+            </p>
+            <Button
+              onClick={() => setLocation("/performance")}
+              className="w-full"
+            >
+              Ver Performance
+            </Button>
+          </Card>
+
+          {/* Apoiadores */}
+          <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+            <h3 className="text-lg font-semibold mb-4">Apoiadores</h3>
+            <p className="text-muted-foreground mb-4">
+              Gerencie a lista de apoiadores da campanha.
+            </p>
+            <Button
+              onClick={() => setLocation("/apoiadores")}
+              className="w-full"
+            >
+              Ver Apoiadores
+            </Button>
+          </Card>
+
+          {/* Usuários */}
+          {(user.role === "coordinator" || user.role === "superadmin") && (
+            <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+              <h3 className="text-lg font-semibold mb-4">Gerenciamento de Usuários</h3>
+              <p className="text-muted-foreground mb-4">
+                Gerencie os usuários do sistema e suas permissões.
+              </p>
+              <Button
+                onClick={() => setLocation("/usuarios")}
+                className="w-full"
+              >
+                Gerenciar Usuários
+              </Button>
+            </Card>
+          )}
+
+          {/* Admin */}
+          {user.role === "superadmin" && (
+            <Card className="p-6 border-primary/20 hover:border-primary/40 transition-colors">
+              <h3 className="text-lg font-semibold mb-4">Painel de Admin</h3>
+              <p className="text-muted-foreground mb-4">
+                Acesse as ferramentas administrativas do sistema.
+              </p>
+              <Button
+                onClick={() => setLocation("/admin")}
+                className="w-full"
+              >
+                Ir para Admin
+              </Button>
+            </Card>
+          )}
         </div>
 
-        {/* Engagement Over Time */}
-        <Card className="p-6 border-primary/20">
-          <h3 className="text-lg font-semibold mb-4">Engajamento ao Longo da Semana</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={FOLLOWERS_DATA}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="date" stroke="rgba(255,255,255,0.5)" />
-              <YAxis stroke="rgba(255,255,255,0.5)" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.2)" }}
-                labelStyle={{ color: "#fff" }}
-              />
-              <Legend />
-              <Bar dataKey="engagement" fill="#3b82f6" name="Engajamento (%)" />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Info Box */}
+        <Card className="mt-8 p-6 bg-primary/5 border-primary/20">
+          <div className="flex items-start gap-4">
+            <Settings className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-semibold mb-2">Dica: Gerenciar Perfil</h3>
+              <p className="text-sm text-muted-foreground">
+                Você pode editar suas informações pessoais, alterar sua senha e gerenciar suas preferências na página de perfil.
+              </p>
+            </div>
+          </div>
         </Card>
       </main>
     </div>
