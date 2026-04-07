@@ -6,8 +6,21 @@
 - [x] Dashboard de performance — Métricas de posts publicados (curtidas, comentários, alcance)
 - [x] Rascunhos colaborativos — WebSocket para edições em tempo real entre Designer e Redator
 
-- [ ] Sistema de Login — 4 níveis de hierarquia (Visitante, Equipe, Coordenador, SuperAdmin)
+- [x] Sistema de Login — 4 níveis de hierarquia (Visitante, Equipe, Coordenador, SuperAdmin)
+- [x] Página de Login — Interface para login com seleção de hierarquia
+- [x] Integrar Instagram API — Conectar dados reais do Instagram para atualizar métricas em tempo real
+  - [x] Configurar credenciais do Instagram
+  - [x] Criar endpoint para buscar dados do Instagram
+  - [ ] Atualizar métricas em Visão Geral
+  - [ ] Atualizar gráficos em Análise
+- [x] Implementar controle de acesso por role — Restringir funcionalidades do dashboard conforme o role
+  - [x] Restringir acesso a Visitante (apenas visualização)
+  - [x] Permitir Equipe (acesso total, sem publicação)
+  - [x] Permitir Coordenador (acesso total com publicação)
+  - [x] Permitir Superadmin (acesso total e administração)
+- [x] Migrar roles para banco de dados — Sincronizar roles com schema alinhado corretamente
+  - [x] Corrigir schema do banco de dados
+  - [x] Atualizar função upsertUser
+  - [x] Sincronizar roles ao fazer login
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
-- [ ] Página de Login — Interface para login com seleção de hierarquia
-- [ ] Controle de Acesso — Restringir acesso a páginas e funcionalidades por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões
