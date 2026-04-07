@@ -31,7 +31,10 @@ export default function Login() {
       }
 
       toast.success("Login realizado com sucesso!");
-      setLocation("/home");
+      // Aguardar um pouco para garantir que o toast seja exibido
+      setTimeout(() => {
+        setLocation("/home");
+      }, 500);
     } catch (error) {
       toast.error("Erro ao conectar com o servidor");
       console.error(error);
