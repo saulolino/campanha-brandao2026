@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Mail, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -31,6 +32,9 @@ export default function Login() {
       }
 
       toast.success("Login realizado com sucesso!");
+      // Invalidar a query de auth para forçar recarregamento do usuário
+      const utils = trpc.useUtils();
+      await utils.auth.me.invalidate();
       // Aguardar um pouco para garantir que o toast seja exibido
       setTimeout(() => {
         setLocation("/");
