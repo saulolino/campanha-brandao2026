@@ -29,6 +29,20 @@
       "when": 1775494258598,
       "tag": "0003_lyrical_misty_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1775522499627,
+      "tag": "0004_bizarre_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1775524261197,
+      "tag": "0005_quick_lorna_dane",
+      "breakpoints": true
     }
   ]
 }
