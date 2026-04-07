@@ -106,10 +106,10 @@ export default function Home() {
               Acesse o painel de controle da campanha com métricas em tempo real.
             </p>
             <Button
-              onClick={() => setLocation("/home")}
+              disabled
               className="w-full"
             >
-              Ir para Painel
+              Você está no Painel
             </Button>
           </Card>
 
