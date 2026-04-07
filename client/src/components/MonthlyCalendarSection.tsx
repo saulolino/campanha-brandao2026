@@ -4,6 +4,7 @@
 // ============================================================
 import { useState } from "react";
 import { CALENDAR_MONTHS, PILLAR_COLORS, type CalendarPost } from "@/lib/monthlyCalendar";
+import { ScheduledPostEditor } from "./ScheduledPostEditor";
 import {
   Calendar,
   ChevronLeft,
@@ -15,9 +16,11 @@ import {
   LayoutGrid,
   Image,
   X,
+  Edit,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-function PostTooltip({ post, onClose }: { post: CalendarPost; onClose: () => void }) {
+function PostTooltip({ post, onClose, onEdit }: { post: CalendarPost; onClose: () => void; onEdit: (post: CalendarPost) => void }) {
   const pillar = PILLAR_COLORS[post.pillar];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -54,6 +57,17 @@ function PostTooltip({ post, onClose }: { post: CalendarPost; onClose: () => voi
           <span className="text-[9px] text-muted-foreground uppercase tracking-wider">Post #{post.id}</span>
           <span className="text-[9px] font-mono text-muted-foreground">{post.status.toUpperCase()}</span>
         </div>
+        {post.status === "planejado" && (
+          <Button
+            onClick={() => onEdit(post)}
+            variant="outline"
+            size="sm"
+            className="w-full mt-3 text-xs"
+          >
+            <Edit size={12} className="mr-1" />
+            Editar
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -62,6 +76,8 @@ function PostTooltip({ post, onClose }: { post: CalendarPost; onClose: () => voi
 export default function MonthlyCalendarSection() {
   const [selectedMonthIdx, setSelectedMonthIdx] = useState(0);
   const [selectedPost, setSelectedPost] = useState<CalendarPost | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [postToEdit, setPostToEdit] = useState<CalendarPost | null>(null);
 
   const month = CALENDAR_MONTHS[selectedMonthIdx];
   const totalPosts = CALENDAR_MONTHS.reduce((acc, m) => acc + m.postsCount, 0);
@@ -284,7 +300,36 @@ export default function MonthlyCalendarSection() {
       </div>
 
       {/* Post detail modal */}
-      {selectedPost && <PostTooltip post={selectedPost} onClose={() => setSelectedPost(null)} />}
+      {selectedPost && (
+        <PostTooltip
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          onEdit={(post) => {
+            setPostToEdit(post);
+            setIsEditorOpen(true);
+            setSelectedPost(null);
+          }}
+        />
+      )}
+
+      {/* Scheduled Post Editor Modal */}
+      {postToEdit && (
+        <ScheduledPostEditor
+          post={{
+            id: postToEdit.id.toString(),
+            title: postToEdit.title,
+            caption: "", // CalendarPost não tem caption, usar vazio
+            scheduledDate: `${postToEdit.date}T${postToEdit.time}:00`,
+            status: "scheduled",
+          }}
+          isOpen={isEditorOpen}
+          onOpenChange={setIsEditorOpen}
+          onSave={async (updatedPost) => {
+            // TODO: Conectar ao tRPC para salvar no banco
+            console.log("Post atualizado:", updatedPost);
+          }}
+        />
+      )}
     </div>
   );
 }

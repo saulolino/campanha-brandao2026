@@ -167,3 +167,25 @@
   - [x] Desabilitar campos para usuários sem permissão
   - [x] Testes de edição (7 testes passando)
   - [ ] Integrar no calendário mensal (próximo passo)
+
+- [x] Integrar ScheduledPostEditor no calendário — Adicionar botão "Editar" no tooltip
+  - [x] Importar ScheduledPostEditor no MonthlyCalendarSection.tsx
+  - [x] Adicionar estado para controlar modal aberto/fechado
+  - [x] Adicionar botão "Editar" no PostTooltip
+  - [x] Converter CalendarPost para ScheduledPost
+  - [x] Botão "Editar" aparece apenas para posts "planejado"
+  - [x] Sem erros de TypeScript
+
+- [ ] Conectar ao tRPC para persistência — Implementar onSave com chamada tRPC
+  - [ ] Criar procedure tRPC para atualizar posts
+  - [ ] Implementar onSave no ScheduledPostEditor
+  - [ ] Chamar tRPC.posts.updatePost
+  - [ ] Tratar erros de atualização
+  - [ ] Testes de tRPC
+
+- [ ] Adicionar notificação de edição — Toast com histórico
+  - [ ] Criar hook usePostEditHistory
+  - [ ] Armazenar histórico em localStorage
+  - [ ] Exibir toast com "Post atualizado por [Coordenador] às [Hora]"
+  - [ ] Adicionar histórico de edições ao post
+  - [ ] Testes de notificação
