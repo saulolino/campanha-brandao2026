@@ -34,7 +34,7 @@ import {
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocalAuth } from "@/hooks/useLocalAuth";
 import InfoTooltip from "./InfoTooltip";
 import LogoutConfirmDialog from "./LogoutConfirmDialog";
 
@@ -394,7 +394,7 @@ function NavGroupComponent({
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
-  const { user } = useAuth();
+  const { user } = useLocalAuth();
 
   return (
     <>
