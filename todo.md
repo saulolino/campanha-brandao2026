@@ -40,5 +40,20 @@
   - [x] Criar testes unitários para PublicationManager
   - [x] Todos os testes passando (7/7)
 - [ ] Corrigir PostPerformance.tsx — Verificar e remover dependências de tRPC se necessário
+- [x] Adicionar edição de posts — Modal de edição para modificar título, legenda e data
+  - [x] Implementar botão de edição em cada post
+  - [x] Criar modal de edição com formulário
+  - [x] Salvar alterações com timestamp e usuário
+  - [x] Testes passando (9/9)
+- [x] Implementar upload de mídia — Upload de imagens/vídeos com preview
+  - [x] Input de arquivo com validação de tipo e tamanho
+  - [x] Preview de imagem/vídeo antes de salvar
+  - [x] Armazenamento em localStorage como base64
+  - [x] Exibição de mídia nos cards de posts
+- [x] Adicionar notificações de transição — Toast com informações de quem moveu e quando
+  - [x] Implementar histórico de transições em cada post
+  - [x] Toast com detalhes: "Post movido de X para Y por [Usuário] às [Hora]"
+  - [x] Rastrear timestamp e usuário de cada mudança
+  - [x] Testes de histórico passando
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões

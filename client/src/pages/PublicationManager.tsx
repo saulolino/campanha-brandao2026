@@ -29,6 +29,8 @@ import {
   Type,
   CheckSquare,
   X,
+  Upload,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +62,16 @@ interface Post {
   createdBy: string;
   mediaUrl?: string;
   createdAt: string;
+  updatedAt: string;
+  updatedBy?: string;
+  history: TransitionHistory[];
+}
+
+interface TransitionHistory {
+  timestamp: string;
+  fromStatus: string;
+  toStatus: string;
+  movedBy: string;
 }
 
 export default function PublicationManager() {
@@ -68,7 +80,10 @@ export default function PublicationManager() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [newPostData, setNewPostData] = useState({ title: "", caption: "", scheduledDate: "" });
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Carregar posts do localStorage
@@ -108,26 +123,125 @@ export default function PublicationManager() {
       scheduledDate: newPostData.scheduledDate,
       createdBy: user?.email || "Usuário",
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      mediaUrl: previewImage || undefined,
+      history: [],
     };
 
     savePosts([...posts, newPost]);
     setShowNewPostDialog(false);
     setNewPostData({ title: "", caption: "", scheduledDate: "" });
+    setPreviewImage(null);
     toast.success("Post criado com sucesso!");
   };
 
-  const handleUpdateStatus = (postId: number, newStatus: string) => {
+  const handleEditPost = (postId: number) => {
+    const post = posts.find((p) => p.id === postId);
+    if (post) {
+      setEditingPostId(postId);
+      setNewPostData({
+        title: post.title,
+        caption: post.caption,
+        scheduledDate: post.scheduledDate,
+      });
+      setPreviewImage(post.mediaUrl || null);
+      setShowEditDialog(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!newPostData.title.trim()) {
+      toast.error("Título é obrigatório");
+      return;
+    }
+
     const updatedPosts = posts.map((post) =>
-      post.id === postId ? { ...post, status: newStatus } : post
+      post.id === editingPostId
+        ? {
+            ...post,
+            title: newPostData.title,
+            caption: newPostData.caption,
+            scheduledDate: newPostData.scheduledDate,
+            mediaUrl: previewImage || post.mediaUrl,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user?.email || "Usuário",
+          }
+        : post
     );
+
     savePosts(updatedPosts);
-    toast.success(`Post movido para ${statusConfig[newStatus as keyof typeof statusConfig]?.label}`);
+    setShowEditDialog(false);
+    setEditingPostId(null);
+    setNewPostData({ title: "", caption: "", scheduledDate: "" });
+    setPreviewImage(null);
+    toast.success("Post atualizado com sucesso!");
+  };
+
+  const handleUpdateStatus = (postId: number, newStatus: string) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const transition: TransitionHistory = {
+      timestamp: new Date().toISOString(),
+      fromStatus: post.status,
+      toStatus: newStatus,
+      movedBy: user?.email || "Usuário",
+    };
+
+    const updatedPosts = posts.map((p) =>
+      p.id === postId
+        ? {
+            ...p,
+            status: newStatus,
+            updatedAt: new Date().toISOString(),
+            updatedBy: user?.email || "Usuário",
+            history: [...(p.history || []), transition],
+          }
+        : p
+    );
+
+    savePosts(updatedPosts);
+
+    // Toast com informações detalhadas
+    const fromLabel = statusConfig[post.status as keyof typeof statusConfig]?.label || post.status;
+    const toLabel = statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus;
+    const timestamp = format(new Date(), "HH:mm", { locale: ptBR });
+
+    toast.success(
+      `Post movido de "${fromLabel}" para "${toLabel}" por ${user?.name || "Você"} às ${timestamp}`
+    );
   };
 
   const handleDeletePost = (postId: number) => {
     const updatedPosts = posts.filter((post) => post.id !== postId);
     savePosts(updatedPosts);
     toast.success("Post deletado com sucesso!");
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      toast.error("Apenas imagens e vídeos são permitidos");
+      return;
+    }
+
+    // Validar tamanho (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máximo 10MB)");
+      return;
+    }
+
+    // Criar preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setPreviewImage(result);
+      toast.success("Mídia carregada com sucesso!");
+    };
+    reader.readAsDataURL(file);
   };
 
   const filteredPosts = selectedStatus
@@ -177,7 +291,7 @@ export default function PublicationManager() {
                 Novo Post
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Criar Novo Post</DialogTitle>
               </DialogHeader>
@@ -206,6 +320,44 @@ export default function PublicationManager() {
                     value={newPostData.scheduledDate}
                     onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
                   />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Mídia (Imagem ou Vídeo)</label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="gap-2"
+                    >
+                      <Upload size={16} />
+                      Selecionar Arquivo
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    {previewImage && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setPreviewImage(null)}
+                        className="text-red-400"
+                      >
+                        <X size={16} />
+                      </Button>
+                    )}
+                  </div>
+                  {previewImage && (
+                    <div className="mt-3 relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                      {previewImage.startsWith("data:video") ? (
+                        <video src={previewImage} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                  )}
                 </div>
                 <Button onClick={handleCreatePost} className="w-full">
                   Criar Post
@@ -242,8 +394,8 @@ export default function PublicationManager() {
               const Icon = config?.icon || AlertCircle;
 
               return (
-                <Card key={post.id} className="p-4 hover:border-primary/50 transition-colors">
-                  <div className="space-y-3">
+                <Card key={post.id} className="p-4 hover:border-primary/50 transition-colors flex flex-col">
+                  <div className="space-y-3 flex-1">
                     {/* Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
@@ -255,6 +407,17 @@ export default function PublicationManager() {
                         {config?.label}
                       </Badge>
                     </div>
+
+                    {/* Media Preview */}
+                    {post.mediaUrl && (
+                      <div className="relative w-full h-32 bg-muted rounded-lg overflow-hidden">
+                        {post.mediaUrl.startsWith("data:video") ? (
+                          <video src={post.mediaUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={post.mediaUrl} alt={post.title} className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    )}
 
                     {/* Caption Preview */}
                     {post.caption && (
@@ -269,31 +432,48 @@ export default function PublicationManager() {
                       </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2 border-t border-border">
-                      {post.status !== "published" && post.status !== "failed" && (
-                        <Select value={post.status} onValueChange={(val) => handleUpdateStatus(post.id, val)}>
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(statusConfig).map(([key, config]) => (
-                              <SelectItem key={key} value={key}>
-                                {config.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletePost(post.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    {/* Updated Info */}
+                    {post.updatedBy && post.updatedAt !== post.createdAt && (
+                      <div className="text-xs text-muted-foreground/70 pt-2 border-t border-border">
+                        Atualizado por {post.updatedBy} em{" "}
+                        {format(new Date(post.updatedAt), "dd/MM HH:mm", { locale: ptBR })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-3 border-t border-border mt-3">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditPost(post.id)}
+                      className="text-blue-400 hover:text-blue-300 gap-1"
+                    >
+                      <Edit size={14} />
+                      Editar
+                    </Button>
+                    {post.status !== "published" && post.status !== "failed" && (
+                      <Select value={post.status} onValueChange={(val) => handleUpdateStatus(post.id, val)}>
+                        <SelectTrigger className="h-8 text-xs flex-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(statusConfig).map(([key, config]) => (
+                            <SelectItem key={key} value={key}>
+                              {config.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeletePost(post.id)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
                   </div>
                 </Card>
               );
@@ -301,6 +481,89 @@ export default function PublicationManager() {
           )}
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Título</label>
+              <Input
+                value={newPostData.title}
+                onChange={(e) => setNewPostData({ ...newPostData, title: e.target.value })}
+                placeholder="Título do post"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Legenda</label>
+              <Textarea
+                value={newPostData.caption}
+                onChange={(e) => setNewPostData({ ...newPostData, caption: e.target.value })}
+                placeholder="Legenda do post"
+                rows={4}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Data de Agendamento</label>
+              <Input
+                type="datetime-local"
+                value={newPostData.scheduledDate}
+                onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Mídia (Imagem ou Vídeo)</label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-2"
+                >
+                  <Upload size={16} />
+                  Alterar Arquivo
+                </Button>
+                {previewImage && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setPreviewImage(null)}
+                    className="text-red-400"
+                  >
+                    <X size={16} />
+                  </Button>
+                )}
+              </div>
+              {previewImage && (
+                <div className="mt-3 relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+                  {previewImage.startsWith("data:video") ? (
+                    <video src={previewImage} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSaveEdit} className="flex-1">
+                Salvar Alterações
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false);
+                  setEditingPostId(null);
+                  setNewPostData({ title: "", caption: "", scheduledDate: "" });
+                  setPreviewImage(null);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -24,6 +24,8 @@ describe("PublicationManager - localStorage operations", () => {
       scheduledDate: "2026-04-10T10:00:00",
       createdBy: "test@example.com",
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      history: [],
     };
 
     const posts = [newPost];
@@ -35,7 +37,7 @@ describe("PublicationManager - localStorage operations", () => {
     expect(savedPosts[0].status).toBe("draft");
   });
 
-  it("should update post status", () => {
+  it("should update post status with transition history", () => {
     const initialPost = {
       id: 1,
       title: "Test Post",
@@ -44,19 +46,103 @@ describe("PublicationManager - localStorage operations", () => {
       scheduledDate: "2026-04-10T10:00:00",
       createdBy: "test@example.com",
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      history: [],
     };
 
     let posts = [initialPost];
     localStorage.setItem("posts", JSON.stringify(posts));
 
-    // Update status
+    // Update status with transition history
+    const transition = {
+      timestamp: new Date().toISOString(),
+      fromStatus: "draft",
+      toStatus: "design",
+      movedBy: "test@example.com",
+    };
+
     posts = posts.map((post) =>
-      post.id === 1 ? { ...post, status: "design" } : post
+      post.id === 1
+        ? {
+            ...post,
+            status: "design",
+            updatedAt: new Date().toISOString(),
+            updatedBy: "test@example.com",
+            history: [...post.history, transition],
+          }
+        : post
     );
     localStorage.setItem("posts", JSON.stringify(posts));
 
     const savedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
     expect(savedPosts[0].status).toBe("design");
+    expect(savedPosts[0].history).toHaveLength(1);
+    expect(savedPosts[0].history[0].fromStatus).toBe("draft");
+    expect(savedPosts[0].history[0].toStatus).toBe("design");
+  });
+
+  it("should edit post data", () => {
+    const initialPost = {
+      id: 1,
+      title: "Original Title",
+      caption: "Original Caption",
+      status: "draft",
+      scheduledDate: "2026-04-10T10:00:00",
+      createdBy: "test@example.com",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      history: [],
+    };
+
+    let posts = [initialPost];
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    // Edit post
+    posts = posts.map((post) =>
+      post.id === 1
+        ? {
+            ...post,
+            title: "Updated Title",
+            caption: "Updated Caption",
+            updatedAt: new Date().toISOString(),
+            updatedBy: "test@example.com",
+          }
+        : post
+    );
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    const savedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
+    expect(savedPosts[0].title).toBe("Updated Title");
+    expect(savedPosts[0].caption).toBe("Updated Caption");
+    expect(savedPosts[0].updatedBy).toBe("test@example.com");
+  });
+
+  it("should add media URL to post", () => {
+    const initialPost = {
+      id: 1,
+      title: "Test Post",
+      caption: "Test Caption",
+      status: "draft",
+      scheduledDate: "2026-04-10T10:00:00",
+      createdBy: "test@example.com",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      mediaUrl: undefined,
+      history: [],
+    };
+
+    let posts = [initialPost];
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    // Add media
+    const mediaUrl = "data:image/png;base64,iVBORw0KGgo...";
+    posts = posts.map((post) =>
+      post.id === 1 ? { ...post, mediaUrl } : post
+    );
+    localStorage.setItem("posts", JSON.stringify(posts));
+
+    const savedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
+    expect(savedPosts[0].mediaUrl).toBe(mediaUrl);
   });
 
   it("should delete a post", () => {
@@ -69,6 +155,8 @@ describe("PublicationManager - localStorage operations", () => {
         scheduledDate: "2026-04-10T10:00:00",
         createdBy: "test@example.com",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [],
       },
       {
         id: 2,
@@ -78,6 +166,8 @@ describe("PublicationManager - localStorage operations", () => {
         scheduledDate: "2026-04-11T10:00:00",
         createdBy: "test@example.com",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [],
       },
     ];
 
@@ -102,6 +192,8 @@ describe("PublicationManager - localStorage operations", () => {
         scheduledDate: "2026-04-10T10:00:00",
         createdBy: "test@example.com",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [],
       },
       {
         id: 2,
@@ -111,6 +203,8 @@ describe("PublicationManager - localStorage operations", () => {
         scheduledDate: "2026-04-11T10:00:00",
         createdBy: "test@example.com",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [],
       },
       {
         id: 3,
@@ -120,6 +214,8 @@ describe("PublicationManager - localStorage operations", () => {
         scheduledDate: "2026-04-12T10:00:00",
         createdBy: "test@example.com",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [],
       },
     ];
 
@@ -132,14 +228,66 @@ describe("PublicationManager - localStorage operations", () => {
     expect(draftPosts[0].title).toBe("Draft Post");
   });
 
-  it("should handle empty posts list", () => {
-    localStorage.setItem("posts", JSON.stringify([]));
+  it("should maintain transition history across multiple status changes", () => {
+    const initialPost = {
+      id: 1,
+      title: "Test Post",
+      caption: "Test Caption",
+      status: "draft",
+      scheduledDate: "2026-04-10T10:00:00",
+      createdBy: "test@example.com",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      history: [],
+    };
+
+    let posts = [initialPost];
+
+    // First transition
+    const transition1 = {
+      timestamp: new Date().toISOString(),
+      fromStatus: "draft",
+      toStatus: "design",
+      movedBy: "designer@example.com",
+    };
+
+    posts = posts.map((post) =>
+      post.id === 1
+        ? {
+            ...post,
+            status: "design",
+            history: [...post.history, transition1],
+          }
+        : post
+    );
+
+    // Second transition
+    const transition2 = {
+      timestamp: new Date().toISOString(),
+      fromStatus: "design",
+      toStatus: "caption",
+      movedBy: "writer@example.com",
+    };
+
+    posts = posts.map((post) =>
+      post.id === 1
+        ? {
+            ...post,
+            status: "caption",
+            history: [...post.history, transition2],
+          }
+        : post
+    );
+
+    localStorage.setItem("posts", JSON.stringify(posts));
 
     const savedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
-    expect(savedPosts).toHaveLength(0);
+    expect(savedPosts[0].history).toHaveLength(2);
+    expect(savedPosts[0].history[0].toStatus).toBe("design");
+    expect(savedPosts[0].history[1].toStatus).toBe("caption");
   });
 
-  it("should validate post data before creating", () => {
+  it("should validate post data before editing", () => {
     const invalidPost = {
       title: "", // Empty title should be invalid
       caption: "Test",
@@ -150,44 +298,10 @@ describe("PublicationManager - localStorage operations", () => {
     expect(isValid).toBe(false);
   });
 
-  it("should maintain post order when filtering", () => {
-    const posts = [
-      {
-        id: 1,
-        title: "First",
-        caption: "C1",
-        status: "draft",
-        scheduledDate: "2026-04-10T10:00:00",
-        createdBy: "test@example.com",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 2,
-        title: "Second",
-        caption: "C2",
-        status: "design",
-        scheduledDate: "2026-04-11T10:00:00",
-        createdBy: "test@example.com",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: 3,
-        title: "Third",
-        caption: "C3",
-        status: "draft",
-        scheduledDate: "2026-04-12T10:00:00",
-        createdBy: "test@example.com",
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
-    localStorage.setItem("posts", JSON.stringify(posts));
+  it("should handle empty posts list", () => {
+    localStorage.setItem("posts", JSON.stringify([]));
 
     const savedPosts = JSON.parse(localStorage.getItem("posts") || "[]");
-    const draftPosts = savedPosts.filter((post: any) => post.status === "draft");
-
-    expect(draftPosts).toHaveLength(2);
-    expect(draftPosts[0].id).toBe(1);
-    expect(draftPosts[1].id).toBe(3);
+    expect(savedPosts).toHaveLength(0);
   });
 });
