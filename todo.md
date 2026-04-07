@@ -157,3 +157,13 @@
   - [ ] Permitir remover de favoritos
   - [ ] Sincronizar com templates regulares
   - [ ] Testes de favoritos
+
+- [x] Editar posts programados no calendário — Permitir Coordenador editar posts com status "scheduled"
+  - [x] Criar componente ScheduledPostEditor
+  - [x] Adicionar modal com campos editáveis (título, legenda, data)
+  - [x] Validar permissão por role (apenas Coordenador)
+  - [x] Validar campos obrigatórios (título, legenda, data)
+  - [x] Exibir mensagens de erro e sucesso
+  - [x] Desabilitar campos para usuários sem permissão
+  - [x] Testes de edição (7 testes passando)
+  - [ ] Integrar no calendário mensal (próximo passo)
