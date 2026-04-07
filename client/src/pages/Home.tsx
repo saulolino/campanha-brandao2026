@@ -102,11 +102,18 @@ export default function Home() {
       navigate("/login");
       return;
     }
-    setUser(JSON.parse(userStr));
+    try {
+      const parsedUser = JSON.parse(userStr);
+      setUser(parsedUser);
+    } catch (err) {
+      console.error("Erro ao parsear usuário:", err);
+      navigate("/login");
+      return;
+    }
     setLoading(false);
   }, [navigate]);
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -124,7 +131,10 @@ export default function Home() {
 
   const handleNavigate = (section: string) => {
     setActiveSection(section);
-    sectionRefs.current[section]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const element = sectionRefs.current[section];
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   // Calculate days remaining

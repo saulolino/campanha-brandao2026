@@ -63,7 +63,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
 
     let dbRole: 'user' | 'admin' = 'user';
-    if (user.role !== undefined) {
+    if (user.role !== undefined && user.role !== null) {
       dbRole = roleMap[user.role] || 'user';
     } else if (user.openId === ENV.ownerOpenId) {
       dbRole = 'admin';
@@ -102,3 +102,43 @@ export async function getUserByOpenId(openId: string) {
 }
 
 // TODO: add feature queries here as your schema grows.
+
+export async function updateUserRole(userId: number, newRole: "visitor" | "team" | "coordinator" | "superadmin"): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update user role: database not available");
+    return;
+  }
+
+  try {
+    const roleMap: Record<string, 'user' | 'admin'> = {
+      'visitor': 'user',
+      'team': 'user',
+      'coordinator': 'user',
+      'superadmin': 'admin',
+    };
+
+    const dbRole = roleMap[newRole] || 'user';
+
+    await db.update(users).set({ role: dbRole as any }).where(eq(users.id, userId));
+  } catch (error) {
+    console.error("[Database] Failed to update user role:", error);
+    throw error;
+  }
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get users: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(users);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to get users:", error);
+    throw error;
+  }
+}
