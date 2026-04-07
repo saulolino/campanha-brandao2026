@@ -34,17 +34,19 @@ function Router() {
     <Switch>
       <Route path={"/"} component={() => {
         if (!isReady) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-        // Redirect root to home if authenticated, otherwise to login
+        // Redirect root to home
         useEffect(() => {
-          if (user) {
-            window.location.href = '/home';
-          } else {
-            window.location.href = '/login';
-          }
-        }, [user]);
+          window.location.href = '/home';
+        }, []);
         return null;
       }} />
-      <Route path={"/login"} component={Login} />
+      <Route path={"/login"} component={() => {
+        // Redirecionar login para home
+        useEffect(() => {
+          window.location.href = '/home';
+        }, []);
+        return null;
+      }} />
       <Route path={"/register"} component={Register} />
       <Route path={"/verify-email/:token"} component={VerifyEmail} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
