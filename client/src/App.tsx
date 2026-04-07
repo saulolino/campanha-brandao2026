@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
@@ -13,10 +14,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 function Router() {
-  // Sem autenticação - dashboard acessível para todos
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={Login} />
+      <Route path={"/login"} component={Login} />
       <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />

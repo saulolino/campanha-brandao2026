@@ -3,7 +3,8 @@
 // Dashboard interno da campanha Eduardo Brandão
 // Brasília Cidade Parque - Meta: 20.000 seguidores
 // ============================================================
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import MetricCard from "@/components/MetricCard";
 import GaugeChart from "@/components/GaugeChart";
@@ -86,18 +87,45 @@ const iconMap: Record<string, any> = {
 };
 
 export default function Home() {
+  const [, navigate] = useLocation();
   // Hooks MUST be called before any conditional returns
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showPresentation, setShowPresentation] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Verificar autenticação
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) {
+      navigate("/login");
+      return;
+    }
+    setUser(JSON.parse(userStr));
+    setLoading(false);
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   const handleNavigate = (section: string) => {
     setActiveSection(section);
     sectionRefs.current[section]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-
-  // Sem autenticação - dashboard acessível para todos
-  // Todos têm acesso total ao painel
 
   // Calculate days remaining
   const today = new Date();
