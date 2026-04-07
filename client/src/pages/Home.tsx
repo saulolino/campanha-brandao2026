@@ -136,6 +136,22 @@ export default function Home() {
   };
 
   const handleNavigate = (section: string) => {
+    // Map section IDs to routes
+    const routeMap: Record<string, string> = {
+      publicacoes: "/publicacoes",
+      performance: "/performance",
+      admin: "/admin",
+      apoiadores: "/apoiadores",
+      usuarios: "/usuarios",
+    };
+
+    // If section has a route, navigate to it
+    if (routeMap[section]) {
+      navigate(routeMap[section]);
+      return;
+    }
+
+    // Otherwise, scroll to section
     setActiveSection(section);
     const element = sectionRefs.current[section];
     if (element) {
