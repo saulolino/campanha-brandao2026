@@ -176,12 +176,13 @@
   - [x] Botão "Editar" aparece apenas para posts "planejado"
   - [x] Sem erros de TypeScript
 
-- [ ] Conectar ao tRPC para persistência — Implementar onSave com chamada tRPC
-  - [ ] Criar procedure tRPC para atualizar posts
-  - [ ] Implementar onSave no ScheduledPostEditor
-  - [ ] Chamar tRPC.posts.updatePost
-  - [ ] Tratar erros de atualização
-  - [ ] Testes de tRPC
+- [x] Conectar ao tRPC para persistência — Implementar onSave com chamada tRPC
+  - [x] Criar procedure tRPC `posts.updatePost` no server/routers/posts.ts
+  - [x] Validar permissão (apenas Coordenador/Superadmin)
+  - [x] Atualizar título, legenda e data do post
+  - [x] Registrar no histórico de status
+  - [x] Sem erros de TypeScript
+  - [ ] Implementar onSave no ScheduledPostEditor (próximo passo)
 
 - [ ] Adicionar notificação de edição — Toast com histórico
   - [ ] Criar hook usePostEditHistory

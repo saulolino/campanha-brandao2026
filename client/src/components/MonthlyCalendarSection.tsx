@@ -325,8 +325,9 @@ export default function MonthlyCalendarSection() {
           isOpen={isEditorOpen}
           onOpenChange={setIsEditorOpen}
           onSave={async (updatedPost) => {
-            // TODO: Conectar ao tRPC para salvar no banco
+            // Conectar ao tRPC para salvar no banco
             console.log("Post atualizado:", updatedPost);
+            // TODO: Implementar chamada ao tRPC.posts.updatePost
           }}
         />
       )}

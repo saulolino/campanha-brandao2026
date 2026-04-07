@@ -289,6 +289,49 @@ export const postsRouter = router({
       return { success: true, media };
     }),
 
+  // Atualizar post (coordenador)
+  updatePost: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().optional(),
+      caption: z.string().optional(),
+      scheduledDate: z.date().optional(),
+      comment: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Verificar se é coordenador ou superadmin
+      if (ctx.user.role !== "coordinator" && ctx.user.role !== "superadmin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only coordinators can update scheduled posts" });
+      }
+
+      const post = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
+      if (!post.length) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+      // Preparar updates
+      const updates: any = {};
+      if (input.title) updates.title = input.title;
+      if (input.caption) updates.caption = input.caption;
+      if (input.scheduledDate) updates.scheduledDate = input.scheduledDate;
+      updates.updatedAt = new Date();
+
+      // Atualizar post
+      await db.update(instagramPosts).set(updates).where(eq(instagramPosts.id, input.id));
+
+      // Registrar no histórico de status
+      await db.insert(postStatusHistory).values({
+        postId: input.id,
+        previousStatus: post[0].status,
+        newStatus: post[0].status, // Status permanece o mesmo, apenas editado
+        changedBy: ctx.user.id,
+        comment: input.comment || "Post updated",
+      });
+
+      return { success: true };
+    }),
+
   // Remover mídia (designer)
   removeMedia: protectedProcedure
     .input(z.object({
