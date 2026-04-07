@@ -9,11 +9,8 @@ export default function Home() {
   const { user, loading, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      setLocation("/login");
-    }
-  }, [loading, user, setLocation]);
+  // Não redirecionar para /login, pois a página de login foi removida
+  // Se o usuário não estiver autenticado, ele verá uma mensagem de carregamento
 
   if (loading) {
     return (
@@ -39,7 +36,8 @@ export default function Home() {
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/login");
+    // Recarregar a página após logout
+    window.location.href = "/home";
   };
 
   return (
