@@ -29,11 +29,14 @@ import {
   ChevronDown,
   TrendingUp,
   Shield,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/_core/hooks/useAuth";
 import InfoTooltip from "./InfoTooltip";
+import LogoutConfirmDialog from "./LogoutConfirmDialog";
 
 interface NavGroup {
   label: string;
@@ -253,6 +256,34 @@ interface SidebarProps {
   onNavigate: (section: string) => void;
 }
 
+function LogoutButton() {
+  const [, navigate] = useLocation();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setShowConfirm(false);
+    navigate("/login");
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setShowConfirm(true)}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/30 rounded-lg transition-colors text-red-400 hover:text-red-300 text-sm font-medium"
+      >
+        <LogOut size={16} />
+        Sair
+      </button>
+      <LogoutConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        onConfirm={handleLogout}
+      />
+    </>
+  );
+}
+
 function CopyLinkButton() {
   const [copied, setCopied] = useState(false);
   const link = typeof window !== "undefined" ? `${window.location.origin}/apoiadores` : "/apoiadores";
@@ -449,8 +480,9 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
           <CopyLinkButton />
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border">
+        {/* Footer with Logout */}
+        <div className="p-4 border-t border-sidebar-border space-y-4">
+          <LogoutButton />
           <div className="flex flex-col items-center gap-2">
             <img
               src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
