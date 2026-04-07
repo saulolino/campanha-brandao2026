@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 export interface LocalUser {
   email: string;
   nome: string;
+  name?: string; // Alias para nome
   role: "visitor" | "team" | "coordinator" | "superadmin";
   whatsapp: string;
 }
