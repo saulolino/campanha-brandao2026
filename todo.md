@@ -94,3 +94,11 @@
   - [x] Incluir métricas de performance
   - [x] Incluir histórico de transições
   - [x] Instalar dependências (jspdf, jspdf-autotable)
+
+- [x] Adicionar geração de mídia com IA — Criar imagens com IA na tela de criar post
+  - [x] Criar componente AIMediaGenerator
+  - [x] Integrar com Manus image generation API
+  - [x] Modal com prompt de descrição
+  - [x] Preview da imagem gerada
+  - [x] Opção de regenerar ou usar
+  - [x] Testes de geração (15 testes passando)

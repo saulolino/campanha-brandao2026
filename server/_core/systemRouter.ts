@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
-import { adminProcedure, publicProcedure, router } from "./trpc";
+import { generateImage } from "./imageGeneration";
+import { adminProcedure, publicProcedure, protectedProcedure, router } from "./trpc";
 
 export const systemRouter = router({
   health: publicProcedure
@@ -25,5 +26,33 @@ export const systemRouter = router({
       return {
         success: delivered,
       } as const;
+    }),
+
+  generateImage: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string().min(10, "prompt must be at least 10 characters"),
+        originalImages: z.array(
+          z.object({
+            url: z.string().url(),
+            mimeType: z.string().optional(),
+          })
+        ).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await generateImage({
+          prompt: input.prompt,
+          originalImages: input.originalImages,
+        });
+        return {
+          success: true,
+          url: result.url,
+        };
+      } catch (error) {
+        console.error("[systemRouter] Image generation error:", error);
+        throw error;
+      }
     }),
 });
