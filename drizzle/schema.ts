@@ -11,18 +11,15 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  name: text("name").notNull(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
-  whatsapp: varchar("whatsapp", { length: 20 }).notNull(),
-  passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
+  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["visitor", "team", "coordinator", "superadmin"]).default("visitor").notNull(),
-  emailVerified: timestamp("emailVerified"),
-  emailVerificationToken: varchar("emailVerificationToken", { length: 255 }),
-  passwordResetToken: varchar("passwordResetToken", { length: 255 }),
-  passwordResetExpires: timestamp("passwordResetExpires"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn"),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;

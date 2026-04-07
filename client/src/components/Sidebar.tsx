@@ -29,10 +29,9 @@ import {
   ChevronDown,
   TrendingUp,
   Shield,
-  LogOut,
 } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/_core/hooks/useAuth";
 import InfoTooltip from "./InfoTooltip";
 
@@ -44,37 +43,8 @@ interface NavGroup {
     label: string;
     tooltip: string;
     icon: any;
-    route: string;
   }>;
 }
-
-// Mapeamento de IDs para rotas
-const ROUTE_MAP: Record<string, string> = {
-  dashboard: "/visao-geral",
-  realtime: "/visao-geral",
-  publicacoes: "/publicacoes",
-  performance: "/analise",
-  nextweek: "/planejamento",
-  calendar: "/planejamento",
-  monthlycal: "/planejamento",
-  contentbank: "/conteudo",
-  content: "/conteudo",
-  briefing: "/conteudo",
-  tracker: "/analise",
-  growth: "/analise",
-  report: "/analise",
-  pillars: "/estrategia",
-  donts: "/estrategia",
-  moodboard: "/estrategia",
-  team: "/recursos",
-  budget: "/recursos",
-  supporters: "/comunicacao",
-  notifications: "/comunicacao",
-  testimonials: "/comunicacao",
-  competitors: "/extras",
-  checklist: "/extras",
-  admin: "/administracao",
-};
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -86,28 +56,24 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Painel Principal",
         tooltip: "Métricas em tempo real, progresso da campanha e indicadores principais",
         icon: LayoutDashboard,
-        route: "/visao-geral",
       },
       {
         id: "realtime",
         label: "Métricas Live",
         tooltip: "Dados atualizados do Instagram em tempo real",
         icon: Activity,
-        route: "/visao-geral",
       },
       {
         id: "publicacoes",
         label: "Gerenciador de Publicações",
         tooltip: "Fluxo colaborativo: Designer → Redator → Coordenador → Publicação",
         icon: Copy,
-        route: "/publicacoes",
       },
       {
         id: "performance",
         label: "Performance de Posts",
         tooltip: "Métricas e análises dos posts publicados",
         icon: TrendingUp,
-        route: "/analise",
       },
     ],
   },
@@ -120,21 +86,18 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Próxima Semana",
         tooltip: "Posts planejados para os próximos 7 dias",
         icon: CalendarClock,
-        route: "/planejamento",
       },
       {
         id: "calendar",
-        label: "Calendarário Semanal",
+        label: "Calendário Semanal",
         tooltip: "Visualize posts por semana com detalhes",
         icon: CalendarDays,
-        route: "/planejamento",
       },
       {
         id: "monthlycal",
-        label: "Calendarário Mensal",
+        label: "Calendário Mensal",
         tooltip: "Visão geral de todos os posts do mês",
         icon: CalendarDays,
-        route: "/planejamento",
       },
     ],
   },
@@ -147,21 +110,18 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Banco de Conteúdo",
         tooltip: "Modelos, legendas, hashtags e guias visuais prontos para usar",
         icon: FolderOpen,
-        route: "/conteudo",
       },
       {
         id: "content",
         label: "Pilares de Conteúdo",
         tooltip: "Temas principais e tipos de posts que funcionam melhor",
         icon: TreePine,
-        route: "/conteudo",
       },
       {
         id: "briefing",
         label: "Briefing Criativo",
         tooltip: "Instruções detalhadas para criar posts de impacto",
         icon: Sparkles,
-        route: "/conteudo",
       },
     ],
   },
@@ -174,21 +134,18 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Status dos Posts",
         tooltip: "Acompanhe quais posts foram publicados e seu desempenho",
         icon: ClipboardList,
-        route: "/analise",
       },
       {
         id: "growth",
         label: "Crescimento",
         tooltip: "Gráficos de crescimento de seguidores e engajamento",
         icon: BarChart3,
-        route: "/analise",
       },
       {
         id: "report",
         label: "Relatório Semanal",
         tooltip: "Resumo de desempenho e recomendações",
         icon: FileText,
-        route: "/analise",
       },
     ],
   },
@@ -201,21 +158,18 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Pilares da Campanha",
         tooltip: "Objetivos principais e temas que devem guiar todos os posts",
         icon: Target,
-        route: "/estrategia",
       },
       {
         id: "donts",
         label: "Alertas e Regras",
         tooltip: "O que fazer e o que evitar para manter a qualidade",
         icon: ShieldAlert,
-        route: "/estrategia",
       },
       {
         id: "moodboard",
         label: "Referências Visuais",
         tooltip: "Inspiração de cores, estilos e design",
         icon: Palette,
-        route: "/estrategia",
       },
     ],
   },
@@ -228,14 +182,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Equipe",
         tooltip: "Papéis, responsabilidades e horas de trabalho necessárias",
         icon: Users,
-        route: "/recursos",
       },
       {
         id: "budget",
         label: "Orçamento",
         tooltip: "Investimento mensal em publicidade e produção",
         icon: DollarSign,
-        route: "/recursos",
       },
     ],
   },
@@ -248,21 +200,18 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Guia do Apoiador",
         tooltip: "Protocolo de engajamento e missões para voluntários",
         icon: Heart,
-        route: "/comunicacao",
       },
       {
         id: "notifications",
         label: "Notificações",
         tooltip: "Alertas sobre posts e lembretes de ações",
         icon: Bell,
-        route: "/comunicacao",
       },
       {
         id: "testimonials",
         label: "Depoimentos",
         tooltip: "Histórias e feedback de apoiadores",
         icon: MessageCircle,
-        route: "/comunicacao",
       },
     ],
   },
@@ -275,14 +224,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Concorrentes",
         tooltip: "Compare seu desempenho com outros perfis",
         icon: BarChart3,
-        route: "/extras",
       },
       {
         id: "checklist",
         label: "Checklist",
         tooltip: "Lista de verificação antes de publicar",
         icon: CheckSquare,
-        route: "/extras",
       },
     ],
   },
@@ -297,13 +244,13 @@ const ADMIN_NAV_GROUP: NavGroup = {
       label: "Painel de Admin",
       tooltip: "Gerenciar usuários, permissões e configurações da plataforma",
       icon: Shield,
-      route: "/administracao",
     },
   ],
 };
 
 interface SidebarProps {
-  activeSection?: string;
+  activeSection: string;
+  onNavigate: (section: string) => void;
 }
 
 function CopyLinkButton() {
@@ -352,15 +299,16 @@ function CopyLinkButton() {
 
 function NavGroupComponent({
   group,
-  activeRoute,
+  activeSection,
+  onNavigate,
   setMobileOpen,
 }: {
   group: NavGroup;
-  activeRoute: string;
+  activeSection: string;
+  onNavigate: (section: string) => void;
   setMobileOpen: (open: boolean) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
-  const [, setLocation] = useLocation();
 
   return (
     <div className="space-y-2">
@@ -379,15 +327,17 @@ function NavGroupComponent({
         <div className="space-y-0.5">
           {group.items.map((item) => {
             const Icon = item.icon;
-            const isActive = activeRoute === item.route;
+            const isActive = activeSection === item.id;
             return (
               <div key={item.id} className="flex items-center gap-2 group/item">
                 <a
-                  href={item.route}
+                  href={item.id === "admin" ? "/admin" : "#"}
                   onClick={(e) => {
-                    e.preventDefault();
-                    setLocation(item.route);
-                    setMobileOpen(false);
+                    if (item.id !== "admin") {
+                      e.preventDefault();
+                      onNavigate(item.id);
+                      setMobileOpen(false);
+                    }
                   }}
                   className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
                     isActive
@@ -410,25 +360,10 @@ function NavGroupComponent({
   );
 }
 
-export default function Sidebar({ activeSection }: SidebarProps) {
+export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const [location] = useLocation();
-
-  const handleLogout = async () => {
-    await logout?.();
-  };
-
-  // Determinar o nível de acesso
-  const getRoleLabel = (role?: string) => {
-    const labels: Record<string, string> = {
-      visitor: "👁️ Visitante",
-      team: "👥 Equipe",
-      coordinator: "📋 Coordenador",
-      superadmin: "🔑 SuperAdmin",
-    };
-    return labels[role || "visitor"] || "Usuário";
-  };
+  const { isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
+  const { user } = useAuth();
 
   return (
     <>
@@ -482,7 +417,7 @@ export default function Sidebar({ activeSection }: SidebarProps) {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name || "Usuário"}</p>
               <p className="text-[10px] text-muted-foreground truncate">
-                {getRoleLabel(user?.role)}
+                {isSuperAdmin ? "🔑 SuperAdmin" : isCoordinator ? "📋 Coordenador" : isTeam ? "👥 Equipe" : "👁️ Visitante"}
               </p>
             </div>
           </div>
@@ -494,14 +429,16 @@ export default function Sidebar({ activeSection }: SidebarProps) {
             <NavGroupComponent
               key={group.label}
               group={group}
-              activeRoute={location}
+              activeSection={activeSection}
+              onNavigate={onNavigate}
               setMobileOpen={setMobileOpen}
             />
           ))}
-          {user?.role === "superadmin" && (
+          {isSuperAdmin && (
             <NavGroupComponent
               group={ADMIN_NAV_GROUP}
-              activeRoute={location}
+              activeSection={activeSection}
+              onNavigate={onNavigate}
               setMobileOpen={setMobileOpen}
             />
           )}
@@ -513,14 +450,7 @@ export default function Sidebar({ activeSection }: SidebarProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-sidebar-border space-y-3">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-sidebar-foreground hover:bg-red-500/10 hover:text-red-400 transition-colors border border-red-500/20 hover:border-red-500/40"
-          >
-            <LogOut size={16} />
-            <span>Sair</span>
-          </button>
+        <div className="p-4 border-t border-sidebar-border">
           <div className="flex flex-col items-center gap-2">
             <img
               src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"

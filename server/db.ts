@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
+import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -17,204 +18,87 @@ export async function getDb() {
   return _db;
 }
 
-export async function createUser(data: {
-  name: string;
-  email: string;
-  whatsapp: string;
-  passwordHash: string;
-  role: 'visitor' | 'team' | 'coordinator' | 'superadmin';
-  emailVerificationToken?: string;
-}) {
+export async function upsertUser(user: InsertUser): Promise<void> {
+  if (!user.openId) {
+    throw new Error("User openId is required for upsert");
+  }
+
   const db = await getDb();
   if (!db) {
-    throw new Error("Database not available");
+    console.warn("[Database] Cannot upsert user: database not available");
+    return;
   }
 
   try {
-    const result = await db.insert(users).values({
-      name: data.name,
-      email: data.email,
-      whatsapp: data.whatsapp,
-      passwordHash: data.passwordHash,
-      role: data.role,
-      emailVerificationToken: data.emailVerificationToken,
-    });
-    return result;
-  } catch (error) {
-    console.error("[Database] Failed to create user:", error);
-    throw error;
-  }
-}
+    const values: InsertUser = {
+      openId: user.openId,
+    };
+    const updateSet: Record<string, unknown> = {};
 
-export async function getUserByEmail(email: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
+    const textFields = ["name", "email", "loginMethod"] as const;
+    type TextField = (typeof textFields)[number];
 
-  try {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return result.length > 0 ? result[0] : undefined;
-  } catch (error) {
-    console.error("[Database] Failed to get user by email:", error);
-    return undefined;
-  }
-}
+    const assignNullable = (field: TextField) => {
+      const value = user[field];
+      if (value === undefined) return;
+      const normalized = value ?? null;
+      values[field] = normalized;
+      updateSet[field] = normalized;
+    };
 
-export async function getUserById(id: number) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
+    textFields.forEach(assignNullable);
 
-  try {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result.length > 0 ? result[0] : undefined;
-  } catch (error) {
-    console.error("[Database] Failed to get user by id:", error);
-    return undefined;
-  }
-}
+    if (user.lastSignedIn !== undefined) {
+      values.lastSignedIn = user.lastSignedIn;
+      updateSet.lastSignedIn = user.lastSignedIn;
+    }
+    // Map new roles to database roles (database only has 'user' and 'admin')
+    const roleMap: Record<string, 'user' | 'admin'> = {
+      'visitor': 'user',
+      'team': 'user',
+      'coordinator': 'user',
+      'superadmin': 'admin',
+      'user': 'user',
+      'admin': 'admin',
+    };
 
-export async function getUserByEmailVerificationToken(token: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  try {
-    const result = await db.select().from(users).where(eq(users.emailVerificationToken, token)).limit(1);
-    return result.length > 0 ? result[0] : undefined;
-  } catch (error) {
-    console.error("[Database] Failed to get user by email verification token:", error);
-    return undefined;
-  }
-}
-
-export async function getUserByPasswordResetToken(token: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  try {
-    const result = await db.select().from(users).where(eq(users.passwordResetToken, token)).limit(1);
-    if (result.length === 0) return undefined;
-
-    const user = result[0];
-    // Verificar se o token ainda é válido
-    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
-      return undefined; // Token expirado
+    let dbRole: 'user' | 'admin' = 'user';
+    if (user.role !== undefined) {
+      dbRole = roleMap[user.role] || 'user';
+    } else if (user.openId === ENV.ownerOpenId) {
+      dbRole = 'admin';
     }
 
-    return user;
+    values.role = dbRole as any;
+    updateSet.role = dbRole;
+
+    if (!values.lastSignedIn) {
+      values.lastSignedIn = new Date();
+    }
+
+    if (Object.keys(updateSet).length === 0) {
+      updateSet.lastSignedIn = new Date();
+    }
+
+    await db.insert(users).values(values).onDuplicateKeyUpdate({
+      set: updateSet,
+    });
   } catch (error) {
-    console.error("[Database] Failed to get user by password reset token:", error);
+    console.error("[Database] Failed to upsert user:", error);
+    throw error;
+  }
+}
+
+export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
+
+  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
 }
 
-export async function verifyUserEmail(id: number) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({
-      emailVerified: new Date(),
-      emailVerificationToken: null,
-    }).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to verify user email:", error);
-    throw error;
-  }
-}
-
-export async function setPasswordResetToken(id: number, token: string, expiresAt: Date) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({
-      passwordResetToken: token,
-      passwordResetExpires: expiresAt,
-    }).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to set password reset token:", error);
-    throw error;
-  }
-}
-
-export async function resetUserPassword(id: number, passwordHash: string) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({
-      passwordHash,
-      passwordResetToken: null,
-      passwordResetExpires: null,
-    }).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to reset user password:", error);
-    throw error;
-  }
-}
-
-export async function updateUserLastSignedIn(id: number) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to update last signed in:", error);
-    throw error;
-  }
-}
-
-export async function updateUserProfile(id: number, data: {
-  name?: string;
-  whatsapp?: string;
-}) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    const updateData: any = {};
-    if (data.name) updateData.name = data.name;
-    if (data.whatsapp) updateData.whatsapp = data.whatsapp;
-
-    await db.update(users).set(updateData).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to update user profile:", error);
-    throw error;
-  }
-}
-
-export async function updateUserPassword(id: number, passwordHash: string) {
-  const db = await getDb();
-  if (!db) {
-    throw new Error("Database not available");
-  }
-
-  try {
-    await db.update(users).set({ passwordHash }).where(eq(users.id, id));
-  } catch (error) {
-    console.error("[Database] Failed to update user password:", error);
-    throw error;
-  }
-}
+// TODO: add feature queries here as your schema grows.
