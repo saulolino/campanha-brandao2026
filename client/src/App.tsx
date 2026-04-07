@@ -32,25 +32,13 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={() => {
-        if (!isReady) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-        // Redirect root to home if authenticated, otherwise to login
-        useEffect(() => {
-          if (user) {
-            window.location.href = '/home';
-          } else {
-            window.location.href = '/login';
-          }
-        }, [user]);
-        return null;
-      }} />
+      <Route path={"/"} component={Home} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/verify-email/:token"} component={VerifyEmail} />
       <Route path={"/forgot-password"} component={ForgotPassword} />
       <Route path={"/reset-password/:token"} component={ResetPassword} />
       <Route path={"/profile"} component={Profile} />
-      <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
       <Route path={"/performance"} component={PerformanceDashboard} />

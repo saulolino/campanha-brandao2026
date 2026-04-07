@@ -9,11 +9,7 @@ export default function Home() {
   const { user, loading, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      setLocation("/login");
-    }
-  }, [loading, user, setLocation]);
+  // Se o usuário não estiver autenticado, mostrar tela de carregamento
 
   if (loading) {
     return (
@@ -39,7 +35,8 @@ export default function Home() {
 
   const handleLogout = async () => {
     await logout();
-    setLocation("/login");
+    // Recarregar a página após logout
+    window.location.href = "/";
   };
 
   return (

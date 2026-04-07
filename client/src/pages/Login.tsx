@@ -33,7 +33,7 @@ export default function Login() {
       toast.success("Login realizado com sucesso!");
       // Aguardar um pouco para garantir que o toast seja exibido
       setTimeout(() => {
-        setLocation("/home");
+        setLocation("/");
       }, 500);
     } catch (error) {
       toast.error("Erro ao conectar com o servidor");
