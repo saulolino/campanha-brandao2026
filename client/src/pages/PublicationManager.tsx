@@ -214,12 +214,12 @@ export default function PublicationManager() {
             </DialogContent>
           </Dialog>
 
-          <Select value={selectedStatus || ""} onValueChange={(val) => setSelectedStatus(val || undefined)}>
+          <Select value={selectedStatus || "all"} onValueChange={(val) => setSelectedStatus(val === "all" ? undefined : val)}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
               {Object.entries(statusConfig).map(([key, config]) => (
                 <SelectItem key={key} value={key}>
                   {config.label}
