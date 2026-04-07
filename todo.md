@@ -34,5 +34,11 @@
   - [x] Rodar fix-roles.mjs
   - [x] Verificar sincronização de roles
   - [x] Validar integridade dos dados
+- [x] Corrigir PublicationManager.tsx — Remover dependência de tRPC e usar localStorage
+  - [x] Reescrever página sem chamadas tRPC
+  - [x] Implementar gerenciamento de posts com localStorage
+  - [x] Criar testes unitários para PublicationManager
+  - [x] Todos os testes passando (7/7)
+- [ ] Corrigir PostPerformance.tsx — Verificar e remover dependências de tRPC se necessário
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões

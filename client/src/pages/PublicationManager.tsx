@@ -1,7 +1,11 @@
-import { useState, useRef } from "react";
+// ============================================================
+// GERENCIADOR DE PUBLICAÇÕES
+// Fluxo colaborativo: Designer → Redator → Coordenador → Publicação
+// ============================================================
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useLocalAuth } from "@/hooks/useLocalAuth";
 import NotFound from "./NotFound";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/_core/hooks/useAuth";
-import InfoTooltip from "@/components/InfoTooltip";
 import {
   Plus,
   Clock,
@@ -49,311 +51,255 @@ const flowSteps = [
   { status: "published", label: "Publicado", role: "Sistema", icon: CheckCircle2 },
 ];
 
+interface Post {
+  id: number;
+  title: string;
+  caption: string;
+  status: string;
+  scheduledDate: string;
+  createdBy: string;
+  mediaUrl?: string;
+  createdAt: string;
+}
+
 export default function PublicationManager() {
-  const { user } = useAuth();
+  const { user } = useLocalAuth();
   const { isVisitor } = usePermissions();
-  
-  // Todos os hooks DEVEM ser chamados antes de qualquer return condicional
+  const [posts, setPosts] = useState<Post[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
-  const [newPostData, setNewPostData] = useState({ title: "", scheduledDate: "" });
-  const [uploadingPostId, setUploadingPostId] = useState<number | null>(null);
+  const [newPostData, setNewPostData] = useState({ title: "", caption: "", scheduledDate: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Queries - DEVEM estar ANTES do return condicional
-  const { data: posts, isLoading, refetch } = trpc.posts.list.useQuery({
-    status: selectedStatus as any,
-  });
+  // Carregar posts do localStorage
+  useEffect(() => {
+    const savedPosts = localStorage.getItem("posts");
+    if (savedPosts) {
+      try {
+        setPosts(JSON.parse(savedPosts));
+      } catch (err) {
+        console.error("Erro ao carregar posts:", err);
+      }
+    }
+  }, []);
 
-  // Mutations - DEVEM estar ANTES do return condicional
-  const createPost = trpc.posts.create.useMutation({
-    onSuccess: () => {
-      setShowNewPostDialog(false);
-      setNewPostData({ title: "", scheduledDate: "" });
-      refetch();
-    },
-  });
+  // Salvar posts no localStorage
+  const savePosts = (updatedPosts: Post[]) => {
+    localStorage.setItem("posts", JSON.stringify(updatedPosts));
+    setPosts(updatedPosts);
+  };
 
-  const sendToCaption = trpc.posts.sendToCaption.useMutation({ onSuccess: () => refetch() });
-  const sendToReview = trpc.posts.sendToReview.useMutation({ onSuccess: () => refetch() });
-  const approveAndSchedule = trpc.posts.approveAndSchedule.useMutation({ onSuccess: () => refetch() });
-  const reject = trpc.posts.reject.useMutation({ onSuccess: () => refetch() });
-  const publish = trpc.posts.publish.useMutation({ onSuccess: () => refetch() });
-  const uploadMedia = trpc.posts.uploadMedia.useMutation({
-    onSuccess: () => {
-      toast.success("Mídia enviada com sucesso!");
-      setUploadingPostId(null);
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(`Erro ao enviar mídia: ${error.message}`);
-      setUploadingPostId(null);
-    },
-  });
-
-  // Visitante não tem acesso - APÓS todos os hooks
+  // Visitante não tem acesso
   if (isVisitor) {
     return <NotFound />;
   }
 
-  const handleFileUpload = async (postId: number, file: File) => {
-    if (!file) return;
-    
-    const buffer = await file.arrayBuffer();
-    setUploadingPostId(postId);
-    
-    uploadMedia.mutate({
-      id: postId,
-      file: new Uint8Array(buffer) as any,
-      mimeType: file.type,
-      fileName: file.name,
-    });
-  };
-
   const handleCreatePost = () => {
-    if (!newPostData.title || !newPostData.scheduledDate) return;
-    createPost.mutate({
+    if (!newPostData.title.trim()) {
+      toast.error("Título é obrigatório");
+      return;
+    }
+
+    const newPost: Post = {
+      id: Date.now(),
       title: newPostData.title,
-      scheduledDate: new Date(newPostData.scheduledDate),
-    });
+      caption: newPostData.caption,
+      status: "draft",
+      scheduledDate: newPostData.scheduledDate,
+      createdBy: user?.email || "Usuário",
+      createdAt: new Date().toISOString(),
+    };
+
+    savePosts([...posts, newPost]);
+    setShowNewPostDialog(false);
+    setNewPostData({ title: "", caption: "", scheduledDate: "" });
+    toast.success("Post criado com sucesso!");
   };
 
-  const getStatusIndex = (status: string) => flowSteps.findIndex(s => s.status === status);
+  const handleUpdateStatus = (postId: number, newStatus: string) => {
+    const updatedPosts = posts.map((post) =>
+      post.id === postId ? { ...post, status: newStatus } : post
+    );
+    savePosts(updatedPosts);
+    toast.success(`Post movido para ${statusConfig[newStatus as keyof typeof statusConfig]?.label}`);
+  };
+
+  const handleDeletePost = (postId: number) => {
+    const updatedPosts = posts.filter((post) => post.id !== postId);
+    savePosts(updatedPosts);
+    toast.success("Post deletado com sucesso!");
+  };
+
+  const filteredPosts = selectedStatus
+    ? posts.filter((post) => post.status === selectedStatus)
+    : posts;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gerenciador de Publicações</h1>
-          <p className="text-muted-foreground mt-1">Fluxo colaborativo: Designer → Redator → Coordenador → Publicação</p>
+    <div className="min-h-screen bg-background p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Gerenciador de Publicações</h1>
+          <p className="text-muted-foreground">
+            Fluxo colaborativo: Designer → Redator → Coordenador → Publicação
+          </p>
         </div>
-        <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus size={16} /> Novo Post
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Novo Post</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Título do Post</label>
-                <Input
-                  placeholder="Ex: Brasília merece mais verde"
-                  value={newPostData.title}
-                  onChange={(e) => setNewPostData({ ...newPostData, title: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Data Agendada</label>
-                <Input
-                  type="datetime-local"
-                  value={newPostData.scheduledDate}
-                  onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
-                />
-              </div>
-              <Button onClick={handleCreatePost} disabled={createPost.isPending} className="w-full">
-                {createPost.isPending ? "Criando..." : "Criar Post"}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant={selectedStatus === undefined ? "default" : "outline"}
-          onClick={() => setSelectedStatus(undefined)}
-        >
-          Todos
-        </Button>
-        {Object.entries(statusConfig).map(([status, config]) => (
-          <Button
-            key={status}
-            variant={selectedStatus === status ? "default" : "outline"}
-            onClick={() => setSelectedStatus(status)}
-            className={selectedStatus === status ? "" : ""}
-          >
-            {config.label}
-          </Button>
-        ))}
-      </div>
-
-      {/* Lista de Posts */}
-      <div className="space-y-3">
-        {isLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Carregando posts...</div>
-        ) : !posts || posts.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">Nenhum post encontrado</div>
-        ) : (
-          posts.map((post: any) => {
-            const statusInfo = statusConfig[post.status as keyof typeof statusConfig];
-            const StatusIcon = statusInfo.icon;
-            const currentStepIndex = getStatusIndex(post.status);
-
-            return (
-              <Card key={post.id} className="p-4 hover:bg-card/80 transition-colors">
-                <div className="space-y-3">
-                  {/* Cabeçalho */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Agendado para {format(new Date(post.scheduledDate), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-                      </p>
+        {/* Flow Steps */}
+        <div className="mb-8 bg-sidebar/50 rounded-lg p-4">
+          <div className="flex items-center justify-between overflow-x-auto gap-2">
+            {flowSteps.map((step, idx) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.status} className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-1">
+                      <Icon size={16} className="text-primary" />
                     </div>
-                    <Badge className={statusInfo.color}>
-                      <StatusIcon size={12} className="mr-1" />
-                      {statusInfo.label}
-                    </Badge>
+                    <span className="text-xs font-semibold text-center">{step.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{step.role}</span>
                   </div>
-
-                  {/* Fluxo visual */}
-                  <div className="flex items-center gap-1 py-2 overflow-x-auto">
-                    {flowSteps.map((step, idx) => {
-                      const StepIcon = step.icon;
-                      const isCompleted = idx < currentStepIndex;
-                      const isCurrent = idx === currentStepIndex;
-
-                      return (
-                        <div key={step.status} className="flex items-center gap-1 shrink-0">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                              isCompleted
-                                ? "bg-green-500/20 text-green-400"
-                                : isCurrent
-                                  ? "bg-primary/20 text-primary border border-primary"
-                                  : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            <StepIcon size={14} />
-                          </div>
-                          {idx < flowSteps.length - 1 && (
-                            <ChevronRight
-                              size={16}
-                              className={isCompleted ? "text-green-500/50" : "text-muted-foreground/30"}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Conteúdo */}
-                  {post.mediaUrls && (
-                    <div className="bg-muted/50 rounded p-2 text-xs text-muted-foreground">
-                      📸 {post.mediaUrls.length > 100 ? post.mediaUrls.substring(0, 100) + "..." : post.mediaUrls}
-                    </div>
+                  {idx < flowSteps.length - 1 && (
+                    <ChevronRight size={16} className="text-muted-foreground/50 mx-2" />
                   )}
-
-                  {post.caption && (
-                    <div className="bg-muted/50 rounded p-2 text-sm text-foreground">
-                      <p className="line-clamp-2">{post.caption}</p>
-                    </div>
-                  )}
-
-                  {/* Ações contextuais */}
-                  <div className="flex gap-2 flex-wrap pt-2">
-                    {post.status === "design" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploadingPostId === post.id}
-                        >
-                          <Image size={14} className="mr-1" /> {uploadingPostId === post.id ? "Enviando..." : "Adicionar Mídia"}
-                        </Button>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*,video/*"
-                          style={{ display: "none" }}
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) {
-                              handleFileUpload(post.id, e.target.files[0]);
-                            }
-                          }}
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => sendToCaption.mutate({ id: post.id })}
-                          disabled={sendToCaption.isPending}
-                        >
-                          <ChevronRight size={14} className="mr-1" /> Enviar para Redator
-                        </Button>
-                      </>
-                    )}
-
-                    {post.status === "caption" && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const caption = prompt("Digite a legenda do post:");
-                            if (caption) {
-                              sendToReview.mutate({ id: post.id, comment: caption });
-                            }
-                          }}
-                          disabled={sendToReview.isPending}
-                        >
-                          <Edit size={14} className="mr-1" /> Adicionar Legenda
-                        </Button>
-                      </>
-                    )}
-
-                    {post.status === "review" && (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => approveAndSchedule.mutate({ id: post.id })}
-                          disabled={approveAndSchedule.isPending}
-                        >
-                          <CheckCircle2 size={14} className="mr-1" /> Aprovar e Agendar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => reject.mutate({ id: post.id, comment: "Rejeitado", returnTo: "design" })}
-                          disabled={reject.isPending}
-                        >
-                          <X size={14} className="mr-1" /> Rejeitar
-                        </Button>
-                      </>
-                    )}
-
-                    {post.status === "scheduled" && (
-                      <Button
-                        size="sm"
-                        onClick={() => publish.mutate({ id: post.id })}
-                        disabled={publish.isPending}
-                      >
-                        <Send size={14} className="mr-1" /> {publish.isPending ? "Publicando..." : "Publicar Agora"}
-                      </Button>
-                    )}
-
-                    {post.status === "published" && (
-                      <Badge className="bg-green-500/20 text-green-400">
-                        ✓ Publicado com sucesso
-                      </Badge>
-                    )}
-
-                    {post.status === "failed" && (
-                      <Badge className="bg-red-500/20 text-red-400">
-                        ✗ Falha na publicação
-                      </Badge>
-                    )}
-                  </div>
                 </div>
-              </Card>
-            );
-          })
-        )}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex gap-4 mb-6">
+          <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus size={16} />
+                Novo Post
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Novo Post</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Título</label>
+                  <Input
+                    value={newPostData.title}
+                    onChange={(e) => setNewPostData({ ...newPostData, title: e.target.value })}
+                    placeholder="Título do post"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Legenda</label>
+                  <Textarea
+                    value={newPostData.caption}
+                    onChange={(e) => setNewPostData({ ...newPostData, caption: e.target.value })}
+                    placeholder="Legenda do post"
+                    rows={4}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Data de Agendamento</label>
+                  <Input
+                    type="datetime-local"
+                    value={newPostData.scheduledDate}
+                    onChange={(e) => setNewPostData({ ...newPostData, scheduledDate: e.target.value })}
+                  />
+                </div>
+                <Button onClick={handleCreatePost} className="w-full">
+                  Criar Post
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Select value={selectedStatus || ""} onValueChange={(val) => setSelectedStatus(val || undefined)}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os status</SelectItem>
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Posts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPosts.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <AlertCircle size={32} className="mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-muted-foreground">Nenhum post encontrado</p>
+            </div>
+          ) : (
+            filteredPosts.map((post) => {
+              const config = statusConfig[post.status as keyof typeof statusConfig];
+              const Icon = config?.icon || AlertCircle;
+
+              return (
+                <Card key={post.id} className="p-4 hover:border-primary/50 transition-colors">
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground line-clamp-2">{post.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Por {post.createdBy}</p>
+                      </div>
+                      <Badge className={config?.color}>
+                        <Icon size={12} className="mr-1" />
+                        {config?.label}
+                      </Badge>
+                    </div>
+
+                    {/* Caption Preview */}
+                    {post.caption && (
+                      <p className="text-sm text-muted-foreground line-clamp-3">{post.caption}</p>
+                    )}
+
+                    {/* Scheduled Date */}
+                    {post.scheduledDate && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock size={12} />
+                        {format(new Date(post.scheduledDate), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-2 border-t border-border">
+                      {post.status !== "published" && post.status !== "failed" && (
+                        <Select value={post.status} onValueChange={(val) => handleUpdateStatus(post.id, val)}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(statusConfig).map(([key, config]) => (
+                              <SelectItem key={key} value={key}>
+                                {config.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeletePost(post.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );
