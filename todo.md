@@ -76,3 +76,21 @@
   - [x] Suporte para sincronização localStorage ↔ TiDB
 - [ ] Middleware de Autorização — Guards para proteger rotas e ações por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões
+
+- [x] Criar hook usePublicationPosts — Sincronizar localStorage ↔ TiDB com fallback offline
+  - [x] Implementar hook com sincronização automática
+  - [x] Adicionar indicador de status de sincronização
+  - [x] Fallback para localStorage quando offline
+  - [x] Testes do hook (9 testes passando)
+- [x] Implementar validações de permissão por etapa — Guards por role com mensagens de erro
+  - [x] Validar Designer para Design
+  - [x] Validar Redator para Legenda
+  - [x] Validar Coordenador para Publicação
+  - [x] Mensagens de erro claras
+  - [x] Testes de validação (28 testes passando)
+- [x] Adicionar exportação de relatórios — CSV/PDF com métricas e histórico
+  - [x] Exportar para CSV
+  - [x] Exportar para PDF
+  - [x] Incluir métricas de performance
+  - [x] Incluir histórico de transições
+  - [x] Instalar dependências (jspdf, jspdf-autotable)
