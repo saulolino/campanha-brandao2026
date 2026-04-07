@@ -23,6 +23,7 @@ export async function createUser(data: {
   whatsapp: string;
   passwordHash: string;
   role: 'visitor' | 'team' | 'coordinator' | 'superadmin';
+  emailVerificationToken?: string;
 }) {
   const db = await getDb();
   if (!db) {
@@ -36,6 +37,7 @@ export async function createUser(data: {
       whatsapp: data.whatsapp,
       passwordHash: data.passwordHash,
       role: data.role,
+      emailVerificationToken: data.emailVerificationToken,
     });
     return result;
   } catch (error) {
@@ -76,6 +78,98 @@ export async function getUserById(id: number) {
   }
 }
 
+export async function getUserByEmailVerificationToken(token: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  try {
+    const result = await db.select().from(users).where(eq(users.emailVerificationToken, token)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get user by email verification token:", error);
+    return undefined;
+  }
+}
+
+export async function getUserByPasswordResetToken(token: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  try {
+    const result = await db.select().from(users).where(eq(users.passwordResetToken, token)).limit(1);
+    if (result.length === 0) return undefined;
+
+    const user = result[0];
+    // Verificar se o token ainda é válido
+    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
+      return undefined; // Token expirado
+    }
+
+    return user;
+  } catch (error) {
+    console.error("[Database] Failed to get user by password reset token:", error);
+    return undefined;
+  }
+}
+
+export async function verifyUserEmail(id: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(users).set({
+      emailVerified: new Date(),
+      emailVerificationToken: null,
+    }).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to verify user email:", error);
+    throw error;
+  }
+}
+
+export async function setPasswordResetToken(id: number, token: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(users).set({
+      passwordResetToken: token,
+      passwordResetExpires: expiresAt,
+    }).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to set password reset token:", error);
+    throw error;
+  }
+}
+
+export async function resetUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(users).set({
+      passwordHash,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    }).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to reset user password:", error);
+    throw error;
+  }
+}
+
 export async function updateUserLastSignedIn(id: number) {
   const db = await getDb();
   if (!db) {
@@ -86,6 +180,41 @@ export async function updateUserLastSignedIn(id: number) {
     await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
   } catch (error) {
     console.error("[Database] Failed to update last signed in:", error);
+    throw error;
+  }
+}
+
+export async function updateUserProfile(id: number, data: {
+  name?: string;
+  whatsapp?: string;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    const updateData: any = {};
+    if (data.name) updateData.name = data.name;
+    if (data.whatsapp) updateData.whatsapp = data.whatsapp;
+
+    await db.update(users).set(updateData).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update user profile:", error);
+    throw error;
+  }
+}
+
+export async function updateUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update user password:", error);
     throw error;
   }
 }

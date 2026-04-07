@@ -77,7 +77,15 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Senha</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-foreground">Senha</label>
+                <a
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Esqueceu a senha?
+                </a>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 text-muted-foreground" size={20} />
                 <Input

@@ -13,6 +13,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
+import Profile from "./pages/Profile";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -42,6 +46,10 @@ function Router() {
       }} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
+      <Route path={"/verify-email/:token"} component={VerifyEmail} />
+      <Route path={"/forgot-password"} component={ForgotPassword} />
+      <Route path={"/reset-password/:token"} component={ResetPassword} />
+      <Route path={"/profile"} component={Profile} />
       <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
