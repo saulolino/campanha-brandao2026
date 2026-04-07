@@ -124,7 +124,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar activeSection={activeSection} onNavigate={setActiveSection} />
+      <Sidebar activeSection={activeSection} />
       
       <main className="lg:ml-64 min-h-screen">
         {/* Header */}
