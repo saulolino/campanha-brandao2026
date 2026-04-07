@@ -80,10 +80,28 @@ export default function Login() {
     }
   };
 
-  const handleQuickLogin = (persona: (typeof PERSONAS)[0]) => {
-    setEmail(persona.email);
-    setSenha(persona.senha);
+  const handleQuickLogin = async (persona: (typeof PERSONAS)[0]) => {
     setErro("");
+    setCarregando(true);
+
+    try {
+      // Armazenar dados da sessão no localStorage
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email: persona.email,
+          nome: persona.nome,
+          role: persona.role,
+          whatsapp: persona.whatsapp,
+        })
+      );
+
+      // Redirecionar para o dashboard
+      navigate("/home");
+    } catch (err) {
+      setErro("Erro ao fazer login");
+      setCarregando(false);
+    }
   };
 
   return (
