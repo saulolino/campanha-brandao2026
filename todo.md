@@ -11,3 +11,14 @@
 - [ ] Página de Login — Interface para login com seleção de hierarquia
 - [ ] Controle de Acesso — Restringir acesso a páginas e funcionalidades por role
 - [ ] Dashboard de Gerenciamento — SuperAdmin gerencia usuários e permissões
+- [x] Integrar Sidebar na página Home com todas as divisões
+- [x] Criar módulo VISÃO GERAL
+- [x] Criar módulo PLANEJAMENTO
+- [x] Criar módulo CONTEÚDO
+- [x] Criar módulo ANÁLISE
+- [x] Criar módulo ESTRATÉGIA
+- [x] Criar módulo RECURSOS
+- [x] Criar módulo COMUNICAÇÃO
+- [x] Criar módulo EXTRAS
+- [x] Criar módulo ADMINISTRAÇÃO (apenas para SuperAdmin)
+- [x] Testar navegação entre todos os módulos

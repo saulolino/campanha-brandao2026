@@ -18,6 +18,15 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import VisaoGeral from "./pages/modules/VisaoGeral";
+import Planejamento from "./pages/modules/Planejamento";
+import Conteudo from "./pages/modules/Conteudo";
+import Analise from "./pages/modules/Analise";
+import Estrategia from "./pages/modules/Estrategia";
+import Recursos from "./pages/modules/Recursos";
+import Comunicacao from "./pages/modules/Comunicacao";
+import Extras from "./pages/modules/Extras";
+import Administracao from "./pages/modules/Administracao";
 
 function Router() {
   const { user, loading } = useAuth();
@@ -51,6 +60,16 @@ function Router() {
       <Route path={"/performance"} component={PerformanceDashboard} />
       <Route path={"/usuarios"} component={UserManagement} />
       <Route path={"/admin"} component={AdminDashboard} />
+      {/* Módulos do Dashboard */}
+      <Route path={"/visao-geral"} component={VisaoGeral} />
+      <Route path={"/planejamento"} component={Planejamento} />
+      <Route path={"/conteudo"} component={Conteudo} />
+      <Route path={"/analise"} component={Analise} />
+      <Route path={"/estrategia"} component={Estrategia} />
+      <Route path={"/recursos"} component={Recursos} />
+      <Route path={"/comunicacao"} component={Comunicacao} />
+      <Route path={"/extras"} component={Extras} />
+      <Route path={"/administracao"} component={Administracao} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
