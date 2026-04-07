@@ -102,3 +102,22 @@
   - [x] Preview da imagem gerada
   - [x] Opção de regenerar ou usar
   - [x] Testes de geração (15 testes passando)
+
+- [x] Integrar AIMediaGenerator no PublicationManager — Botão "Gerar com IA" na seção de mídia
+  - [x] Adicionar botão "Gerar com IA" no modal de criação
+  - [x] Abrir AIMediaGenerator ao clicar
+  - [x] Salvar imagem gerada no post
+  - [x] Exibir preview da imagem no formulário
+  - [x] Testes de integração (78 testes passando)
+- [ ] Adicionar histórico de imagens geradas — Reutilizar imagens com seus prompts
+  - [ ] Armazenar histórico em localStorage
+  - [ ] Criar componente de galeria de histórico
+  - [ ] Permitir reutilizar imagem com um clique
+  - [ ] Exibir prompt original de cada imagem
+  - [ ] Testes de histórico
+- [ ] Implementar suporte a edição de imagens — Usar originalImages para ajustes
+  - [ ] Adicionar botão "Editar Imagem" nos posts
+  - [ ] Abrir AIMediaGenerator com originalImages
+  - [ ] Salvar imagem editada
+  - [ ] Rastrear versões de imagem editada
+  - [ ] Testes de edição

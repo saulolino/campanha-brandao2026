@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
+import { AIMediaGenerator } from "@/components/AIMediaGenerator";
 import NotFound from "./NotFound";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,7 @@ import {
   Upload,
   Download,
   Copy,
+  Wand2,
   Search,
   Filter,
 } from "lucide-react";
@@ -85,6 +87,13 @@ interface Filters {
   dateTo: string;
 }
 
+interface GeneratedImage {
+  id: string;
+  prompt: string;
+  url: string;
+  createdAt: string;
+}
+
 export default function PublicationManager() {
   const { user } = useLocalAuth();
   const { isVisitor } = usePermissions();
@@ -96,6 +105,9 @@ export default function PublicationManager() {
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [newPostData, setNewPostData] = useState({ title: "", caption: "", scheduledDate: "" });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
     searchTerm: "",
     status: undefined,
@@ -104,6 +116,18 @@ export default function PublicationManager() {
     dateTo: "",
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Carregar histórico de imagens geradas
+  useEffect(() => {
+    const saved = localStorage.getItem("generatedImages");
+    if (saved) {
+      try {
+        setGeneratedImages(JSON.parse(saved));
+      } catch (err) {
+        console.error("Erro ao carregar histórico de imagens:", err);
+      }
+    }
+  }, []);
 
   // Carregar posts do localStorage
   useEffect(() => {
@@ -116,6 +140,25 @@ export default function PublicationManager() {
       }
     }
   }, []);
+
+  // Salvar histórico de imagens geradas
+  const saveGeneratedImage = (prompt: string, url: string) => {
+    const newImage: GeneratedImage = {
+      id: Date.now().toString(),
+      prompt,
+      url,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newImage, ...generatedImages].slice(0, 20);
+    setGeneratedImages(updated);
+    localStorage.setItem("generatedImages", JSON.stringify(updated));
+  };
+
+  // Handler para mídia gerada com IA
+  const handleAIMediaGenerated = (mediaUrl: string) => {
+    setPreviewImage(mediaUrl);
+    setShowAIGenerator(false);
+  };
 
   // Salvar posts no localStorage
   const savePosts = (updatedPosts: Post[]) => {
@@ -337,6 +380,14 @@ export default function PublicationManager() {
     });
   };
 
+
+      {/* AIMediaGenerator Modal */}
+      <AIMediaGenerator
+        isOpen={showAIGenerator}
+        onOpenChange={setShowAIGenerator}
+        onMediaGenerated={handleAIMediaGenerated}
+      />
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
@@ -430,6 +481,14 @@ export default function PublicationManager() {
                       >
                         <Upload size={16} />
                         Selecionar Arquivo
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAIGenerator(true)}
+                        className="gap-2 bg-purple-500/10 hover:bg-purple-500/20"
+                      >
+                        <Wand2 size={16} />
+                        Gerar com IA
                       </Button>
                       <input
                         ref={fileInputRef}
