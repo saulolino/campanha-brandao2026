@@ -33,6 +33,13 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/home"} component={() => {
+        // Redirecionar /home para /
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+        return null;
+      }} />
       <Route path={"/login"} component={Login} />
       <Route path={"/register"} component={Register} />
       <Route path={"/verify-email/:token"} component={VerifyEmail} />
