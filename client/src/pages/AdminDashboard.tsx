@@ -15,12 +15,12 @@ type UserRole = "visitor" | "team" | "coordinator" | "superadmin";
 
 interface User {
   id: number;
-  openId: string;
-  name: string | null;
-  email: string | null;
+  name: string;
+  email: string;
+  whatsapp: string;
   role: string;
   createdAt: Date;
-  lastSignedIn: Date;
+  lastSignedIn: Date | null;
 }
 
 export default function AdminDashboard() {
@@ -30,11 +30,45 @@ export default function AdminDashboard() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("visitor");
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [searchEmail, setSearchEmail] = useState("");
+  const [foundUser, setFoundUser] = useState<User | null>(null);
 
   const { data: allUsers, isLoading: usersLoading, refetch } = trpc.users.list.useQuery();
   const updateRoleMutation = trpc.users.updateRole.useMutation({
     onSuccess: () => {
       toast.success("Função atualizada com sucesso!");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao atualizar: ${error.message}`);
+    },
+  });
+  
+  const [emailToSearch, setEmailToSearch] = useState<string | null>(null);
+  const { data: searchedUser, isLoading: searchingUser, error: searchError } = trpc.users.getByEmail.useQuery(
+    { email: emailToSearch! },
+    { enabled: !!emailToSearch, retry: false }
+  );
+
+  useEffect(() => {
+    if (searchedUser) {
+      setFoundUser(searchedUser as User);
+      toast.success(`Usuário encontrado: ${searchedUser.name || searchedUser.email}`);
+    }
+  }, [searchedUser]);
+
+  useEffect(() => {
+    if (searchError) {
+      setFoundUser(null);
+      toast.error(`Erro: ${searchError.message}`);
+    }
+  }, [searchError]);
+  
+  const updateRoleByEmailMutation = trpc.users.updateRoleByEmail.useMutation({
+    onSuccess: () => {
+      toast.success("Função atualizada com sucesso!");
+      setSearchEmail("");
+      setFoundUser(null);
       refetch();
     },
     onError: (error: any) => {
@@ -151,6 +185,82 @@ export default function AdminDashboard() {
               </div>
             </Card>
           </div>
+
+          {/* Search by Email Section */}
+          <Card className="border-border p-4 mb-6">
+            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+              Buscar e Atualizar Usuário por Email
+              <InfoTooltip text="Digite um email para buscar o usuário e atualizar sua função" />
+            </h3>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Digite o email do usuário"
+                  value={searchEmail}
+                  onChange={(e) => setSearchEmail(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => {
+                    if (searchEmail) {
+                      setEmailToSearch(searchEmail);
+                    }
+                  }}
+                  disabled={!searchEmail || searchingUser}
+                >
+                  Buscar
+                </Button>
+              </div>
+              
+              {foundUser && (
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Nome</p>
+                      <p className="font-semibold text-foreground">{foundUser.name || "Sem nome"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Email</p>
+                      <p className="font-semibold text-foreground">{foundUser.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Função Atual</p>
+                      <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${roleColors[foundUser.role as UserRole]}`}>
+                        {foundUser.role === "visitor" ? "Visitante" : foundUser.role === "team" ? "Equipe" : foundUser.role === "coordinator" ? "Coordenador" : "SuperAdmin"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Nova Função</p>
+                      <Select
+                        value={selectedRole}
+                        onValueChange={(value) => setSelectedRole(value as UserRole)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="visitor">Visitante</SelectItem>
+                          <SelectItem value="team">Equipe</SelectItem>
+                          <SelectItem value="coordinator">Coordenador</SelectItem>
+                          <SelectItem value="superadmin">SuperAdmin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      updateRoleByEmailMutation.mutate({ email: foundUser.email!, newRole: selectedRole });
+                    }}
+                    disabled={updateRoleByEmailMutation.isPending}
+                    className="w-full"
+                  >
+                    Atualizar Função
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
 
           {/* Users Table */}
           <Card className="border-border overflow-hidden">

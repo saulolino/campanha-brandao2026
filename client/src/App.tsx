@@ -10,6 +10,7 @@ import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
@@ -40,6 +41,7 @@ function Router() {
         return null;
       }} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/register"} component={Register} />
       <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />

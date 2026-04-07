@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users } from "../drizzle/schema";
-import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -18,87 +17,75 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
+export async function createUser(data: {
+  name: string;
+  email: string;
+  whatsapp: string;
+  passwordHash: string;
+  role: 'visitor' | 'team' | 'coordinator' | 'superadmin';
+}) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+    throw new Error("Database not available");
   }
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    // Map new roles to database roles (database only has 'user' and 'admin')
-    const roleMap: Record<string, 'user' | 'admin'> = {
-      'visitor': 'user',
-      'team': 'user',
-      'coordinator': 'user',
-      'superadmin': 'admin',
-      'user': 'user',
-      'admin': 'admin',
-    };
-
-    let dbRole: 'user' | 'admin' = 'user';
-    if (user.role !== undefined) {
-      dbRole = roleMap[user.role] || 'user';
-    } else if (user.openId === ENV.ownerOpenId) {
-      dbRole = 'admin';
-    }
-
-    values.role = dbRole as any;
-    updateSet.role = dbRole;
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
+    const result = await db.insert(users).values({
+      name: data.name,
+      email: data.email,
+      whatsapp: data.whatsapp,
+      passwordHash: data.passwordHash,
+      role: data.role,
     });
+    return result;
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    console.error("[Database] Failed to create user:", error);
     throw error;
   }
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  try {
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get user by email:", error);
+    return undefined;
+  }
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  try {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  } catch (error) {
+    console.error("[Database] Failed to get user by id:", error);
+    return undefined;
+  }
+}
+
+export async function updateUserLastSignedIn(id: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  try {
+    await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, id));
+  } catch (error) {
+    console.error("[Database] Failed to update last signed in:", error);
+    throw error;
+  }
+}
