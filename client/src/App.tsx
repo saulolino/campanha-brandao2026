@@ -4,42 +4,19 @@ import { Route, Switch } from "wouter";
 import { useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { useAuth } from "./_core/hooks/useAuth";
 import Home from "./pages/Home";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
-import Login from "./pages/Login";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 function Router() {
-  const { user, loading } = useAuth();
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    if (!loading) {
-      setIsReady(true);
-    }
-  }, [loading]);
-
-  // make sure to consider if you need authentication for certain routes
+  // Sem autenticação - dashboard acessível para todos
   return (
     <Switch>
-      <Route path={"/"} component={() => {
-        if (!isReady) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-        // Redirect root to home if authenticated, otherwise to login
-        useEffect(() => {
-          if (user) {
-            window.location.href = '/home';
-          } else {
-            window.location.href = '/login';
-          }
-        }, [user]);
-        return null;
-      }} />
-      <Route path={"/login"} component={Login} />
+      <Route path={"/"} component={Home} />
       <Route path={"/home"} component={Home} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
@@ -52,11 +29,6 @@ function Router() {
     </Switch>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (

@@ -4,8 +4,6 @@
 // Brasília Cidade Parque - Meta: 20.000 seguidores
 // ============================================================
 import { useState, useRef } from "react";
-import { usePermissions } from "@/hooks/usePermissions";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Sidebar from "@/components/Sidebar";
 import MetricCard from "@/components/MetricCard";
 import GaugeChart from "@/components/GaugeChart";
@@ -92,26 +90,14 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [showPresentation, setShowPresentation] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-  
-  const { isVisitor } = usePermissions();
-
-  // Visitante não tem acesso ao painel
-  if (isVisitor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Acesso Negado</h1>
-          <p className="text-muted-foreground mb-6">Você não tem permissão para acessar o painel.</p>
-          <a href="/login" className="text-primary hover:underline">Voltar para login</a>
-        </div>
-      </div>
-    );
-  }
 
   const handleNavigate = (section: string) => {
     setActiveSection(section);
     sectionRefs.current[section]?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  // Sem autenticação - dashboard acessível para todos
+  // Todos têm acesso total ao painel
 
   // Calculate days remaining
   const today = new Date();
