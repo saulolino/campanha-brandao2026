@@ -129,6 +129,10 @@ export default function Home() {
     navigate("/login");
   };
 
+  // Verificar se user.name existe antes de usar
+  const userName = user?.nome || user?.name || "Usuário";
+  const userRole = user?.role || "visitor";
+
   const handleNavigate = (section: string) => {
     setActiveSection(section);
     const element = sectionRefs.current[section];
