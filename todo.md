@@ -109,15 +109,24 @@
   - [x] Salvar imagem gerada no post
   - [x] Exibir preview da imagem no formulário
   - [x] Testes de integração (78 testes passando)
-- [ ] Adicionar histórico de imagens geradas — Reutilizar imagens com seus prompts
-  - [ ] Armazenar histórico em localStorage
-  - [ ] Criar componente de galeria de histórico
-  - [ ] Permitir reutilizar imagem com um clique
-  - [ ] Exibir prompt original de cada imagem
-  - [ ] Testes de histórico
+- [x] Adicionar histórico de imagens geradas — Reutilizar imagens com seus prompts
+    - [x] Armazenar histórico em localStorage
+    - [x] Criar componente ImageHistoryGallery
+    - [x] Permitir reutilizar imagem com um clique
+    - [x] Exibir prompt original de cada imagem com tooltip
+    - [x] Integrar galeria no PublicationManager
+  - [x] Testes passando (78/78)
 - [ ] Implementar suporte a edição de imagens — Usar originalImages para ajustes
   - [ ] Adicionar botão "Editar Imagem" nos posts
   - [ ] Abrir AIMediaGenerator com originalImages
   - [ ] Salvar imagem editada
   - [ ] Rastrear versões de imagem editada
   - [ ] Testes de edição
+
+- [x] Adicionar templates de prompts — Sugerir prompts pré-definidos para Brasília/campanha
+    - [x] Criar arquivo promptTemplates.ts com 6 categorias (Pôr do sol, Palácio, etc)
+    - [x] Integrar templates no AIMediaGenerator
+    - [x] Permitir usar template como base para prompt customizado
+    - [x] Exibir categorias em Select
+  - [x] Mostrar templates com preview ao clicar
+  - [x] Testes passando (78/78)

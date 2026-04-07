@@ -3,20 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Wand2, RotateCcw, Check, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Wand2, RotateCcw, Check, X, Copy } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { PROMPT_TEMPLATES } from "@/lib/promptTemplates";
 
 interface AIMediaGeneratorProps {
   onMediaGenerated: (mediaUrl: string) => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  originalImages?: Array<{ url: string; mimeType?: string }>;
 }
 
-export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange }: AIMediaGeneratorProps) {
+export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange, originalImages }: AIMediaGeneratorProps) {
   const [prompt, setPrompt] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
 
   // Mutation para gerar imagem com IA
   const generateImageMutation = trpc.system.generateImage.useMutation({
@@ -30,6 +35,11 @@ export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange }: AIM
     },
   });
 
+
+  const handleApplyTemplate = (template: string) => {
+    setSelectedTemplate(template);
+    setPrompt(template);
+  };
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       setError("Por favor, descreva a imagem que deseja gerar");
@@ -42,6 +52,7 @@ export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange }: AIM
     try {
       await generateImageMutation.mutateAsync({
         prompt: prompt.trim(),
+        originalImages: originalImages || [],
       });
     } catch (err) {
       console.error("[AIMediaGenerator] Erro ao gerar imagem:", err);
@@ -85,6 +96,8 @@ export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange }: AIM
     setPrompt("");
     setGeneratedImageUrl(null);
     setError(null);
+    setSelectedCategory("");
+    setSelectedTemplate("");
   };
 
   const handleClose = () => {
@@ -106,6 +119,46 @@ export function AIMediaGenerator({ onMediaGenerated, isOpen, onOpenChange }: AIM
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Templates de Prompts */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Templates de Prompts</label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha uma categoria..." />
+              </SelectTrigger>
+              <SelectContent>
+                {PROMPT_TEMPLATES.map((cat) => (
+                  <SelectItem key={cat.category} value={cat.category}>
+                    {cat.category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedCategory && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 max-h-48 overflow-y-auto">
+                {PROMPT_TEMPLATES.find((c) => c.category === selectedCategory)?.templates.map(
+                  (template, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleApplyTemplate(template)}
+                      className={`p-2 rounded-lg text-sm text-left transition-all border ${
+                        selectedTemplate === template
+                          ? "bg-purple-500/20 border-purple--500 text-purple-600"
+                          : "bg-muted border-border hover:border-purple-500/50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Copy size={14} className="mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{template}</span>
+                      </div>
+                    </button>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Prompt Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Descrição da Imagem</label>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { AIMediaGenerator } from "@/components/AIMediaGenerator";
+import { ImageHistoryGallery } from "@/components/ImageHistoryGallery";
 import NotFound from "./NotFound";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -388,6 +389,15 @@ export default function PublicationManager() {
         onMediaGenerated={handleAIMediaGenerated}
       />
 
+
+  // Deletar imagem do histórico
+  const deleteGeneratedImage = (id: string) => {
+    const updated = generatedImages.filter((img) => img.id !== id);
+    setGeneratedImages(updated);
+    localStorage.setItem("generatedImages", JSON.stringify(updated));
+    toast.success("Imagem removida do histórico");
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
@@ -399,12 +409,36 @@ export default function PublicationManager() {
           </p>
         </div>
 
+
+      {/* Galeria de Histórico de Imagens */}
+      {generatedImages.length > 0 && (
+        <div className="mb-6">
+          <ImageHistoryGallery
+            images={generatedImages}
+            onSelectImage={(image) => {
+              setPreviewImage(image.url);
+              toast.success("Imagem reutilizada!");
+            }}
+            onDeleteImage={deleteGeneratedImage}
+          />
+        </div>
+      )}
+
         {/* Flow Steps */}
         <div className="mb-8 bg-sidebar/50 rounded-lg p-4">
           <div className="flex items-center justify-between overflow-x-auto gap-2">
             {flowSteps.map((step, idx) => {
               const Icon = step.icon;
-              return (
+            
+  // Deletar imagem do histórico
+  const deleteGeneratedImage = (id: string) => {
+    const updated = generatedImages.filter((img) => img.id !== id);
+    setGeneratedImages(updated);
+    localStorage.setItem("generatedImages", JSON.stringify(updated));
+    toast.success("Imagem removida do histórico");
+  };
+
+  return (
                 <div key={step.status} className="flex items-center gap-2 flex-shrink-0">
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mb-1">
@@ -638,7 +672,16 @@ export default function PublicationManager() {
               const config = statusConfig[post.status as keyof typeof statusConfig];
               const Icon = config?.icon || AlertCircle;
 
-              return (
+            
+  // Deletar imagem do histórico
+  const deleteGeneratedImage = (id: string) => {
+    const updated = generatedImages.filter((img) => img.id !== id);
+    setGeneratedImages(updated);
+    localStorage.setItem("generatedImages", JSON.stringify(updated));
+    toast.success("Imagem removida do histórico");
+  };
+
+  return (
                 <Card key={post.id} className="p-4 hover:border-primary/50 transition-colors flex flex-col">
                   <div className="space-y-3 flex-1">
                     {/* Header */}
