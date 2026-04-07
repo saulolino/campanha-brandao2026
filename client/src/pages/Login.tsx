@@ -50,36 +50,29 @@ export default function Login() {
     setCarregando(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password: senha,
-        }),
-        credentials: "include",
-      });
+      // Validar credenciais
+      const persona = PERSONAS.find(
+        (p) => p.email === email && p.senha === senha
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        setErro(data.error || "Email ou senha inválidos");
+      if (!persona) {
+        setErro("Email ou senha inválidos");
         setCarregando(false);
         return;
       }
 
-      const data = await response.json();
-
+      // Armazenar dados da sessão no localStorage
       localStorage.setItem(
         "user",
         JSON.stringify({
-          email: data.user.email,
-          nome: data.user.name,
-          role: data.user.role,
+          email: persona.email,
+          nome: persona.nome,
+          role: persona.role,
+          whatsapp: persona.whatsapp,
         })
       );
 
+      // Redirecionar para o dashboard
       navigate("/home");
     } catch (err) {
       setErro("Erro ao fazer login");
