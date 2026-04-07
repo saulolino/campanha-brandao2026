@@ -117,7 +117,8 @@
     - [x] Integrar galeria no PublicationManager
   - [x] Testes passando (78/78)
 - [ ] Implementar suporte a edição de imagens — Usar originalImages para ajustes
-  - [ ] Adicionar botão "Editar Imagem" nos posts
+    - [x] Criar hook useFavoritePrompts
+  - [x] Adicionar botão "Editar Imagem" nos posts
   - [ ] Abrir AIMediaGenerator com originalImages
   - [ ] Salvar imagem editada
   - [ ] Rastrear versões de imagem editada
@@ -130,3 +131,29 @@
     - [x] Exibir categorias em Select
   - [x] Mostrar templates com preview ao clicar
   - [x] Testes passando (78/78)
+
+  - [x] Criar hook useFavoritePrompts
+  - [x] Adicionar botão "Editar Imagem" nos posts — Ícone de edição que abre AIMediaGenerator
+  - [ ] Adicionar ícone Edit em cada card de post
+  - [ ] Abrir AIMediaGenerator com originalImages
+  - [ ] Salvar imagem editada
+  - [ ] Atualizar preview do post
+  - [ ] Testes de edição
+
+- [x] Implementar rastreamento de versões — Histórico de edições de imagens
+    - [x] Criar hook useImageVersions
+  - [x] Armazenar histões para cada imagem
+  - [ ] Armazenar histórico em localStorage
+  - [ ] Adicionar timestamps e usuário de cada versão
+  - [ ] Permitir reverter para versão anterior
+  - [ ] Exibir histórico de versões em modal
+  - [ ] Testes de versões
+
+- [x] Criar atalhos de prompts favoritos — Marcar templates como favoritos
+    - [x] Criar hook useFavoritePrompts
+  - [x] Adicionar botão de favorito em cada template
+  - [ ] Armazenar favoritos em localStorage
+  - [ ] Criar seção "Meus Favoritos" no AIMediaGenerator
+  - [ ] Permitir remover de favoritos
+  - [ ] Sincronizar com templates regulares
+  - [ ] Testes de favoritos
