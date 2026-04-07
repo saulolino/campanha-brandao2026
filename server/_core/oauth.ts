@@ -272,4 +272,41 @@ export function registerAuthRoutes(app: Express) {
       res.status(500).json({ error: "Failed to change password" });
     }
   });
+
+  // Rota de callback do Manus OAuth
+  app.get("/api/oauth/callback", async (req: Request, res: Response) => {
+    try {
+      const { code, state } = req.query;
+
+      if (!code || !state) {
+        res.status(400).json({ error: "Missing code or state" });
+        return;
+      }
+
+      // Decodificar state para obter o redirect URI e role
+      let stateData: any = {};
+      try {
+        const decodedState = Buffer.from(state as string, "base64").toString("utf-8");
+        stateData = JSON.parse(decodedState);
+      } catch (error) {
+        res.status(400).json({ error: "Invalid state parameter" });
+        return;
+      }
+
+      const { redirectUri, role } = stateData;
+
+      // TODO: Trocar code por token com Manus OAuth
+      // Por enquanto, criar um usuário de teste ou redirecionar para login
+      
+      // Redirecionar para o URI fornecido
+      if (redirectUri) {
+        res.redirect(redirectUri);
+      } else {
+        res.redirect("/");
+      }
+    } catch (error) {
+      console.error("[OAuth] Callback failed", error);
+      res.status(500).json({ error: "OAuth callback failed" });
+    }
+  });
 }
