@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings, RefreshCw } from "lucide-react";
+import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings, RefreshCw, Heart, MessageCircle, FileText } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
 
@@ -12,34 +12,34 @@ export default function Home() {
   const [lastSync, setLastSync] = useState<string>('');
   
   // Buscar métricas reais do Instagram
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError, refetch } = trpc.instagram.getMetrics.useQuery();
   
   const handleNavigate = (route: string) => {
     navigate(route);
+  };
+
+  const handleRefresh = () => {
+    refetch();
   };
 
   // Calcular KPIs baseado em dados reais
   const targetFollowers = 20000;
   const currentFollowers = metrics?.followers || 0;
   const requiredGrowth = Math.max(0, targetFollowers - currentFollowers);
-  const weeklyGrowth = Math.floor(currentFollowers * 0.02); // Estimativa: 2% crescimento semanal
+  const totalPosts = metrics?.posts || 0;
+  const totalLikes = metrics?.likes || 0;
+  const totalComments = metrics?.comments || 0;
+  const avgEngagement = totalPosts > 0 ? Math.round((totalLikes + totalComments) / Math.min(totalPosts, 20)) : 0;
   
   // Atualizar timestamp de última sincronização
   useEffect(() => {
     if (metrics) {
-      const now = new Date().toLocaleTimeString('pt-BR');
+      const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       setLastSync(now);
     }
   }, [metrics]);
-  
-  const kpis = {
-    currentFollowers,
-    targetFollowers,
-    requiredGrowth,
-    weeklyGrowth,
-  };
 
-  const progressPercentage = (kpis.currentFollowers / kpis.targetFollowers) * 100;
+  const progressPercentage = (currentFollowers / targetFollowers) * 100;
 
   return (
     <div className="flex h-screen bg-background">
@@ -50,17 +50,29 @@ export default function Home() {
           {/* Error Alert */}
           {metricsError && <InstagramErrorAlert error={metricsError as Error} />}
           
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Painel Principal</h1>
-            <p className="text-muted-foreground">Visão executiva da campanha Eduardo Brandão — Brasília Cidade Parque</p>
+          {/* Header com perfil real */}
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-1">Painel Principal</h1>
+              {metrics?.username ? (
+                <p className="text-muted-foreground">
+                  <span className="text-primary font-medium">@{metrics.username}</span> — {metrics.name || 'Eduardo Brandão'}
+                </p>
+              ) : (
+                <p className="text-muted-foreground">Visão executiva da campanha Eduardo Brandão — Brasília Cidade Parque</p>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={metricsLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${metricsLoading ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </Button>
           </div>
 
           {/* Status de Sincronização */}
-          {lastSync && (
-            <div className="flex items-center justify-between mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Última sincronização: {lastSync}</span>
-              <RefreshCw className="w-4 h-4 text-green-500" />
+          {lastSync && !metricsError && (
+            <div className="flex items-center gap-2 mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm text-green-600">Dados sincronizados do Instagram às {lastSync}</span>
             </div>
           )}
           
@@ -70,14 +82,14 @@ export default function Home() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Seguidores Atuais
+                  Seguidores
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">
-                  {metricsLoading ? '...' : kpis.currentFollowers.toLocaleString()}
+                  {metricsLoading ? '...' : currentFollowers.toLocaleString('pt-BR')}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Do Instagram em tempo real</p>
+                <p className="text-xs text-muted-foreground mt-1">Seguindo: {metricsLoading ? '...' : (metrics?.following || 0).toLocaleString('pt-BR')}</p>
               </CardContent>
             </Card>
 
@@ -89,34 +101,89 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-accent">{kpis.targetFollowers.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Objetivo da campanha</p>
+                <div className="text-3xl font-bold text-accent">{targetFollowers.toLocaleString('pt-BR')}</div>
+                <p className="text-xs text-muted-foreground mt-1">Faltam {requiredGrowth.toLocaleString('pt-BR')} seguidores</p>
               </CardContent>
             </Card>
 
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Faltando
+                  <Heart className="w-4 h-4" />
+                  Engajamento Médio
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-500">{kpis.requiredGrowth.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Seguidores necessários</p>
+                <div className="text-3xl font-bold text-orange-500">
+                  {metricsLoading ? '...' : avgEngagement.toLocaleString('pt-BR')}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Por post (últimos 20)</p>
               </CardContent>
             </Card>
 
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  Crescimento Semanal
+                  <FileText className="w-4 h-4" />
+                  Total de Posts
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-500">+{metricsLoading ? '...' : kpis.weeklyGrowth}</div>
-                <p className="text-xs text-muted-foreground mt-1">Estimativa semanal</p>
+                <div className="text-3xl font-bold text-green-500">
+                  {metricsLoading ? '...' : totalPosts.toLocaleString('pt-BR')}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Publicações no perfil</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Engajamento detalhado */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card className="border border-border/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-500/10 rounded-lg">
+                    <Heart className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metricsLoading ? '...' : totalLikes.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Curtidas (últimos 20 posts)</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <MessageCircle className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metricsLoading ? '...' : totalComments.toLocaleString('pt-BR')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Comentários (últimos 20 posts)</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">
+                      {metricsLoading ? '...' : currentFollowers > 0 ? ((avgEngagement / currentFollowers) * 100).toFixed(2) + '%' : '0%'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Taxa de engajamento</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -126,7 +193,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle>Progresso da Campanha</CardTitle>
               <CardDescription>
-                {kpis.currentFollowers.toLocaleString()} de {kpis.targetFollowers.toLocaleString()} seguidores ({progressPercentage.toFixed(1)}%)
+                {currentFollowers.toLocaleString('pt-BR')} de {targetFollowers.toLocaleString('pt-BR')} seguidores ({progressPercentage.toFixed(1)}%)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -137,9 +204,9 @@ export default function Home() {
                 />
               </div>
               <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-                <span>0%</span>
-                <span>50%</span>
-                <span>100%</span>
+                <span>0</span>
+                <span>{(targetFollowers / 2).toLocaleString('pt-BR')}</span>
+                <span>{targetFollowers.toLocaleString('pt-BR')}</span>
               </div>
             </CardContent>
           </Card>

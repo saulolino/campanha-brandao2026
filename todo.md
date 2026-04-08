@@ -429,3 +429,22 @@
 - [x] Atualizar Relatorios.tsx
   - [x] Remover dados mockups
   - [x] Gerar relatórios com dados reais
+
+
+# DADOS REAIS VIA MCP DO INSTAGRAM
+- [x] Buscar dados reais via MCP do Instagram
+  - [x] Extrair informações da conta (@eduardobrandaopv)
+  - [x] Extrair 20 posts recentes com likes e comentários
+  - [x] Salvar dados em JSON (server/data/instagram_real_data.json)
+- [x] Refatorar instagramService para ler dados do JSON
+  - [x] Remover dependência de token inválido da API Graph
+  - [x] Carregar dados do arquivo JSON no startup
+  - [x] Servir métricas, posts, crescimento e engajamento por tipo
+- [x] Refatorar router do Instagram
+  - [x] Remover imports de funções antigas (publishToInstagram, etc)
+  - [x] Usar instagramService baseado em JSON
+  - [x] Adicionar procedure getLastSync
+- [x] Corrigir scheduler
+  - [x] Desabilitar auto-publish que causava ECONNRESET
+  - [x] Remover dependência de tabela instagram_posts no banco
+- [x] Testes passando (7/7)

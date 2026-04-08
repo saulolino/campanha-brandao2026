@@ -1,13 +1,24 @@
 /**
- * Serviço de Integração com Instagram Graph API
- * Conecta com a API real do Instagram para buscar dados de contas business
+ * Serviço de Integração com Instagram
+ * Lê dados reais extraídos via MCP do Instagram
+ * Arquivo fonte: server/data/instagram_real_data.json
  */
 
-import { ENV } from '../_core/env';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface InstagramMetricsReal {
   followers: number;
+  following: number;
   posts: number;
+  username: string;
+  name: string;
+  bio: string;
+  profilePicture: string;
   engagement: number;
   reach: number;
   impressions: number;
@@ -15,13 +26,18 @@ export interface InstagramMetricsReal {
   shares: number;
   comments: number;
   likes: number;
+  engagementRate: number;
+  avgEngagement: number;
 }
 
 export interface InstagramPostReal {
   id: string;
   caption: string;
-  mediaType: 'IMAGE' | 'VIDEO' | 'CAROUSEL';
+  mediaType: string;
+  mediaProductType: string;
   mediaUrl: string;
+  thumbnailUrl: string;
+  permalink: string;
   timestamp: string;
   likes: number;
   comments: number;
@@ -29,218 +45,209 @@ export interface InstagramPostReal {
   saves: number;
   reach: number;
   impressions: number;
+  engagement: number;
+}
+
+interface InstagramData {
+  account: {
+    username: string;
+    name: string;
+    bio: string;
+    followers: number;
+    following: number;
+    posts: number;
+    profilePicture: string;
+  };
+  posts: Array<{
+    id: string;
+    caption: string;
+    mediaType: string;
+    mediaProductType: string;
+    permalink: string;
+    timestamp: string;
+    likes: number;
+    comments: number;
+    thumbnailUrl: string;
+  }>;
+  metrics: {
+    totalLikes: number;
+    totalComments: number;
+    avgEngagement: number;
+    engagementRate: number;
+    engagementByType: Array<{
+      type: string;
+      posts: number;
+      totalLikes: number;
+      totalComments: number;
+      avgEngagement: number;
+    }>;
+  };
+  fetchedAt: string;
 }
 
 /**
- * Classe para integração com Instagram Graph API
- * Requer: INSTAGRAM_BUSINESS_ACCOUNT_ID e INSTAGRAM_ACCESS_TOKEN
+ * Classe para servir dados reais do Instagram
+ * Dados extraídos via MCP e armazenados em JSON
  */
 export class InstagramService {
-  private accountId: string;
-  private accessToken: string;
-  private apiVersion = 'v18.0';
-  private baseUrl = 'https://graph.instagram.com';
+  private data: InstagramData | null = null;
+  private dataPath: string;
 
-  constructor(accountId?: string, accessToken?: string) {
-    this.accountId = accountId || process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '';
-    this.accessToken = accessToken || process.env.INSTAGRAM_ACCESS_TOKEN || '';
-
-    if (!this.accountId || !this.accessToken) {
-      console.warn('[Instagram] Credenciais não configuradas. Usando dados simulados.');
-    }
+  constructor() {
+    this.dataPath = path.join(__dirname, '..', 'data', 'instagram_real_data.json');
+    this.loadData();
   }
 
   /**
-   * Fazer requisição para Instagram Graph API
+   * Carregar dados do arquivo JSON
    */
-  private async makeRequest(endpoint: string, params: Record<string, any> = {}) {
-    if (!this.accessToken) {
-      throw new Error('Instagram Access Token não configurado');
-    }
-
-    const url = new URL(`${this.baseUrl}/${this.apiVersion}${endpoint}`);
-    url.searchParams.append('access_token', this.accessToken);
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url.searchParams.append(key, String(value));
-      }
-    });
-
+  private loadData(): void {
     try {
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Instagram API Error: ${error.error?.message || response.statusText}`);
+      if (fs.existsSync(this.dataPath)) {
+        const raw = fs.readFileSync(this.dataPath, 'utf-8');
+        this.data = JSON.parse(raw);
+        console.log(`[Instagram] Dados reais carregados: @${this.data?.account?.username}, ${this.data?.posts?.length} posts`);
+      } else {
+        console.warn(`[Instagram] Arquivo de dados não encontrado: ${this.dataPath}`);
       }
-
-      return await response.json();
     } catch (error) {
-      console.error('[Instagram] Request failed:', error);
-      throw error;
+      console.error('[Instagram] Erro ao carregar dados:', error);
     }
   }
 
   /**
-   * Buscar métricas da conta business
+   * Recarregar dados (útil após atualização via MCP)
+   */
+  reload(): void {
+    this.loadData();
+  }
+
+  /**
+   * Buscar métricas da conta
    */
   async getMetrics(): Promise<InstagramMetricsReal> {
-    try {
-      const fields = [
-        'followers_count',
-        'media_count',
-        'biography',
-        'website',
-        'profile_picture_url',
-      ];
-
-      const data = await this.makeRequest(`/${this.accountId}`, {
-        fields: fields.join(','),
-      });
-
-      // Buscar métricas de engajamento
-      const insightsData = await this.makeRequest(`/${this.accountId}/insights`, {
-        metric: 'impressions,reach,profile_views',
-        period: 'day',
-      });
-
-      const insights = insightsData.data || [];
-      const metricsMap: Record<string, number> = {};
-
-      insights.forEach((insight: any) => {
-        metricsMap[insight.name] = insight.values?.[0]?.value || 0;
-      });
-
-      return {
-        followers: data.followers_count || 0,
-        posts: data.media_count || 0,
-        engagement: 0, // Calcular baseado em dados reais
-        reach: metricsMap.reach || 0,
-        impressions: metricsMap.impressions || 0,
-        saves: 0,
-        shares: 0,
-        comments: 0,
-        likes: 0,
-      };
-    } catch (error) {
-      console.error('[Instagram] Failed to fetch metrics:', error);
-      throw error;
+    if (!this.data) {
+      throw new Error('Dados do Instagram não disponíveis. Execute a sincronização via MCP.');
     }
+
+    const { account, metrics } = this.data;
+
+    return {
+      followers: account.followers,
+      following: account.following,
+      posts: account.posts,
+      username: account.username,
+      name: account.name,
+      bio: account.bio,
+      profilePicture: account.profilePicture,
+      engagement: metrics.totalLikes + metrics.totalComments,
+      reach: 0,
+      impressions: 0,
+      saves: 0,
+      shares: 0,
+      comments: metrics.totalComments,
+      likes: metrics.totalLikes,
+      engagementRate: metrics.engagementRate,
+      avgEngagement: metrics.avgEngagement,
+    };
   }
 
   /**
    * Buscar posts recentes
    */
   async getPosts(limit: number = 10): Promise<InstagramPostReal[]> {
-    try {
-      const fields = [
-        'id',
-        'caption',
-        'media_type',
-        'media_url',
-        'timestamp',
-        'like_count',
-        'comments_count',
-      ];
+    if (!this.data) {
+      throw new Error('Dados do Instagram não disponíveis. Execute a sincronização via MCP.');
+    }
 
-      const data = await this.makeRequest(`/${this.accountId}/media`, {
-        fields: fields.join(','),
-        limit,
-      });
-
-      const posts = data.data || [];
-
-      return posts.map((post: any) => ({
+    return this.data.posts
+      .slice(0, limit)
+      .map((post) => ({
         id: post.id,
-        caption: post.caption || '',
-        mediaType: post.media_type || 'IMAGE',
-        mediaUrl: post.media_url || '',
-        timestamp: post.timestamp || new Date().toISOString(),
-        likes: post.like_count || 0,
-        comments: post.comments_count || 0,
+        caption: post.caption,
+        mediaType: post.mediaType,
+        mediaProductType: post.mediaProductType,
+        mediaUrl: post.thumbnailUrl || '',
+        thumbnailUrl: post.thumbnailUrl || '',
+        permalink: post.permalink,
+        timestamp: post.timestamp,
+        likes: post.likes,
+        comments: post.comments,
         shares: 0,
         saves: 0,
         reach: 0,
         impressions: 0,
+        engagement: post.likes + post.comments,
       }));
-    } catch (error) {
-      console.error('[Instagram] Failed to fetch posts:', error);
-      throw error;
-    }
   }
 
   /**
-   * Buscar insights de um post específico
-   */
-  async getPostInsights(postId: string) {
-    try {
-      const fields = [
-        'like_count',
-        'comments_count',
-        'shares_count',
-        'saved_count',
-        'reach',
-        'impressions',
-      ];
-
-      const data = await this.makeRequest(`/${postId}/insights`, {
-        metric: fields.join(','),
-      });
-
-      return data;
-    } catch (error) {
-      console.error('[Instagram] Failed to fetch post insights:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Buscar análise de crescimento (últimos 7 dias)
+   * Buscar análise de crescimento baseada em posts recentes
    */
   async getGrowth() {
-    try {
-      const data = await this.makeRequest(`/${this.accountId}/insights`, {
-        metric: 'follower_count,impressions,reach',
-        period: 'day',
-        since: Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60,
-        until: Math.floor(Date.now() / 1000),
-      });
-
-      const insights = data.data || [];
-      const daily: Array<{ date: string; followers: number; engagement: number }> = [];
-
-      insights.forEach((insight: any) => {
-        const values = insight.values || [];
-        values.forEach((value: any) => {
-          const date = new Date(value.end_time).toISOString().split('T')[0];
-          const existing = daily.find((d) => d.date === date);
-
-          if (existing) {
-            if (insight.name === 'follower_count') existing.followers = value.value;
-            if (insight.name === 'impressions') existing.engagement = value.value;
-          } else {
-            daily.push({
-              date,
-              followers: insight.name === 'follower_count' ? value.value : 0,
-              engagement: insight.name === 'impressions' ? value.value : 0,
-            });
-          }
-        });
-      });
-
-      return { daily: daily.sort((a, b) => a.date.localeCompare(b.date)) };
-    } catch (error) {
-      console.error('[Instagram] Failed to fetch growth data:', error);
-      throw error;
+    if (!this.data) {
+      throw new Error('Dados do Instagram não disponíveis. Execute a sincronização via MCP.');
     }
+
+    const posts = this.data.posts;
+
+    // Agrupar por semana
+    const weeklyData: Record<string, { likes: number; comments: number; posts: number }> = {};
+
+    posts.forEach((post) => {
+      const date = new Date(post.timestamp);
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      const weekKey = weekStart.toISOString().split('T')[0];
+
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { likes: 0, comments: 0, posts: 0 };
+      }
+      weeklyData[weekKey].likes += post.likes;
+      weeklyData[weekKey].comments += post.comments;
+      weeklyData[weekKey].posts += 1;
+    });
+
+    const daily = Object.entries(weeklyData)
+      .map(([date, data]) => ({
+        date,
+        engagement: data.likes + data.comments,
+        posts: data.posts,
+        avgEngagement: data.posts > 0 ? Math.round((data.likes + data.comments) / data.posts) : 0,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return { daily };
   }
 
   /**
-   * Verificar se as credenciais estão configuradas
+   * Buscar engajamento por tipo de conteúdo
+   */
+  async getEngagementByType() {
+    if (!this.data) {
+      throw new Error('Dados do Instagram não disponíveis. Execute a sincronização via MCP.');
+    }
+
+    return this.data.metrics.engagementByType.map((item) => ({
+      type: item.type,
+      posts: item.posts,
+      avgEngagement: item.avgEngagement,
+      totalReach: 0,
+    }));
+  }
+
+  /**
+   * Verificar se os dados estão disponíveis
    */
   isConfigured(): boolean {
-    return !!this.accessToken && !!this.accountId;
+    return this.data !== null && this.data.posts.length > 0;
+  }
+
+  /**
+   * Obter data da última sincronização
+   */
+  getLastSyncDate(): string | null {
+    return this.data?.fetchedAt || null;
   }
 }
 
