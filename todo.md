@@ -499,3 +499,5 @@
 - [x] Criar página /relatorios com agenda semanal e mensal + exportação PDF (jsPDF) — dados reais do banco
 
 - [x] CRUD de usuários na página /configuracoes (listar, editar role, remover, convidar)
+
+- [x] Fix: CRUD de usuários retorna erro de permissão mesmo logado como Superadmin

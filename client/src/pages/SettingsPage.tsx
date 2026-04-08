@@ -39,7 +39,13 @@ export default function SettingsPage() {
 
   // ─── CRUD de Usuários ────────────────────────────────────────────────────
   const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.role === "superadmin";
+  // O sistema usa login local (localStorage) independente do OAuth
+  // Verifica role tanto no banco (useAuth) quanto no localStorage
+  const localUser = (() => {
+    try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
+  })();
+  const effectiveRole = currentUser?.role ?? localUser?.role ?? null;
+  const isSuperAdmin = effectiveRole === "superadmin";
 
   // Estado do modal de edição
   const [editingUser, setEditingUser] = useState<{ id: number; name: string; role: string } | null>(null);

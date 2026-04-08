@@ -44,38 +44,45 @@ export default function Login() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
+  const doLocalLogin = async (emailVal: string, senhaVal: string, persona: (typeof PERSONAS)[0]) => {
+    // Chamar endpoint real que cria sessão JWT no cookie
+    const resp = await fetch("/api/auth/local-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email: emailVal, senha: senhaVal }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error((err as any).error || "Erro ao fazer login");
+    }
+    // Manter localStorage para compatibilidade com componentes que usam user.role
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        email: persona.email,
+        nome: persona.nome,
+        role: persona.role,
+        whatsapp: persona.whatsapp,
+      })
+    );
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro("");
     setCarregando(true);
-
     try {
-      // Validar credenciais
-      const persona = PERSONAS.find(
-        (p) => p.email === email && p.senha === senha
-      );
-
+      const persona = PERSONAS.find(p => p.email === email && p.senha === senha);
       if (!persona) {
         setErro("Email ou senha inválidos");
         setCarregando(false);
         return;
       }
-
-      // Armazenar dados da sessão no localStorage
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: persona.email,
-          nome: persona.nome,
-          role: persona.role,
-          whatsapp: persona.whatsapp,
-        })
-      );
-
-      // Redirecionar para o dashboard
+      await doLocalLogin(email, senha, persona);
       navigate("/home");
-    } catch (err) {
-      setErro("Erro ao fazer login");
+    } catch (err: any) {
+      setErro(err.message || "Erro ao fazer login");
       setCarregando(false);
     }
   };
@@ -83,23 +90,11 @@ export default function Login() {
   const handleQuickLogin = async (persona: (typeof PERSONAS)[0]) => {
     setErro("");
     setCarregando(true);
-
     try {
-      // Armazenar dados da sessão no localStorage
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: persona.email,
-          nome: persona.nome,
-          role: persona.role,
-          whatsapp: persona.whatsapp,
-        })
-      );
-
-      // Redirecionar para o dashboard
+      await doLocalLogin(persona.email, persona.senha, persona);
       navigate("/home");
-    } catch (err) {
-      setErro("Erro ao fazer login");
+    } catch (err: any) {
+      setErro(err.message || "Erro ao fazer login");
       setCarregando(false);
     }
   };
