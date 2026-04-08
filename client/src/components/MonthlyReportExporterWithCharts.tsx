@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, FileText, Loader2, BarChart3 } from "lucide-react";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -163,7 +163,7 @@ export function MonthlyReportExporterWithCharts({
           post.hasAds ? "Sim" : "Não",
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           head: [["Data", "Título", "Status", "Formato", "Pilar", "Anúncios"]],
           body: tableData,
           startY: 30,
