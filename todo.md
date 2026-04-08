@@ -461,3 +461,18 @@
 - [ ] Posts aparecem imediatamente no calendário após criação
 - [ ] Edição persiste corretamente no banco de dados
 - [ ] Testes do módulo de agenda
+
+# FASE: STATUS PRODUÇÃO, CALENDÁRIO MENSAL E NOTIFICAÇÕES
+
+- [ ] Seletor de status no modal (Rascunho → Design → Legenda → Revisão → Agendado)
+- [ ] Visualização mensal na página /conteudo (aba Mensal)
+- [ ] Notificações automáticas de posts pendentes nas próximas 24h
+
+# FASE: STATUS PRODUÇÃO, CALENDÁRIO MENSAL E NOTIFICAÇÕES
+
+- [x] Seletor de status de produção no modal (pipeline visual: Rascunho → Design → Legenda → Revisão → Agendado)
+- [x] Aba de visualização mensal com grade completa de dias
+- [x] Notificações de posts pendentes nas próximas 24h com banner de alerta
+- [x] Botão para dispensar alertas individualmente
+- [x] Navegação entre meses no calendário mensal
+- [x] Legenda de tipos no calendário mensal

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "sonner"; // sonner toast
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,16 +25,21 @@ import {
   DollarSign,
   Trash2,
   Edit3,
+  AlertTriangle,
+  X,
+  CalendarDays,
 } from "lucide-react";
 
 // Tipos
 type PostType = "reels" | "carrossel" | "video" | "story" | "imagem";
 type PostStatus = "draft" | "design" | "caption" | "review" | "scheduled" | "published" | "failed";
+type ViewMode = "semanal" | "mensal";
 
 interface PostForm {
   title: string;
   description: string;
   type: PostType;
+  status: PostStatus;
   scheduledDate: string;
   scheduledTime: string;
   objective: string;
@@ -49,6 +54,7 @@ const defaultForm: PostForm = {
   title: "",
   description: "",
   type: "reels",
+  status: "draft",
   scheduledDate: "",
   scheduledTime: "12:00",
   objective: "",
@@ -68,15 +74,17 @@ const TYPE_CONFIG: Record<PostType, { label: string; icon: any; color: string; b
   imagem: { label: "Imagem", icon: Image, color: "text-green-400", bg: "bg-green-500/20 border-green-500/40" },
 };
 
-const STATUS_CONFIG: Record<PostStatus, { label: string; color: string }> = {
-  draft: { label: "Rascunho", color: "bg-gray-500/20 text-gray-400" },
-  design: { label: "Design", color: "bg-blue-500/20 text-blue-400" },
-  caption: { label: "Legenda", color: "bg-yellow-500/20 text-yellow-400" },
-  review: { label: "Revisão", color: "bg-orange-500/20 text-orange-400" },
-  scheduled: { label: "Agendado", color: "bg-green-500/20 text-green-400" },
-  published: { label: "Publicado", color: "bg-emerald-500/20 text-emerald-400" },
-  failed: { label: "Falhou", color: "bg-red-500/20 text-red-400" },
+const STATUS_CONFIG: Record<PostStatus, { label: string; color: string; step: number }> = {
+  draft:     { label: "Rascunho", color: "bg-gray-500/20 text-gray-400 border-gray-500/30",     step: 1 },
+  design:    { label: "Design",   color: "bg-blue-500/20 text-blue-400 border-blue-500/30",     step: 2 },
+  caption:   { label: "Legenda",  color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", step: 3 },
+  review:    { label: "Revisão",  color: "bg-orange-500/20 text-orange-400 border-orange-500/30", step: 4 },
+  scheduled: { label: "Agendado", color: "bg-green-500/20 text-green-400 border-green-500/30",  step: 5 },
+  published: { label: "Publicado",color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", step: 6 },
+  failed:    { label: "Falhou",   color: "bg-red-500/20 text-red-400 border-red-500/30",        step: 0 },
 };
+
+const PRODUCTION_STATUSES: PostStatus[] = ["draft", "design", "caption", "review", "scheduled"];
 
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -90,6 +98,18 @@ function getWeekDays(referenceDate: Date): Date[] {
     d.setDate(monday.getDate() + i);
     return d;
   });
+}
+
+function getMonthGrid(year: number, month: number): (Date | null)[] {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startPad = firstDay.getDay(); // 0=Dom
+  const grid: (Date | null)[] = [];
+  for (let i = 0; i < startPad; i++) grid.push(null);
+  for (let d = 1; d <= lastDay.getDate(); d++) grid.push(new Date(year, month, d));
+  // pad to complete last row
+  while (grid.length % 7 !== 0) grid.push(null);
+  return grid;
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -106,16 +126,20 @@ function formatDateForInput(date: Date): string {
 }
 
 export default function Conteudo() {
+  const [viewMode, setViewMode] = useState<ViewMode>("semanal");
   const [currentWeekRef, setCurrentWeekRef] = useState(() => new Date());
+  const [monthRef, setMonthRef] = useState(() => new Date());
   const weekDays = useMemo(() => getWeekDays(currentWeekRef), [currentWeekRef]);
+  const monthGrid = useMemo(() => getMonthGrid(monthRef.getFullYear(), monthRef.getMonth()), [monthRef]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [form, setForm] = useState<PostForm>(defaultForm);
+  const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
 
   const utils = trpc.useUtils();
-  const { data: postsData, isLoading } = trpc.posts.list.useQuery({ limit: 200, offset: 0 });
-  const posts = postsData || [];
+  const { data: postsData, isLoading } = trpc.posts.list.useQuery({ limit: 500, offset: 0 });
+  const posts: any[] = postsData || [];
 
   const createPost = trpc.posts.create.useMutation({
     onSuccess: () => {
@@ -152,6 +176,19 @@ export default function Conteudo() {
     },
   });
 
+  // Notificações: posts agendados nas próximas 24h com status pendente (não publicado)
+  const pendingAlerts = useMemo(() => {
+    const now = new Date();
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    return posts.filter((p: any) => {
+      if (dismissedAlerts.includes(p.id)) return false;
+      const scheduled = new Date(p.scheduledDate);
+      const status: PostStatus = p.status || "draft";
+      const isPending = ["draft", "design", "caption", "review"].includes(status);
+      return isPending && scheduled >= now && scheduled <= in24h;
+    });
+  }, [posts, dismissedAlerts]);
+
   function prevWeek() {
     const d = new Date(currentWeekRef);
     d.setDate(d.getDate() - 7);
@@ -162,6 +199,18 @@ export default function Conteudo() {
     const d = new Date(currentWeekRef);
     d.setDate(d.getDate() + 7);
     setCurrentWeekRef(d);
+  }
+
+  function prevMonth() {
+    const d = new Date(monthRef);
+    d.setMonth(d.getMonth() - 1);
+    setMonthRef(d);
+  }
+
+  function nextMonth() {
+    const d = new Date(monthRef);
+    d.setMonth(d.getMonth() + 1);
+    setMonthRef(d);
   }
 
   function openNewPost(day?: Date) {
@@ -177,6 +226,7 @@ export default function Conteudo() {
       title: post.title || "",
       description: post.description || "",
       type: (post.type as PostType) || "imagem",
+      status: (post.status as PostStatus) || "draft",
       scheduledDate: formatDateForInput(d),
       scheduledTime: post.scheduledTime || "12:00",
       objective: post.objective || "",
@@ -190,44 +240,26 @@ export default function Conteudo() {
   }
 
   function handleSave() {
-    if (!form.title.trim()) {
-      toast.error("Título obrigatório.");
-      return;
-    }
-    if (!form.scheduledDate) {
-      toast.error("Data obrigatória.");
-      return;
-    }
+    if (!form.title.trim()) { toast.error("Título obrigatório."); return; }
+    if (!form.scheduledDate) { toast.error("Data obrigatória."); return; }
     const scheduledDate = new Date(form.scheduledDate + "T" + form.scheduledTime + ":00");
+    const payload = {
+      title: form.title,
+      description: form.description,
+      type: form.type,
+      scheduledDate,
+      scheduledTime: form.scheduledTime,
+      objective: form.objective,
+      expectedReach: form.expectedReach,
+      expectedLikes: form.expectedLikes,
+      expectedComments: form.expectedComments,
+      budget: form.budget || undefined,
+      notes: form.notes,
+    };
     if (editingPost) {
-      updatePost.mutate({
-        id: editingPost.id,
-        title: form.title,
-        description: form.description,
-        type: form.type,
-        scheduledDate,
-        scheduledTime: form.scheduledTime,
-        objective: form.objective,
-        expectedReach: form.expectedReach,
-        expectedLikes: form.expectedLikes,
-        expectedComments: form.expectedComments,
-        budget: form.budget || undefined,
-        notes: form.notes,
-      });
+      updatePost.mutate({ id: editingPost.id, ...payload, status: form.status });
     } else {
-      createPost.mutate({
-        title: form.title,
-        description: form.description,
-        type: form.type,
-        scheduledDate,
-        scheduledTime: form.scheduledTime,
-        objective: form.objective,
-        expectedReach: form.expectedReach,
-        expectedLikes: form.expectedLikes,
-        expectedComments: form.expectedComments,
-        budget: form.budget || undefined,
-        notes: form.notes,
-      });
+      createPost.mutate(payload);
     }
   }
 
@@ -239,17 +271,15 @@ export default function Conteudo() {
 
   const today = new Date();
   const weekLabel = `${weekDays[0].getDate()} ${MONTHS_PT[weekDays[0].getMonth()]} – ${weekDays[6].getDate()} ${MONTHS_PT[weekDays[6].getMonth()]} ${weekDays[6].getFullYear()}`;
+  const monthLabel = `${MONTHS_PT[monthRef.getMonth()]} ${monthRef.getFullYear()}`;
 
   const typeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    posts.forEach((p: any) => {
-      const t = p.type || "imagem";
-      counts[t] = (counts[t] || 0) + 1;
-    });
+    posts.forEach((p: any) => { const t = p.type || "imagem"; counts[t] = (counts[t] || 0) + 1; });
     return counts;
   }, [posts]);
 
-  const weekPosts = useMemo(() => weekDays.flatMap(getPostsForDay), [weekDays, posts]);
+  const weekPosts = useMemo(() => weekDays.flatMap(d => getPostsForDay(d)), [weekDays, posts]);
 
   return (
     <div className="flex h-screen bg-[#0a0f1a] text-white overflow-hidden">
@@ -266,17 +296,84 @@ export default function Conteudo() {
                 <p className="text-xs text-white/50">Planejamento e agendamento de posts</p>
               </div>
             </div>
-            <Button
-              onClick={() => openNewPost()}
-              className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-semibold gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Post
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* Toggle Semanal / Mensal */}
+              <div className="flex bg-white/10 rounded-lg p-1 gap-1">
+                <button
+                  onClick={() => setViewMode("semanal")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    viewMode === "semanal" ? "bg-[#4ade80] text-black" : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" /> Semanal
+                </button>
+                <button
+                  onClick={() => setViewMode("mensal")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    viewMode === "mensal" ? "bg-[#4ade80] text-black" : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <CalendarDays className="w-3.5 h-3.5" /> Mensal
+                </button>
+              </div>
+              <Button
+                onClick={() => openNewPost()}
+                className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-semibold gap-2"
+              >
+                <Plus className="w-4 h-4" /> Novo Post
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          {/* Banner de alertas: posts pendentes nas próximas 24h */}
+          {pendingAlerts.length > 0 && (
+            <div className="rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-yellow-300 mb-2">
+                    {pendingAlerts.length} post{pendingAlerts.length > 1 ? "s" : ""} agendado{pendingAlerts.length > 1 ? "s" : ""} nas próximas 24h com produção pendente
+                  </p>
+                  <div className="space-y-1.5">
+                    {pendingAlerts.map((p: any) => {
+                      const d = new Date(p.scheduledDate);
+                      const statusCfg = STATUS_CONFIG[(p.status as PostStatus) || "draft"];
+                      return (
+                        <div key={p.id} className="flex items-center justify-between bg-yellow-500/10 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-yellow-200 font-medium">{p.title}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${statusCfg.color}`}>
+                              {statusCfg.label}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-yellow-400/70">
+                              {DAYS_PT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1} às {p.scheduledTime || "12:00"}
+                            </span>
+                            <button
+                              onClick={() => openEditPost(p)}
+                              className="text-[10px] text-yellow-300 hover:underline"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => setDismissedAlerts(prev => [...prev, p.id])}
+                              className="p-0.5 hover:bg-yellow-500/20 rounded"
+                            >
+                              <X className="w-3 h-3 text-yellow-400/60" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Resumo de tipos */}
           <div className="grid grid-cols-5 gap-3">
             {(Object.keys(TYPE_CONFIG) as PostType[]).map((type) => {
@@ -294,169 +391,277 @@ export default function Conteudo() {
             })}
           </div>
 
-          {/* Navegação de semana */}
-          <div className="flex items-center justify-between bg-white/5 rounded-xl border border-white/10 px-4 py-3">
-            <button onClick={prevWeek} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-              <ChevronLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-white">{weekLabel}</p>
-              <button onClick={() => setCurrentWeekRef(new Date())} className="text-xs text-[#4ade80] hover:underline mt-0.5">
-                Semana atual
-              </button>
-            </div>
-            <button onClick={nextWeek} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-              <ChevronRight className="w-5 h-5 text-white/70" />
-            </button>
-          </div>
+          {/* ===== VISUALIZAÇÃO SEMANAL ===== */}
+          {viewMode === "semanal" && (
+            <>
+              {/* Navegação de semana */}
+              <div className="flex items-center justify-between bg-white/5 rounded-xl border border-white/10 px-4 py-3">
+                <button onClick={prevWeek} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <ChevronLeft className="w-5 h-5 text-white/70" />
+                </button>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-white">{weekLabel}</p>
+                  <button onClick={() => setCurrentWeekRef(new Date())} className="text-xs text-[#4ade80] hover:underline mt-0.5">
+                    Semana atual
+                  </button>
+                </div>
+                <button onClick={nextWeek} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <ChevronRight className="w-5 h-5 text-white/70" />
+                </button>
+              </div>
 
-          {/* Calendário semanal */}
-          {isLoading ? (
-            <div className="grid grid-cols-7 gap-3">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-3 h-48 animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-7 gap-3">
-              {weekDays.map((day) => {
-                const dayPosts = getPostsForDay(day);
-                const isToday = isSameDay(day, today);
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`rounded-xl border p-3 min-h-[180px] flex flex-col gap-2 transition-colors ${
-                      isToday ? "border-[#4ade80]/50 bg-[#4ade80]/5" : "border-white/10 bg-white/5 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-white/50 uppercase tracking-wide">{DAYS_PT[day.getDay()]}</p>
-                        <p className={`text-lg font-bold ${isToday ? "text-[#4ade80]" : "text-white"}`}>{day.getDate()}</p>
-                      </div>
-                      <button
-                        onClick={() => openNewPost(day)}
-                        className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors"
-                        title="Adicionar post"
-                      >
-                        <Plus className="w-3 h-3 text-white/60" />
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-1.5 flex-1">
-                      {dayPosts.length === 0 ? (
-                        <p className="text-xs text-white/20 text-center mt-4">Sem posts</p>
-                      ) : (
-                        dayPosts.map((post: any) => {
-                          const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
-                          const Icon = typeCfg.icon;
-                          return (
-                            <button
-                              key={post.id}
-                              onClick={() => openEditPost(post)}
-                              className={`w-full text-left rounded-lg border p-2 hover:brightness-110 transition-all ${typeCfg.bg}`}
-                            >
-                              <div className="flex items-center gap-1.5 mb-1">
-                                <Icon className={`w-3 h-3 ${typeCfg.color} flex-shrink-0`} />
-                                <span className="text-xs font-medium text-white truncate">{post.title}</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] text-white/50">{post.scheduledTime || "12:00"}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${STATUS_CONFIG[(post.status as PostStatus) || "draft"].color}`}>
-                                  {STATUS_CONFIG[(post.status as PostStatus) || "draft"].label}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Lista de posts da semana */}
-          <div className="bg-white/5 rounded-xl border border-white/10 p-4">
-            <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#4ade80]" />
-              Posts desta semana
-              <Badge className="bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/30 text-xs">{weekPosts.length}</Badge>
-            </h2>
-            <div className="space-y-2">
-              {weekPosts.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="w-10 h-10 text-white/20 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm">Nenhum post agendado esta semana</p>
-                  <Button
-                    onClick={() => openNewPost()}
-                    variant="outline"
-                    size="sm"
-                    className="mt-3 border-white/20 text-white/70 hover:bg-white/10"
-                  >
-                    <Plus className="w-3 h-3 mr-1" /> Criar primeiro post
-                  </Button>
+              {/* Calendário semanal */}
+              {isLoading ? (
+                <div className="grid grid-cols-7 gap-3">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="bg-white/5 rounded-xl border border-white/10 p-3 h-48 animate-pulse" />
+                  ))}
                 </div>
               ) : (
-                weekPosts.map((post: any) => {
-                  const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
-                  const Icon = typeCfg.icon;
-                  const d = new Date(post.scheduledDate);
+                <div className="grid grid-cols-7 gap-3">
+                  {weekDays.map((day) => {
+                    const dayPosts = getPostsForDay(day);
+                    const isToday = isSameDay(day, today);
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className={`rounded-xl border p-3 min-h-[180px] flex flex-col gap-2 transition-colors ${
+                          isToday ? "border-[#4ade80]/50 bg-[#4ade80]/5" : "border-white/10 bg-white/5 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-white/50 uppercase tracking-wide">{DAYS_PT[day.getDay()]}</p>
+                            <p className={`text-lg font-bold ${isToday ? "text-[#4ade80]" : "text-white"}`}>{day.getDate()}</p>
+                          </div>
+                          <button
+                            onClick={() => openNewPost(day)}
+                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors"
+                            title="Adicionar post"
+                          >
+                            <Plus className="w-3 h-3 text-white/60" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-1.5 flex-1">
+                          {dayPosts.length === 0 ? (
+                            <p className="text-xs text-white/20 text-center mt-4">Sem posts</p>
+                          ) : (
+                            dayPosts.map((post: any) => {
+                              const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
+                              const Icon = typeCfg.icon;
+                              return (
+                                <button
+                                  key={post.id}
+                                  onClick={() => openEditPost(post)}
+                                  className={`w-full text-left rounded-lg border p-2 hover:brightness-110 transition-all ${typeCfg.bg}`}
+                                >
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <Icon className={`w-3 h-3 ${typeCfg.color} flex-shrink-0`} />
+                                    <span className="text-xs font-medium text-white truncate">{post.title}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-white/50">{post.scheduledTime || "12:00"}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${STATUS_CONFIG[(post.status as PostStatus) || "draft"].color}`}>
+                                      {STATUS_CONFIG[(post.status as PostStatus) || "draft"].label}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Lista de posts da semana */}
+              <div className="bg-white/5 rounded-xl border border-white/10 p-4">
+                <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#4ade80]" />
+                  Posts desta semana
+                  <Badge className="bg-[#4ade80]/20 text-[#4ade80] border-[#4ade80]/30 text-xs">{weekPosts.length}</Badge>
+                </h2>
+                <div className="space-y-2">
+                  {weekPosts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="w-10 h-10 text-white/20 mx-auto mb-3" />
+                      <p className="text-white/40 text-sm">Nenhum post agendado esta semana</p>
+                      <Button
+                        onClick={() => openNewPost()}
+                        variant="outline"
+                        size="sm"
+                        className="mt-3 border-white/20 text-white/70 hover:bg-white/10"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Criar primeiro post
+                      </Button>
+                    </div>
+                  ) : (
+                    weekPosts.map((post: any) => {
+                      const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
+                      const Icon = typeCfg.icon;
+                      const d = new Date(post.scheduledDate);
+                      return (
+                        <div
+                          key={post.id}
+                          className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeCfg.bg}`}>
+                            <Icon className={`w-4 h-4 ${typeCfg.color}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{post.title}</p>
+                            <p className="text-xs text-white/50">
+                              {DAYS_PT[d.getDay()]}, {d.getDate()} {MONTHS_PT[d.getMonth()]} às {post.scheduledTime || "12:00"}
+                              {post.objective && ` · ${post.objective}`}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            {(post.expectedReach || 0) > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-white/40">
+                                <Eye className="w-3 h-3" />{(post.expectedReach || 0).toLocaleString()}
+                              </div>
+                            )}
+                            {(post.expectedLikes || 0) > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-white/40">
+                                <Heart className="w-3 h-3" />{(post.expectedLikes || 0).toLocaleString()}
+                              </div>
+                            )}
+                            {(post.expectedComments || 0) > 0 && (
+                              <div className="flex items-center gap-1 text-xs text-white/40">
+                                <MessageCircle className="w-3 h-3" />{(post.expectedComments || 0).toLocaleString()}
+                              </div>
+                            )}
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_CONFIG[(post.status as PostStatus) || "draft"].color}`}>
+                              {STATUS_CONFIG[(post.status as PostStatus) || "draft"].label}
+                            </span>
+                            <button
+                              onClick={() => openEditPost(post)}
+                              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                              title="Editar"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-white/50" />
+                            </button>
+                            <button
+                              onClick={() => { if (confirm("Remover este post?")) deletePost.mutate({ id: post.id }); }}
+                              className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                              title="Remover"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ===== VISUALIZAÇÃO MENSAL ===== */}
+          {viewMode === "mensal" && (
+            <div className="space-y-4">
+              {/* Navegação de mês */}
+              <div className="flex items-center justify-between bg-white/5 rounded-xl border border-white/10 px-4 py-3">
+                <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <ChevronLeft className="w-5 h-5 text-white/70" />
+                </button>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-white">{monthLabel}</p>
+                  <button
+                    onClick={() => setMonthRef(new Date())}
+                    className="text-xs text-[#4ade80] hover:underline mt-0.5"
+                  >
+                    Mês atual
+                  </button>
+                </div>
+                <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                  <ChevronRight className="w-5 h-5 text-white/70" />
+                </button>
+              </div>
+
+              {/* Grade mensal */}
+              <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+                {/* Cabeçalho dias da semana */}
+                <div className="grid grid-cols-7 border-b border-white/10">
+                  {DAYS_PT.map((d) => (
+                    <div key={d} className="py-2 text-center text-xs font-semibold text-white/50 uppercase tracking-wide">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Células */}
+                <div className="grid grid-cols-7">
+                  {monthGrid.map((day, idx) => {
+                    if (!day) {
+                      return <div key={`empty-${idx}`} className="border-r border-b border-white/5 min-h-[100px] bg-white/2" />;
+                    }
+                    const dayPosts = getPostsForDay(day);
+                    const isToday = isSameDay(day, today);
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className={`border-r border-b border-white/5 min-h-[100px] p-2 flex flex-col gap-1 ${
+                          isToday ? "bg-[#4ade80]/5" : "hover:bg-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                            isToday ? "bg-[#4ade80] text-black" : "text-white/70"
+                          }`}>
+                            {day.getDate()}
+                          </span>
+                          <button
+                            onClick={() => openNewPost(day)}
+                            className="w-5 h-5 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors opacity-0 hover:opacity-100 group-hover:opacity-100"
+                            title="Adicionar post"
+                          >
+                            <Plus className="w-2.5 h-2.5 text-white/60" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-0.5 flex-1">
+                          {dayPosts.slice(0, 3).map((post: any) => {
+                            const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
+                            const statusCfg = STATUS_CONFIG[(post.status as PostStatus) || "draft"];
+                            return (
+                              <button
+                                key={post.id}
+                                onClick={() => openEditPost(post)}
+                                className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate border ${typeCfg.bg} hover:brightness-110 transition-all`}
+                                title={`${post.title} — ${statusCfg.label}`}
+                              >
+                                <span className={typeCfg.color}>●</span> {post.title}
+                              </button>
+                            );
+                          })}
+                          {dayPosts.length > 3 && (
+                            <span className="text-[10px] text-white/40 pl-1">+{dayPosts.length - 3} mais</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Legenda de tipos */}
+              <div className="flex flex-wrap gap-3">
+                {(Object.keys(TYPE_CONFIG) as PostType[]).map((type) => {
+                  const cfg = TYPE_CONFIG[type];
+                  const Icon = cfg.icon;
                   return (
-                    <div
-                      key={post.id}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors"
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${typeCfg.bg}`}>
-                        <Icon className={`w-4 h-4 ${typeCfg.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{post.title}</p>
-                        <p className="text-xs text-white/50">
-                          {DAYS_PT[d.getDay()]}, {d.getDate()} {MONTHS_PT[d.getMonth()]} às {post.scheduledTime || "12:00"}
-                          {post.objective && ` · ${post.objective}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
-                        {(post.expectedReach || 0) > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-white/40">
-                            <Eye className="w-3 h-3" />{(post.expectedReach || 0).toLocaleString()}
-                          </div>
-                        )}
-                        {(post.expectedLikes || 0) > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-white/40">
-                            <Heart className="w-3 h-3" />{(post.expectedLikes || 0).toLocaleString()}
-                          </div>
-                        )}
-                        {(post.expectedComments || 0) > 0 && (
-                          <div className="flex items-center gap-1 text-xs text-white/40">
-                            <MessageCircle className="w-3 h-3" />{(post.expectedComments || 0).toLocaleString()}
-                          </div>
-                        )}
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_CONFIG[(post.status as PostStatus) || "draft"].color}`}>
-                          {STATUS_CONFIG[(post.status as PostStatus) || "draft"].label}
-                        </span>
-                        <button
-                          onClick={() => openEditPost(post)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                          title="Editar"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-white/50" />
-                        </button>
-                        <button
-                          onClick={() => { if (confirm("Remover este post?")) deletePost.mutate({ id: post.id }); }}
-                          className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
-                          title="Remover"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
-                        </button>
-                      </div>
+                    <div key={type} className="flex items-center gap-1.5 text-xs text-white/50">
+                      <Icon className={`w-3.5 h-3.5 ${cfg.color}`} />
+                      {cfg.label}
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
 
@@ -477,6 +682,7 @@ export default function Conteudo() {
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-4 py-2">
+            {/* Título */}
             <div className="col-span-2 space-y-1.5">
               <Label className="text-white/70 text-xs">Título *</Label>
               <Input
@@ -487,6 +693,7 @@ export default function Conteudo() {
               />
             </div>
 
+            {/* Tipo */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Tipo de Conteúdo *</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as PostType })}>
@@ -503,6 +710,7 @@ export default function Conteudo() {
               </Select>
             </div>
 
+            {/* Objetivo */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Objetivo</Label>
               <Select value={form.objective} onValueChange={(v) => setForm({ ...form, objective: v })}>
@@ -519,6 +727,7 @@ export default function Conteudo() {
               </Select>
             </div>
 
+            {/* Data */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Data *</Label>
               <Input
@@ -529,6 +738,7 @@ export default function Conteudo() {
               />
             </div>
 
+            {/* Hora */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Hora *</Label>
               <Input
@@ -539,6 +749,40 @@ export default function Conteudo() {
               />
             </div>
 
+            {/* Status de Produção */}
+            <div className="col-span-2 space-y-2">
+              <Label className="text-white/70 text-xs">Status de Produção</Label>
+              {/* Pipeline visual */}
+              <div className="flex items-center gap-1">
+                {PRODUCTION_STATUSES.map((s, idx) => {
+                  const cfg = STATUS_CONFIG[s];
+                  const isActive = form.status === s;
+                  const currentStep = STATUS_CONFIG[form.status]?.step || 1;
+                  const isPast = cfg.step < currentStep;
+                  return (
+                    <div key={s} className="flex items-center flex-1">
+                      <button
+                        onClick={() => setForm({ ...form, status: s })}
+                        className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all border text-center ${
+                          isActive
+                            ? cfg.color + " border-current"
+                            : isPast
+                            ? "bg-white/10 text-white/60 border-white/20 hover:bg-white/15"
+                            : "bg-white/5 text-white/30 border-white/10 hover:bg-white/10"
+                        }`}
+                      >
+                        {cfg.label}
+                      </button>
+                      {idx < PRODUCTION_STATUSES.length - 1 && (
+                        <ChevronRight className={`w-3 h-3 flex-shrink-0 mx-0.5 ${isPast ? "text-white/40" : "text-white/15"}`} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Descrição */}
             <div className="col-span-2 space-y-1.5">
               <Label className="text-white/70 text-xs">Descrição</Label>
               <Textarea
@@ -550,6 +794,7 @@ export default function Conteudo() {
               />
             </div>
 
+            {/* Métricas Projetadas */}
             <div className="col-span-2">
               <p className="text-xs text-white/50 mb-2 flex items-center gap-1">
                 <Eye className="w-3 h-3" /> Métricas Projetadas
@@ -588,6 +833,7 @@ export default function Conteudo() {
               </div>
             </div>
 
+            {/* Orçamento */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs flex items-center gap-1">
                 <DollarSign className="w-3 h-3" /> Orçamento (R$)
@@ -603,6 +849,7 @@ export default function Conteudo() {
               />
             </div>
 
+            {/* Observações */}
             <div className="space-y-1.5">
               <Label className="text-white/70 text-xs">Observações</Label>
               <Input
