@@ -199,3 +199,12 @@
   - [x] Suporte a comentários de edição
   - [x] Testes de histórico (8 testes passando)
   - [ ] Criar procedure tRPC para buscar histórico (próximo passo)
+
+- [x] Criar relatório mensal de posts em PDF — Exportar posts por mês em PDF
+  - [x] Criar componente MonthlyReportExporter
+  - [x] Implementar geração de PDF com jsPDF
+  - [x] Incluir estatísticas mensais (total posts, status, performance)
+  - [x] Suporte a exportação em CSV também
+  - [x] Modal com seleção de formato
+  - [x] Testes de exportação (7 testes passando)
+  - [ ] Integrar no calendário mensal (próximo passo)
