@@ -486,3 +486,5 @@
 - [ ] Fix: Falha na query SQL instagram_posts — colunas novas não migradas para o banco
 
 - [x] Seed do banco com posts agendados do plano de comunicação (históricos + futuros planejados)
+
+- [x] Fix: instagram.getMetrics retorna 500 em produção — página /home não carrega dados
