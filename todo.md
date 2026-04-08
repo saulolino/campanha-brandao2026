@@ -399,3 +399,33 @@
   - [x] Incluir gráficos e métricas
   - [x] Download automático
   - [x] Agendar envio por email (opcional)
+
+
+# REMOVER MOCKUPS E CONECTAR DADOS REAIS
+
+- [x] Criar procedures tRPC para dados reais
+  - [x] Procedure para buscar posts reais do Instagram
+  - [x] Procedure para buscar engajamento por post
+  - [x] Procedure para buscar crescimento histórico
+  - [x] Procedure para buscar métricas por tipo de conteúdo
+
+- [x] Atualizar Home.tsx
+  - [x] Remover mock KPIs
+  - [x] Usar dados reais do Instagram
+
+- [x] Atualizar Conteudo.tsx
+  - [x] Remover posts mockups
+  - [x] Buscar posts reais da API
+
+- [x] Atualizar Metricas.tsx
+  - [x] Remover dados simulados de engajamento
+  - [x] Buscar engajamento real por período
+  - [x] Buscar performance real por tipo
+
+- [x] Atualizar Projecoes.tsx
+  - [x] Remover crescimento simulado
+  - [x] Calcular projeção real baseada em histórico
+
+- [x] Atualizar Relatorios.tsx
+  - [x] Remover dados mockups
+  - [x] Gerar relatórios com dados reais

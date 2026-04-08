@@ -5,79 +5,45 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Heart, MessageCircle, Share2, TrendingUp, Filter } from "lucide-react";
+import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 export default function Metricas() {
   const { animationClass } = usePageTransition();
   const [period, setPeriod] = useState("semanal");
   const [contentType, setContentType] = useState("todos");
 
-  // Dados por período
-  const dataByPeriod = {
-    semanal: [
-      { day: "Seg", curtidas: 234, comentarios: 45, compartilhamentos: 12 },
-      { day: "Ter", curtidas: 456, comentarios: 78, compartilhamentos: 23 },
-      { day: "Qua", curtidas: 345, comentarios: 56, compartilhamentos: 18 },
-      { day: "Qui", curtidas: 567, comentarios: 89, compartilhamentos: 34 },
-      { day: "Sex", curtidas: 678, comentarios: 102, compartilhamentos: 45 },
-      { day: "Sab", curtidas: 789, comentarios: 125, compartilhamentos: 56 },
-      { day: "Dom", curtidas: 456, comentarios: 67, compartilhamentos: 28 },
-    ],
-    mensal: [
-      { week: "Sem 1", curtidas: 2100, comentarios: 350, compartilhamentos: 180 },
-      { week: "Sem 2", curtidas: 2800, comentarios: 420, compartilhamentos: 240 },
-      { week: "Sem 3", curtidas: 3200, comentarios: 480, compartilhamentos: 290 },
-      { week: "Sem 4", curtidas: 3567, comentarios: 510, compartilhamentos: 340 },
-    ],
-  };
+  // Buscar dados reais do Instagram
+  const { data: metrics, isLoading: metricsLoading } = trpc.instagram.getMetrics.useQuery();
+  const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery();
+  const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
+  const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery();
 
-  // Dados por tipo de conteúdo
-  const contentTypeData = {
-    todos: [
-      { name: "Curtidas", value: 65, color: "#ef4444" },
-      { name: "Comentários", value: 25, color: "#3b82f6" },
-      { name: "Compartilhamentos", value: 10, color: "#10b981" },
-    ],
-    reels: [
-      { name: "Curtidas", value: 72, color: "#ef4444" },
-      { name: "Comentários", value: 18, color: "#3b82f6" },
-      { name: "Compartilhamentos", value: 10, color: "#10b981" },
-    ],
-    carrossel: [
-      { name: "Curtidas", value: 58, color: "#ef4444" },
-      { name: "Comentários", value: 32, color: "#3b82f6" },
-      { name: "Compartilhamentos", value: 10, color: "#10b981" },
-    ],
-    stories: [
-      { name: "Curtidas", value: 45, color: "#ef4444" },
-      { name: "Comentários", value: 35, color: "#3b82f6" },
-      { name: "Compartilhamentos", value: 20, color: "#10b981" },
-    ],
-  };
+  // Preparar dados para gráficos
+  const growthData = growth?.daily?.map((item: any) => ({
+    date: new Date(item.date).toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' }),
+    followers: item.followers,
+    engagement: item.engagement,
+  })) || [];
 
-  const topPostsByType = {
-    todos: [
-      { id: 1, title: "Reels - Qualidade de Vida", type: "Reel", curtidas: 2345, comentarios: 234, compartilhamentos: 156 },
-      { id: 2, title: "Carrossel - Infraestrutura", type: "Carrossel", curtidas: 1890, comentarios: 167, compartilhamentos: 89 },
-      { id: 3, title: "Stories - Comunidade", type: "Story", curtidas: 1567, comentarios: 145, compartilhamentos: 67 },
-    ],
-    reels: [
-      { id: 1, title: "Qualidade de Vida em BCP", type: "Reel", curtidas: 2345, comentarios: 234, compartilhamentos: 156 },
-      { id: 4, title: "Segurança e Bem-estar", type: "Reel", curtidas: 1876, comentarios: 198, compartilhamentos: 145 },
-    ],
-    carrossel: [
-      { id: 2, title: "Infraestrutura do Bairro", type: "Carrossel", curtidas: 1890, comentarios: 167, compartilhamentos: 89 },
-      { id: 5, title: "Depoimentos de Moradores", type: "Carrossel", curtidas: 1654, comentarios: 142, compartilhamentos: 78 },
-    ],
-    stories: [
-      { id: 3, title: "Comunidade em Ação", type: "Story", curtidas: 1567, comentarios: 145, compartilhamentos: 67 },
-      { id: 6, title: "Domingo em Família", type: "Story", curtidas: 1234, comentarios: 98, compartilhamentos: 45 },
-    ],
-  };
+  // Filtrar posts por tipo de conteúdo
+  const filteredPosts = topPosts?.filter((post: any) => {
+    if (contentType === 'todos') return true;
+    const postType = post.mediaType?.toLowerCase() || '';
+    if (contentType === 'reels') return postType.includes('reel');
+    if (contentType === 'carousel') return postType.includes('carousel');
+    if (contentType === 'image') return postType.includes('image');
+    if (contentType === 'video') return postType.includes('video');
+    return true;
+  }) || [];
 
-  const engagementData = period === "semanal" ? dataByPeriod.semanal : dataByPeriod.mensal;
-  const breakdownData = contentTypeData[contentType as keyof typeof contentTypeData] || contentTypeData.todos;
-  const topPosts = topPostsByType[contentType as keyof typeof topPostsByType] || topPostsByType.todos;
+  // Preparar dados de distribuição de engajamento
+  const engagementDistribution = [
+    { name: 'Curtidas', value: metrics?.likes || 0, color: '#ef4444' },
+    { name: 'Comentários', value: metrics?.comments || 0, color: '#3b82f6' },
+    { name: 'Compartilhamentos', value: metrics?.shares || 0, color: '#10b981' },
+    { name: 'Salvos', value: metrics?.saves || 0, color: '#f59e0b' },
+  ];
 
   return (
     <div className="flex h-screen bg-background">
@@ -90,7 +56,7 @@ export default function Metricas() {
               <TrendingUp className="w-8 h-8 text-primary" />
               <h1 className="text-3xl font-bold text-foreground">Métricas</h1>
             </div>
-            <p className="text-muted-foreground mb-6">Engajamento, performance e indicadores da campanha</p>
+            <p className="text-muted-foreground mb-6">Engajamento, performance e indicadores em tempo real do Instagram</p>
 
             {/* Filtros */}
             <div className="flex flex-col md:flex-row gap-4 p-4 bg-muted/50 rounded-lg border border-border/50">
@@ -99,50 +65,45 @@ export default function Metricas() {
                 <span className="text-sm font-medium">Filtros:</span>
               </div>
 
-              <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-2 block">Período</label>
-                <Select value={period} onValueChange={setPeriod}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="semanal">Semanal</SelectItem>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={period} onValueChange={setPeriod}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="semanal">Últimos 7 dias</SelectItem>
+                  <SelectItem value="mensal">Últimos 30 dias</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-2 block">Tipo de Conteúdo</label>
-                <Select value={contentType} onValueChange={setContentType}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="reels">Reels</SelectItem>
-                    <SelectItem value="carrossel">Carrossel</SelectItem>
-                    <SelectItem value="stories">Stories</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={contentType} onValueChange={setContentType}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Tipo de conteúdo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="reels">Reels</SelectItem>
+                  <SelectItem value="carousel">Carrossel</SelectItem>
+                  <SelectItem value="image">Imagens</SelectItem>
+                  <SelectItem value="video">Vídeos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Heart className="w-4 h-4 text-red-500" />
-                  Total de Curtidas
+                  Curtidas
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-500">
-                  {engagementData.reduce((sum: number, item: any) => sum + item.curtidas, 0).toLocaleString()}
+                <div className="text-3xl font-bold text-primary">
+                  {metricsLoading ? '...' : (metrics?.likes || 0).toLocaleString()}
                 </div>
-                <p className="text-xs text-green-500 mt-1">+8% vs período anterior</p>
+                <p className="text-xs text-muted-foreground mt-1">Total</p>
               </CardContent>
             </Card>
 
@@ -150,14 +111,14 @@ export default function Metricas() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <MessageCircle className="w-4 h-4 text-blue-500" />
-                  Total de Comentários
+                  Comentários
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-500">
-                  {engagementData.reduce((sum: number, item: any) => sum + item.comentarios, 0).toLocaleString()}
+                <div className="text-3xl font-bold text-primary">
+                  {metricsLoading ? '...' : (metrics?.comments || 0).toLocaleString()}
                 </div>
-                <p className="text-xs text-green-500 mt-1">+12% vs período anterior</p>
+                <p className="text-xs text-muted-foreground mt-1">Total</p>
               </CardContent>
             </Card>
 
@@ -165,113 +126,202 @@ export default function Metricas() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Share2 className="w-4 h-4 text-green-500" />
-                  Total de Compartilhamentos
+                  Compartilhamentos
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-500">
-                  {engagementData.reduce((sum: number, item: any) => sum + item.compartilhamentos, 0).toLocaleString()}
+                <div className="text-3xl font-bold text-primary">
+                  {metricsLoading ? '...' : (metrics?.shares || 0).toLocaleString()}
                 </div>
-                <p className="text-xs text-green-500 mt-1">+15% vs período anterior</p>
+                <p className="text-xs text-muted-foreground mt-1">Total</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Alcance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-primary">
+                  {metricsLoading ? '...' : (metrics?.reach || 0).toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Pessoas alcançadas</p>
               </CardContent>
             </Card>
           </div>
 
-          <Tabs defaultValue="engajamento" className="w-full">
+          <Tabs defaultValue="crescimento" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="engajamento">Engajamento</TabsTrigger>
+              <TabsTrigger value="crescimento">Crescimento</TabsTrigger>
               <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
               <TabsTrigger value="topPosts">Top Posts</TabsTrigger>
             </TabsList>
 
-            {/* Engajamento */}
-            <TabsContent value="engajamento" className="space-y-4">
+            {/* Crescimento */}
+            <TabsContent value="crescimento" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Engajamento por {period === "semanal" ? "Dia" : "Semana"}</CardTitle>
-                  <CardDescription>Curtidas, comentários e compartilhamentos</CardDescription>
+                  <CardTitle>Crescimento de Seguidores</CardTitle>
+                  <CardDescription>Evolução nos últimos 7 dias</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={engagementData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey={period === "semanal" ? "day" : "week"} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="curtidas" fill="#ef4444" name="Curtidas" />
-                      <Bar dataKey="comentarios" fill="#3b82f6" name="Comentários" />
-                      <Bar dataKey="compartilhamentos" fill="#10b981" name="Compartilhamentos" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {growthLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : growthData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={growthData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis dataKey="date" stroke="#9ca3af" />
+                        <YAxis stroke="#9ca3af" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                          labelStyle={{ color: '#f3f4f6' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="followers" 
+                          stroke="#10b981" 
+                          strokeWidth={2}
+                          dot={{ fill: '#10b981' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Dados de crescimento não disponíveis
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Distribuição */}
+            {/* Distribuição de Engajamento */}
             <TabsContent value="distribuicao" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Distribuição de Engajamento</CardTitle>
-                  <CardDescription>Proporção de curtidas, comentários e compartilhamentos</CardDescription>
+                  <CardDescription>Proporção de curtidas, comentários, compartilhamentos e salvos</CardDescription>
                 </CardHeader>
-                <CardContent className="flex justify-center">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={breakdownData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, value }) => `${name}: ${value}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {breakdownData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <CardContent>
+                  {metricsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <div className="flex justify-center">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={engagementDistribution}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, value }) => `${name}: ${value.toLocaleString()}`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {engagementDistribution.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                            labelStyle={{ color: '#f3f4f6' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
+              {/* Engajamento por Tipo */}
+              {engagementByType && engagementByType.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Engajamento por Tipo de Conteúdo</CardTitle>
+                    <CardDescription>Performance média de cada tipo</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {engagementByType.map((item: any) => (
+                        <div key={item.type} className="border border-border/50 rounded-lg p-4">
+                          <h4 className="font-semibold capitalize mb-3">{item.type}</h4>
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Posts</span>
+                              <span className="font-semibold">{item.posts}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Engajamento Médio</span>
+                              <span className="font-semibold">{item.avgEngagement.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Alcance Total</span>
+                              <span className="font-semibold">{item.totalReach.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Top Posts */}
             <TabsContent value="topPosts" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Posts</CardTitle>
+                  <CardTitle>Top Posts por Engajamento</CardTitle>
                   <CardDescription>Posts com melhor performance</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {topPosts.map((post: any) => (
-                      <div key={post.id} className="border border-border/50 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold">{post.title}</h4>
-                            <p className="text-xs text-muted-foreground">{post.type}</p>
+                  {topLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredPosts.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredPosts.map((post: any, index: number) => (
+                        <div key={post.id || index} className="border border-border/50 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h4 className="font-semibold line-clamp-2 mb-1">#{index + 1} - {post.caption || 'Sem legenda'}</h4>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(post.timestamp).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border/30">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Engajamento</p>
+                              <p className="font-semibold text-primary">{post.engagement?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Curtidas</p>
+                              <p className="font-semibold text-red-500">{post.likes?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Comentários</p>
+                              <p className="font-semibold text-blue-500">{post.comments?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Alcance</p>
+                              <p className="font-semibold text-green-500">{post.reach?.toLocaleString() || 0}</p>
+                            </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="flex items-center gap-2">
-                            <Heart className="w-4 h-4 text-red-500" />
-                            <span className="text-sm">{post.curtidas.toLocaleString()} curtidas</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="w-4 h-4 text-blue-500" />
-                            <span className="text-sm">{post.comentarios.toLocaleString()} comentários</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Share2 className="w-4 h-4 text-green-500" />
-                            <span className="text-sm">{post.compartilhamentos.toLocaleString()} compartilhamentos</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Nenhum post encontrado para este filtro
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

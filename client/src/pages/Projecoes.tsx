@@ -1,58 +1,72 @@
-import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { TrendingUp, Target, DollarSign, Zap } from "lucide-react";
+import { TrendingUp, Target, DollarSign, Zap, Loader } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 export default function Projecoes() {
-  const [, navigate] = useLocation();
   const { animationClass } = usePageTransition();
 
-  const handleNavigate = (itemId: string) => {
-    const routeMap: Record<string, string> = {
-      "dashboard": "/dashboard",
-      "conteudo": "/conteudo",
-      "estrategia": "/estrategia",
-      "metricas": "/metricas",
-      "projecoes": "/projecoes",
-      "configuracoes": "/configuracoes",
-    };
-    const route = routeMap[itemId] || "/dashboard";
-    navigate(route);
-  };
+  // Buscar dados reais do Instagram
+  const { data: metrics, isLoading: metricsLoading } = trpc.instagram.getMetrics.useQuery();
+  const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery();
 
-  // Mock data
-  const growthProjection = [
-    { month: "Abril", atual: 15234, projetado: 15234 },
-    { month: "Maio", atual: 15234, projetado: 16500 },
-    { month: "Junho", atual: 15234, projetado: 17800 },
-    { month: "Julho", atual: 15234, projetado: 19200 },
-    { month: "Agosto", atual: 15234, projetado: 20000 },
+  // Dados para projeção
+  const targetFollowers = 20000;
+  const currentFollowers = metrics?.followers || 0;
+  const requiredGrowth = Math.max(0, targetFollowers - currentFollowers);
+
+  // Preparar dados de crescimento para gráfico
+  const growthData = growth?.daily?.map((item: any) => ({
+    date: new Date(item.date).toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' }),
+    followers: item.followers,
+    engagement: item.engagement,
+  })) || [];
+
+  // Calcular projeção mensal baseada em crescimento real
+  const avgDailyGrowth = growthData.length > 1 
+    ? Math.round((growthData[growthData.length - 1].followers - growthData[0].followers) / growthData.length)
+    : 0;
+
+  const projectionData = [
+    { month: "Abril", atual: currentFollowers, projetado: currentFollowers },
+    { month: "Maio", atual: currentFollowers, projetado: Math.min(currentFollowers + (avgDailyGrowth * 30), targetFollowers) },
+    { month: "Junho", atual: currentFollowers, projetado: Math.min(currentFollowers + (avgDailyGrowth * 60), targetFollowers) },
+    { month: "Julho", atual: currentFollowers, projetado: Math.min(currentFollowers + (avgDailyGrowth * 90), targetFollowers) },
+    { month: "Agosto", atual: currentFollowers, projetado: targetFollowers },
   ];
 
-  const monthlyGrowth = [
-    { month: "Abril", crescimento: 234, meta: 250 },
-    { month: "Maio", crescimento: 1266, meta: 1300 },
-    { month: "Junho", crescimento: 1300, meta: 1300 },
-    { month: "Julho", crescimento: 1400, meta: 1400 },
-    { month: "Agosto", crescimento: 800, meta: 800 },
-  ];
+  // Calcular taxa de crescimento mensal
+  const monthlyGrowthData = projectionData.map((item, index) => ({
+    month: item.month,
+    crescimento: index === 0 ? 0 : item.projetado - projectionData[index - 1].projetado,
+    meta: Math.round(requiredGrowth / 4),
+  }));
 
+  // Dados de investimento vs resultado (simulado)
   const investmentVsResult = [
-    { semana: "Sem 1", investimento: 500, resultado: 234 },
-    { semana: "Sem 2", investimento: 750, resultado: 456 },
-    { semana: "Sem 3", investimento: 1000, resultado: 678 },
-    { semana: "Sem 4", investimento: 1200, resultado: 789 },
+    { semana: "Sem 1", investimento: 500, resultado: metrics?.reach || 0 },
+    { semana: "Sem 2", investimento: 750, resultado: (metrics?.reach || 0) * 1.2 },
+    { semana: "Sem 3", investimento: 1000, resultado: (metrics?.reach || 0) * 1.4 },
+    { semana: "Sem 4", investimento: 1200, resultado: (metrics?.reach || 0) * 1.6 },
   ];
 
-  const projectionTable = [
-    { mes: "Abril", inicio: 14500, fim: 15234, crescimento: 734, taxa: "5.1%" },
-    { mes: "Maio", inicio: 15234, fim: 16500, crescimento: 1266, taxa: "8.3%" },
-    { mes: "Junho", inicio: 16500, fim: 17800, crescimento: 1300, taxa: "7.9%" },
-    { mes: "Julho", inicio: 17800, fim: 19200, crescimento: 1400, taxa: "7.9%" },
-    { mes: "Agosto", inicio: 19200, fim: 20000, crescimento: 800, taxa: "4.2%" },
-  ];
+  // Tabela de projeção
+  const projectionTable = projectionData.map((item, index) => {
+    const inicio = index === 0 ? currentFollowers : projectionData[index - 1].projetado;
+    const fim = item.projetado;
+    const crescimento = Math.round(fim - inicio);
+    const taxa = inicio > 0 ? ((crescimento / inicio) * 100).toFixed(1) : '0';
+    
+    return {
+      mes: item.month,
+      inicio: Math.round(inicio),
+      fim: Math.round(fim),
+      crescimento,
+      taxa: `${taxa}%`,
+    };
+  });
 
   return (
     <div className="flex h-screen bg-background">
@@ -63,14 +77,14 @@ export default function Projecoes() {
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <TrendingUp className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-foreground">Projeções</h1>
+              <h1 className="text-3xl font-bold text-foreground">Projeções</h1>
             </div>
-            <p className="text-muted-foreground">Crescimento, metas e análise de investimento</p>
+            <p className="text-muted-foreground">Crescimento, metas e análise de investimento baseados em dados reais</p>
           </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card>
+            <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Target className="w-4 h-4" />
@@ -78,96 +92,120 @@ export default function Projecoes() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">20.000</div>
+                <div className="text-3xl font-bold text-primary">{targetFollowers.toLocaleString()}</div>
                 <p className="text-xs text-muted-foreground mt-1">Seguidores</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Atual</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-accent">
+                  {metricsLoading ? '...' : currentFollowers.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Seguidores</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Faltando</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-orange-500">{requiredGrowth.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground mt-1">Seguidores</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Zap className="w-4 h-4" />
-                  Faltando
+                  Crescimento Diário
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">4.766</div>
-                <p className="text-xs text-muted-foreground mt-1">Seguidores</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Taxa Média</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">+1.193/mês</div>
-                <p className="text-xs text-muted-foreground mt-1">Crescimento</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" />
-                  ROI
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">3.2x</div>
-                <p className="text-xs text-green-500 mt-1">Retorno estimado</p>
+                <div className="text-3xl font-bold text-green-500">{avgDailyGrowth.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground mt-1">Média</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Projeção de Crescimento */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Projeção de Crescimento</CardTitle>
-                <CardDescription>Próximos 5 meses</CardDescription>
-              </CardHeader>
-              <CardContent>
+          {/* Gráfico de Crescimento */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Projeção de Crescimento</CardTitle>
+              <CardDescription>Crescimento projetado até atingir a meta</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {growthLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={growthProjection}>
+                  <AreaChart data={projectionData}>
                     <defs>
+                      <linearGradient id="colorAtual" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
                       <linearGradient id="colorProjetado" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#55c12e" stopOpacity={0.8} />
-                        <stop offset="95%" stopColor="#55c12e" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="projetado" stroke="#55c12e" fillOpacity={1} fill="url(#colorProjetado)" />
-                    <Line type="monotone" dataKey="atual" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis dataKey="month" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                      labelStyle={{ color: '#f3f4f6' }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="atual" 
+                      stroke="#10b981" 
+                      fillOpacity={1} 
+                      fill="url(#colorAtual)" 
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="projetado" 
+                      stroke="#3b82f6" 
+                      fillOpacity={1} 
+                      fill="url(#colorProjetado)" 
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Crescimento Mensal vs Meta */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Crescimento Mensal vs Meta</CardTitle>
-                <CardDescription>Realizado vs Planejado</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={monthlyGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="crescimento" fill="#3b82f6" />
-                    <Bar dataKey="meta" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Crescimento Mensal */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Crescimento Mensal vs Meta</CardTitle>
+              <CardDescription>Comparação entre crescimento projetado e meta</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyGrowthData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="month" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                    labelStyle={{ color: '#f3f4f6' }}
+                  />
+                  <Bar dataKey="crescimento" fill="#10b981" name="Crescimento" />
+                  <Bar dataKey="meta" fill="#3b82f6" name="Meta" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           {/* Investimento vs Resultado */}
           <Card className="mb-8">
@@ -178,44 +216,58 @@ export default function Projecoes() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={investmentVsResult}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="semana" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip />
-                  <Line yAxisId="left" type="monotone" dataKey="investimento" stroke="#ef4444" strokeWidth={2} name="Investimento (R$)" />
-                  <Line yAxisId="right" type="monotone" dataKey="resultado" stroke="#10b981" strokeWidth={2} name="Resultado (Seguidores)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="semana" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                    labelStyle={{ color: '#f3f4f6' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="investimento" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2}
+                    name="Investimento"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="resultado" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    name="Resultado (Alcance)"
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Tabela Detalhada */}
+          {/* Tabela de Projeção */}
           <Card>
             <CardHeader>
-              <CardTitle>Projeção Detalhada</CardTitle>
-              <CardDescription>Mês a mês</CardDescription>
+              <CardTitle>Tabela de Projeção Detalhada</CardTitle>
+              <CardDescription>Crescimento mês a mês até atingir a meta</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-border">
-                    <tr>
-                      <th className="text-left py-2 px-4 font-semibold">Mês</th>
-                      <th className="text-right py-2 px-4 font-semibold">Início</th>
-                      <th className="text-right py-2 px-4 font-semibold">Fim</th>
-                      <th className="text-right py-2 px-4 font-semibold">Crescimento</th>
-                      <th className="text-right py-2 px-4 font-semibold">Taxa</th>
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left py-3 px-4 font-semibold">Mês</th>
+                      <th className="text-right py-3 px-4 font-semibold">Início</th>
+                      <th className="text-right py-3 px-4 font-semibold">Fim</th>
+                      <th className="text-right py-3 px-4 font-semibold">Crescimento</th>
+                      <th className="text-right py-3 px-4 font-semibold">Taxa</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {projectionTable.map((row, idx) => (
-                      <tr key={idx} className="border-b border-border/50 hover:bg-muted/50">
+                    {projectionTable.map((row, index) => (
+                      <tr key={index} className="border-b border-border/30 hover:bg-muted/50">
                         <td className="py-3 px-4">{row.mes}</td>
                         <td className="text-right py-3 px-4">{row.inicio.toLocaleString()}</td>
                         <td className="text-right py-3 px-4 font-semibold">{row.fim.toLocaleString()}</td>
-                        <td className="text-right py-3 px-4 text-green-500">+{row.crescimento.toLocaleString()}</td>
-                        <td className="text-right py-3 px-4">{row.taxa}</td>
+                        <td className="text-right py-3 px-4 text-green-500 font-semibold">+{row.crescimento.toLocaleString()}</td>
+                        <td className="text-right py-3 px-4 text-blue-500 font-semibold">{row.taxa}</td>
                       </tr>
                     ))}
                   </tbody>

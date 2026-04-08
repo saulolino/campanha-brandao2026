@@ -3,52 +3,40 @@ import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Video, Image, MessageSquare } from "lucide-react";
+import { Calendar, Video, Image, MessageSquare, Heart, MessageCircle, Share2, Loader } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 export default function Conteudo() {
   const { animationClass } = usePageTransition();
-
-  const weeklyPosts = [
-    { id: 1, day: "Segunda", date: "10 de Abril", type: "Reel", title: "Qualidade de Vida em BCP", status: "Agendado", time: "08:00" },
-    { id: 2, day: "Terça", date: "11 de Abril", type: "Carrossel", title: "Infraestrutura do Bairro", status: "Agendado", time: "14:00" },
-    { id: 3, day: "Quarta", date: "12 de Abril", type: "Story", title: "Comunidade em Ação", status: "Rascunho", time: "20:00" },
-    { id: 4, day: "Quinta", date: "13 de Abril", type: "Reel", title: "Segurança e Bem-estar", status: "Agendado", time: "08:00" },
-    { id: 5, day: "Sexta", date: "14 de Abril", type: "Carrossel", title: "Depoimentos de Moradores", status: "Pendente", time: "14:00" },
-    { id: 6, day: "Sábado", date: "15 de Abril", type: "Reel", title: "Atividades do Fim de Semana", status: "Agendado", time: "10:00" },
-    { id: 7, day: "Domingo", date: "16 de Abril", type: "Story", title: "Domingo em Família", status: "Rascunho", time: "18:00" },
-  ];
-
-  const contentTypes = [
-    { name: "Reels", count: 3, icon: Video, color: "bg-red-500/10 text-red-500" },
-    { name: "Carrossel", count: 2, icon: Image, color: "bg-blue-500/10 text-blue-500" },
-    { name: "Stories", count: 2, icon: MessageSquare, color: "bg-purple-500/10 text-purple-500" },
-  ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Agendado":
-        return "bg-green-500/10 text-green-700";
-      case "Rascunho":
-        return "bg-yellow-500/10 text-yellow-700";
-      case "Pendente":
-        return "bg-orange-500/10 text-orange-700";
-      default:
-        return "bg-gray-500/10 text-gray-700";
-    }
-  };
+  
+  // Buscar posts reais do Instagram
+  const { data: posts, isLoading: postsLoading } = trpc.instagram.getPosts.useQuery({ limit: 20 });
+  const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "Reel":
-        return <Video className="w-4 h-4" />;
-      case "Carrossel":
-        return <Image className="w-4 h-4" />;
-      case "Story":
-        return <MessageSquare className="w-4 h-4" />;
-      default:
-        return <Calendar className="w-4 h-4" />;
-    }
+    const typeStr = type?.toLowerCase() || '';
+    if (typeStr.includes('reel')) return <Video className="w-4 h-4" />;
+    if (typeStr.includes('carousel')) return <Image className="w-4 h-4" />;
+    if (typeStr.includes('story')) return <MessageSquare className="w-4 h-4" />;
+    return <Calendar className="w-4 h-4" />;
   };
+
+  const getTypeLabel = (type: string) => {
+    const typeStr = type?.toLowerCase() || '';
+    if (typeStr.includes('reel')) return 'Reel';
+    if (typeStr.includes('carousel')) return 'Carrossel';
+    if (typeStr.includes('story')) return 'Story';
+    if (typeStr.includes('image')) return 'Imagem';
+    if (typeStr.includes('video')) return 'Vídeo';
+    return type || 'Conteúdo';
+  };
+
+  // Contar tipos de conteúdo
+  const contentTypeCounts = posts?.reduce((acc: any, post: any) => {
+    const type = getTypeLabel(post.mediaType);
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {}) || {};
 
   return (
     <div className="flex h-screen bg-background">
@@ -61,114 +49,166 @@ export default function Conteudo() {
               <Calendar className="w-8 h-8 text-primary" />
               <h1 className="text-3xl font-bold text-foreground">Conteúdo</h1>
             </div>
-            <p className="text-muted-foreground">Calendário, cronograma e execução editorial de posts</p>
+            <p className="text-muted-foreground">Posts recentes e performance de conteúdo do Instagram</p>
           </div>
 
-          <Tabs defaultValue="calendario" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="calendario">Calendário</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="tipos">Tipos</TabsTrigger>
-            </TabsList>
+          {/* Estatísticas de Conteúdo */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card className="border border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total de Posts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-primary">{posts?.length || 0}</div>
+                <p className="text-xs text-muted-foreground mt-1">Últimos 20 posts</p>
+              </CardContent>
+            </Card>
 
-            {/* Calendário */}
-            <TabsContent value="calendario" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Calendário Semanal</CardTitle>
-                  <CardDescription>Posts planejados para os próximos 7 dias</CardDescription>
+            {Object.entries(contentTypeCounts).map(([type, count]: [string, any]) => (
+              <Card key={type} className="border border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    {getTypeIcon(type)}
+                    {type}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {weeklyPosts.map((post) => (
-                      <div key={post.id} className="border border-border/50 rounded-lg p-4 hover:border-primary/50 transition-colors">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-semibold text-sm">{post.day}</h4>
-                            <p className="text-xs text-muted-foreground">{post.date}</p>
-                          </div>
-                          <Badge variant="outline" className={getStatusColor(post.status)}>
-                            {post.status}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            {getTypeIcon(post.type)}
-                            <span className="text-muted-foreground">{post.type}</span>
-                          </div>
-                          <p className="text-sm font-medium">{post.title}</p>
-                          <p className="text-xs text-muted-foreground">Horário: {post.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <div className="text-3xl font-bold text-primary">{count}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Posts</p>
                 </CardContent>
               </Card>
-            </TabsContent>
+            ))}
+          </div>
 
-            {/* Timeline */}
+          <Tabs defaultValue="timeline" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="timeline">Timeline de Posts</TabsTrigger>
+              <TabsTrigger value="topPosts">Top Posts</TabsTrigger>
+            </TabsList>
+
+            {/* Timeline de Posts */}
             <TabsContent value="timeline" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Timeline de Posts</CardTitle>
-                  <CardDescription>Visualização cronológica da semana</CardDescription>
+                  <CardTitle>Posts Recentes</CardTitle>
+                  <CardDescription>Últimos 20 posts publicados no Instagram</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {weeklyPosts.map((post, idx) => (
-                      <div key={post.id} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className="w-4 h-4 bg-primary rounded-full" />
-                          {idx < weeklyPosts.length - 1 && <div className="w-1 h-12 bg-border mt-2" />}
-                        </div>
-                        <div className="flex-1 pb-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="font-semibold">{post.day} - {post.date}</h4>
-                              <p className="text-sm text-muted-foreground">{post.time}</p>
+                  {postsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : posts && posts.length > 0 ? (
+                    <div className="space-y-4">
+                      {posts.map((post: any, index: number) => (
+                        <div key={post.id || index} className="border border-border/50 rounded-lg p-4 hover:border-primary/50 transition-colors">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getTypeIcon(post.mediaType)}
+                                <Badge variant="secondary">{getTypeLabel(post.mediaType)}</Badge>
+                              </div>
+                              <h4 className="font-semibold line-clamp-2">{post.caption || 'Sem legenda'}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(post.timestamp).toLocaleDateString('pt-BR')}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className={getStatusColor(post.status)}>
-                                {post.status}
-                              </Badge>
-                              <Badge variant="secondary" className="flex items-center gap-1">
-                                {getTypeIcon(post.type)}
-                                {post.type}
-                              </Badge>
+                            {post.mediaUrl && (
+                              <img 
+                                src={post.mediaUrl} 
+                                alt="Post" 
+                                className="w-20 h-20 rounded-lg object-cover ml-4"
+                              />
+                            )}
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 pt-3 border-t border-border/30">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Heart className="w-4 h-4 text-red-500" />
+                              <span>{post.likes?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <MessageCircle className="w-4 h-4 text-blue-500" />
+                              <span>{post.comments?.toLocaleString() || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <Share2 className="w-4 h-4 text-green-500" />
+                              <span>{post.reach?.toLocaleString() || 0}</span>
                             </div>
                           </div>
-                          <p className="text-sm font-medium text-foreground">{post.title}</p>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Nenhum post encontrado. Verifique as credenciais do Instagram.
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Tipos de Conteúdo */}
-            <TabsContent value="tipos" className="space-y-4">
+            {/* Top Posts */}
+            <TabsContent value="topPosts" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Distribuição de Conteúdo</CardTitle>
-                  <CardDescription>Tipos de conteúdo planejados para a semana</CardDescription>
+                  <CardTitle>Top Posts por Engajamento</CardTitle>
+                  <CardDescription>Posts com melhor performance</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {contentTypes.map((type) => {
-                      const Icon = type.icon;
-                      return (
-                        <div key={type.name} className="border border-border/50 rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${type.color} mx-auto mb-4`}>
-                            <Icon className="w-6 h-6" />
+                  {topLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : topPosts && topPosts.length > 0 ? (
+                    <div className="space-y-4">
+                      {topPosts.map((post: any, index: number) => (
+                        <div key={post.id || index} className="border border-border/50 rounded-lg p-4 bg-accent/5 hover:border-primary/50 transition-colors">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getTypeIcon(post.mediaType)}
+                                <Badge variant="default">{getTypeLabel(post.mediaType)}</Badge>
+                                <Badge variant="outline">#{index + 1}</Badge>
+                              </div>
+                              <h4 className="font-semibold line-clamp-2">{post.caption || 'Sem legenda'}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(post.timestamp).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            {post.mediaUrl && (
+                              <img 
+                                src={post.mediaUrl} 
+                                alt="Post" 
+                                className="w-20 h-20 rounded-lg object-cover ml-4"
+                              />
+                            )}
                           </div>
-                          <h4 className="font-semibold mb-1">{type.name}</h4>
-                          <p className="text-3xl font-bold text-primary">{type.count}</p>
-                          <p className="text-xs text-muted-foreground mt-2">{Math.round((type.count / weeklyPosts.length) * 100)}% da semana</p>
+                          <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border/30">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Engajamento</p>
+                              <p className="font-semibold text-primary">{post.engagement?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Curtidas</p>
+                              <p className="font-semibold text-red-500">{post.likes?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Comentários</p>
+                              <p className="font-semibold text-blue-500">{post.comments?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Alcance</p>
+                              <p className="font-semibold text-green-500">{post.reach?.toLocaleString() || 0}</p>
+                            </div>
+                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      Nenhum post encontrado. Verifique as credenciais do Instagram.
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

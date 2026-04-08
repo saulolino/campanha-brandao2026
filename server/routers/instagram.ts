@@ -2,170 +2,188 @@ import { publicProcedure, router } from "../\_core/trpc";
 import { publishToInstagram, getInstagramPostInfo, getInstagramPostMetrics } from "../instagram";
 import { instagramService } from "../services/instagramService";
 
-/**
- * Métricas simuladas do Instagram
- * TODO: Substituir por chamadas reais à API do Instagram quando tiver credenciais
- */
-const SIMULATED_METRICS = {
-  followers: 12450,
-  posts: 145,
-  engagement: 8.5,
-  reach: 45230,
-  impressions: 89450,
-  saves: 1250,
-  shares: 890,
-  comments: 2340,
-  likes: 15670,
-};
-
-const SIMULATED_POSTS = [
-  {
-    id: '1',
-    caption: 'Brasília Cidade Parque - Conheça nosso projeto!',
-    mediaType: 'IMAGE',
-    mediaUrl: 'https://via.placeholder.com/1080x1080?text=Post+1',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    likes: 1250,
-    comments: 145,
-    shares: 89,
-    saves: 234,
-    reach: 5420,
-    impressions: 8950,
-  },
-  {
-    id: '2',
-    caption: 'Campanha Eduardo Brandão - Vota em nós!',
-    mediaType: 'VIDEO',
-    mediaUrl: 'https://via.placeholder.com/1080x1080?text=Post+2',
-    timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    likes: 2340,
-    comments: 234,
-    shares: 156,
-    saves: 456,
-    reach: 8230,
-    impressions: 12450,
-  },
-  {
-    id: '3',
-    caption: 'Últimas notícias da campanha',
-    mediaType: 'CAROUSEL',
-    mediaUrl: 'https://via.placeholder.com/1080x1080?text=Post+3',
-    timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-    likes: 890,
-    comments: 67,
-    shares: 45,
-    saves: 123,
-    reach: 3210,
-    impressions: 5670,
-  },
-];
-
-const SIMULATED_GROWTH = {
-  daily: [
-    { date: '2026-04-01', followers: 12100, engagement: 7.8 },
-    { date: '2026-04-02', followers: 12200, engagement: 8.1 },
-    { date: '2026-04-03', followers: 12300, engagement: 8.3 },
-    { date: '2026-04-04', followers: 12350, engagement: 8.4 },
-    { date: '2026-04-05', followers: 12400, engagement: 8.5 },
-    { date: '2026-04-06', followers: 12425, engagement: 8.6 },
-    { date: '2026-04-07', followers: 12450, engagement: 8.5 },
-  ],
-};
-
 export const instagramRouter = router({
   /**
    * Obter métricas gerais do Instagram
+   * Retorna dados REAIS da API do Instagram
    */
   getMetrics: publicProcedure.query(async () => {
     try {
-      // Tentar usar API real se configurada, senão usar dados simulados
-      if (instagramService.isConfigured()) {
-        return await instagramService.getMetrics();
+      if (!instagramService.isConfigured()) {
+        throw new Error('Instagram credentials not configured. Please configure INSTAGRAM_BUSINESS_ACCOUNT_ID and INSTAGRAM_GRAPH_API_TOKEN');
       }
-      return SIMULATED_METRICS;
+      return await instagramService.getMetrics();
     } catch (error) {
       console.error('[Instagram] Failed to fetch metrics:', error);
-      return SIMULATED_METRICS; // Retornar dados simulados em caso de erro
+      throw error;
     }
   }),
 
   /**
    * Obter posts recentes
+   * Retorna dados REAIS da API do Instagram
    */
-  getPosts: publicProcedure.query(async () => {
-    try {
-      // Tentar usar API real se configurada, senão usar dados simulados
-      if (instagramService.isConfigured()) {
-        return await instagramService.getPosts();
+  getPosts: publicProcedure
+    .input((val: unknown) => {
+      if (typeof val === 'object' && val !== null && 'limit' in val) {
+        return val as { limit?: number };
       }
-      return SIMULATED_POSTS;
-    } catch (error) {
-      console.error('[Instagram] Failed to fetch posts:', error);
-      return SIMULATED_POSTS; // Retornar dados simulados em caso de erro
-    }
-  }),
+      return { limit: 10 };
+    })
+    .query(async ({ input }) => {
+      try {
+        if (!instagramService.isConfigured()) {
+          throw new Error('Instagram credentials not configured. Please configure INSTAGRAM_BUSINESS_ACCOUNT_ID and INSTAGRAM_GRAPH_API_TOKEN');
+        }
+        return await instagramService.getPosts(input.limit || 10);
+      } catch (error) {
+        console.error('[Instagram] Failed to fetch posts:', error);
+        throw error;
+      }
+    }),
 
   /**
    * Obter análise de crescimento
+   * Retorna dados REAIS da API do Instagram (últimos 7 dias)
    */
   getGrowth: publicProcedure.query(async () => {
     try {
-      // Tentar usar API real se configurada, senão usar dados simulados
-      if (instagramService.isConfigured()) {
-        return await instagramService.getGrowth();
+      if (!instagramService.isConfigured()) {
+        throw new Error('Instagram credentials not configured. Please configure INSTAGRAM_BUSINESS_ACCOUNT_ID and INSTAGRAM_GRAPH_API_TOKEN');
       }
-      return SIMULATED_GROWTH;
+      return await instagramService.getGrowth();
     } catch (error) {
       console.error('[Instagram] Failed to fetch growth data:', error);
-      return SIMULATED_GROWTH; // Retornar dados simulados em caso de erro
+      throw error;
     }
   }),
 
   /**
    * Obter informações de um post específico
+   * Retorna dados REAIS da API do Instagram
    */
   getPostInfo: publicProcedure
     .input((val: unknown) => {
       if (typeof val === 'object' && val !== null && 'postId' in val) {
         return val as { postId: string };
       }
-      throw new Error('Invalid input');
+      throw new Error('Invalid input: postId is required');
     })
     .query(async ({ input }) => {
       try {
+        if (!instagramService.isConfigured()) {
+          throw new Error('Instagram credentials not configured');
+        }
         return await getInstagramPostInfo(input.postId);
       } catch (error) {
         console.error('[Instagram] Failed to fetch post info:', error);
-        // Retornar dados simulados
-        return SIMULATED_POSTS.find((p) => p.id === input.postId) || SIMULATED_POSTS[0];
+        throw error;
       }
     }),
 
   /**
    * Obter métricas de um post específico
+   * Retorna dados REAIS da API do Instagram (likes, comments, shares, saves, reach, impressions)
    */
   getPostMetrics: publicProcedure
     .input((val: unknown) => {
       if (typeof val === 'object' && val !== null && 'postId' in val) {
         return val as { postId: string };
       }
-      throw new Error('Invalid input');
+      throw new Error('Invalid input: postId is required');
     })
     .query(async ({ input }) => {
       try {
+        if (!instagramService.isConfigured()) {
+          throw new Error('Instagram credentials not configured');
+        }
         return await getInstagramPostMetrics(input.postId);
       } catch (error) {
         console.error('[Instagram] Failed to fetch post metrics:', error);
-        // Retornar dados simulados
-        const post = SIMULATED_POSTS.find((p) => p.id === input.postId) || SIMULATED_POSTS[0];
-        return {
-          likes: post.likes,
-          comments: post.comments,
-          shares: post.shares,
-          saves: post.saves,
-          reach: post.reach,
-          impressions: post.impressions,
-        };
+        throw error;
+      }
+    }),
+
+  /**
+   * Obter engajamento por tipo de conteúdo
+   * Retorna dados REAIS calculados a partir dos posts da API
+   */
+  getEngagementByType: publicProcedure.query(async () => {
+    try {
+      if (!instagramService.isConfigured()) {
+        throw new Error('Instagram credentials not configured');
+      }
+      
+      const posts = await instagramService.getPosts(100);
+      
+      const byType: Record<string, any> = {
+        reels: { posts: 0, engagement: 0, reach: 0, avgEngagement: 0 },
+        carousel: { posts: 0, engagement: 0, reach: 0, avgEngagement: 0 },
+        image: { posts: 0, engagement: 0, reach: 0, avgEngagement: 0 },
+        video: { posts: 0, engagement: 0, reach: 0, avgEngagement: 0 },
+      };
+
+      posts.forEach((post: any) => {
+        const type = post.mediaType?.toLowerCase() || 'image';
+        const typeKey = type === 'carousel_container' ? 'carousel' : type;
+        
+        if (byType[typeKey]) {
+          byType[typeKey].posts += 1;
+          byType[typeKey].engagement += (post.likes || 0) + (post.comments || 0);
+          byType[typeKey].reach += post.reach || 0;
+        }
+      });
+
+      return Object.entries(byType).map(([type, data]: [string, any]) => ({
+        type,
+        posts: data.posts,
+        avgEngagement: data.posts > 0 ? Math.round(data.engagement / data.posts) : 0,
+        totalReach: data.reach,
+      }));
+    } catch (error) {
+      console.error('[Instagram] Failed to fetch engagement by type:', error);
+      throw error;
+    }
+  }),
+
+  /**
+   * Obter top posts por engajamento
+   * Retorna dados REAIS dos posts com melhor performance
+   */
+  getTopPosts: publicProcedure
+    .input((val: unknown) => {
+      if (typeof val === 'object' && val !== null && 'limit' in val) {
+        return val as { limit?: number };
+      }
+      return { limit: 5 };
+    })
+    .query(async ({ input }) => {
+      try {
+        if (!instagramService.isConfigured()) {
+          throw new Error('Instagram credentials not configured');
+        }
+        
+        const posts = await instagramService.getPosts(50);
+        
+        const sorted = posts
+          .map((post: any) => ({
+            id: post.id,
+            caption: post.caption,
+            mediaType: post.mediaType,
+            mediaUrl: post.mediaUrl,
+            timestamp: post.timestamp,
+            engagement: (post.likes || 0) + (post.comments || 0),
+            likes: post.likes || 0,
+            comments: post.comments || 0,
+            reach: post.reach || 0,
+          }))
+          .sort((a: any, b: any) => b.engagement - a.engagement)
+          .slice(0, input.limit || 5);
+
+        return sorted;
+      } catch (error) {
+        console.error('[Instagram] Failed to fetch top posts:', error);
+        throw error;
       }
     }),
 });
