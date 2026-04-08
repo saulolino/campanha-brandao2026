@@ -21,21 +21,28 @@ export default function Relatorios() {
   // Preparar dados de crescimento semanal
   const growthData = growth?.daily?.map((item: any) => ({
     week: new Date(item.date).toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' }),
-    followers: item.followers,
-    engagement: item.engagement,
+    engagement: item.engagement || 0,
+    posts: item.posts || 0,
+    avgEngagement: item.avgEngagement || 0,
   })) || [];
 
   // Preparar dados de distribuição de conteúdo
+  const TYPE_COLORS: Record<string, string> = {
+    VIDEO: '#ef4444',
+    IMAGE: '#3b82f6',
+    CAROUSEL_ALBUM: '#10b981',
+    REELS: '#f59e0b',
+  };
   const distributionData = engagementByType?.map((item: any) => ({
-    name: item.type.charAt(0).toUpperCase() + item.type.slice(1),
-    value: item.posts,
-    color: ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'][Math.random() * 4 | 0],
+    name: item.type === 'CAROUSEL_ALBUM' ? 'Carrossel' : item.type === 'VIDEO' ? 'Vídeo' : item.type === 'IMAGE' ? 'Imagem' : item.type,
+    value: item.posts || 0,
+    color: TYPE_COLORS[item.type] || '#8b5cf6',
   })) || [];
 
   // Calcular resumo executivo
-  const totalPosts = engagementByType?.reduce((sum: number, item: any) => sum + item.posts, 0) || 0;
+  const totalPosts = engagementByType?.reduce((sum: number, item: any) => sum + (item.posts || 0), 0) || 0;
   const avgEngagement = engagementByType && engagementByType.length > 0
-    ? engagementByType.reduce((sum: number, item: any) => sum + item.avgEngagement, 0) / engagementByType.length
+    ? Math.round(engagementByType.reduce((sum: number, item: any) => sum + (item.avgEngagement || 0), 0) / engagementByType.length)
     : 0;
 
   const handleDownloadPDF = () => {
@@ -105,10 +112,10 @@ export default function Relatorios() {
                         />
                         <Line 
                           type="monotone" 
-                          dataKey="followers" 
+                          dataKey="engagement" 
                           stroke="#10b981" 
                           strokeWidth={2}
-                          name="Seguidores"
+                          name="Engajamento"
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -218,16 +225,16 @@ export default function Relatorios() {
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span>Engajamento Médio</span>
-                              <span className="font-semibold">{item.avgEngagement.toLocaleString()}</span>
+                              <span className="font-semibold">{(item.avgEngagement || 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span>Alcance Total</span>
-                              <span className="font-semibold">{item.totalReach.toLocaleString()}</span>
+                              <span className="font-semibold">{(item.totalReach || 0).toLocaleString()}</span>
                             </div>
                             <div className="w-full bg-muted rounded-full h-2 mt-2">
                               <div 
                                 className="bg-primary h-2 rounded-full" 
-                                style={{ width: `${(item.avgEngagement / 100) * 100}%` }}
+                                style={{ width: `${Math.min(((item.avgEngagement || 0) / Math.max(...(engagementByType || []).map((e: any) => e.avgEngagement || 1))) * 100, 100)}%` }}
                               />
                             </div>
                           </div>

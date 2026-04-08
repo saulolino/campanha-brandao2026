@@ -448,3 +448,5 @@
   - [x] Desabilitar auto-publish que causava ECONNRESET
   - [x] Remover dependência de tabela instagram_posts no banco
 - [x] Testes passando (7/7)
+
+- [x] Fix: Erro NaN na página /relatorios — Valor numérico renderizado como NaN
