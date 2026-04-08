@@ -266,10 +266,21 @@ interface SidebarProps {
 function LogoutButton() {
   const [, navigate] = useLocation();
   const [showConfirm, setShowConfirm] = useState(false);
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Limpar localStorage
     localStorage.removeItem("user");
     setShowConfirm(false);
+    // Limpar cookie de sessão JWT no servidor
+    try {
+      await fetch("/api/trpc/auth.logout", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ "0": { json: null } }),
+      });
+    } catch {
+      // Ignorar erros de rede — o localStorage já foi limpo
+    }
     navigate("/login");
   };
 

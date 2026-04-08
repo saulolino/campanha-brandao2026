@@ -501,3 +501,5 @@
 - [x] CRUD de usuários na página /configuracoes (listar, editar role, remover, convidar)
 
 - [x] Fix: CRUD de usuários retorna erro de permissão mesmo logado como Superadmin
+
+- [x] Fix: botão Sair no sidebar não funciona (não faz logout nem redireciona para /login)
