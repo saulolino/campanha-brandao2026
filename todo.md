@@ -493,3 +493,7 @@
 
 - [x] Reconstruir página /projecoes com dados completos do plano de comunicação (projeção mensal, orçamento, KPIs, metas, pilares, equipe, regras)
 - [x] Corrigir default do campo role no schema (adicionar .default('visitor') e migrar)
+
+- [ ] Criar página /relatorios com geração de PDF da agenda semanal e mensal de postagens
+
+- [x] Criar página /relatorios com agenda semanal e mensal + exportação PDF (jsPDF) — dados reais do banco

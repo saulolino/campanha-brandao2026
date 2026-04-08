@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { instagramPosts } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, lte, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const postsRouter = router({
@@ -10,7 +10,7 @@ export const postsRouter = router({
   list: publicProcedure
     .input(z.object({
       status: z.enum(["draft", "design", "caption", "review", "scheduled", "published", "failed"]).optional(),
-      limit: z.number().default(20),
+      limit: z.number().default(500),
       offset: z.number().default(0),
     }))
     .query(async ({ input }) => {
@@ -45,6 +45,60 @@ export const postsRouter = router({
       }
 
       return post[0];
+    }),
+
+  // Buscar posts por semana (ISO week)
+  getByWeek: publicProcedure
+    .input(z.object({
+      year: z.number(),
+      week: z.number(), // 1-53
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { posts: [], weekStart: new Date(), weekEnd: new Date() };
+
+      // Calcular início e fim da semana ISO
+      // Semana ISO começa na segunda-feira
+      const jan4 = new Date(input.year, 0, 4);
+      const dayOfWeek = jan4.getDay() || 7; // 1=seg ... 7=dom
+      const weekStart = new Date(jan4);
+      weekStart.setDate(jan4.getDate() - dayOfWeek + 1 + (input.week - 1) * 7);
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const posts = await db.select().from(instagramPosts)
+        .where(and(
+          gte(instagramPosts.scheduledDate, weekStart),
+          lte(instagramPosts.scheduledDate, weekEnd)
+        ))
+        .orderBy(instagramPosts.scheduledDate);
+
+      return { posts, weekStart, weekEnd };
+    }),
+
+  // Buscar posts por mês
+  getByMonth: publicProcedure
+    .input(z.object({
+      year: z.number(),
+      month: z.number(), // 1-12
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { posts: [], monthStart: new Date(), monthEnd: new Date() };
+
+      const monthStart = new Date(input.year, input.month - 1, 1, 0, 0, 0, 0);
+      const monthEnd = new Date(input.year, input.month, 0, 23, 59, 59, 999);
+
+      const posts = await db.select().from(instagramPosts)
+        .where(and(
+          gte(instagramPosts.scheduledDate, monthStart),
+          lte(instagramPosts.scheduledDate, monthEnd)
+        ))
+        .orderBy(instagramPosts.scheduledDate);
+
+      return { posts, monthStart, monthEnd };
     }),
 
   // Criar novo post
