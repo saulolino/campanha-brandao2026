@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import SidebarNav from "@/components/SidebarNav";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -127,7 +127,23 @@ function formatDateForInput(date: Date): string {
 }
 
 export default function Conteudo() {
-  const { isAuthenticated, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
+  const [, navigate] = useLocation();
+
+  // Verificar autenticação via localStorage (sistema local)
+  const localUser = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  }, []);
+
+  // Redirecionar para login se não autenticado
+  useEffect(() => {
+    if (!localUser) {
+      navigate("/login");
+    }
+  }, [localUser, navigate]);
+
   const [viewMode, setViewMode] = useState<ViewMode>("semanal");
   const [currentWeekRef, setCurrentWeekRef] = useState(() => new Date());
   const [monthRef, setMonthRef] = useState(() => new Date());
@@ -142,7 +158,7 @@ export default function Conteudo() {
   const utils = trpc.useUtils();
   const { data: postsData, isLoading } = trpc.posts.list.useQuery(
     { limit: 500, offset: 0 },
-    { enabled: isAuthenticated } // Só busca posts quando autenticado
+    { enabled: !!localUser } // Só busca posts quando autenticado localmente
   );
   const posts: any[] = postsData || [];
 
