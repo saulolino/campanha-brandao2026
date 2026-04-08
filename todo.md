@@ -231,3 +231,11 @@
   - [ ] Validação de permissão (Coordenador)
   - [ ] Integração com tRPC para persistência
   - [ ] Testes de agendamento
+
+- [x] Sincronização de dados reais do Instagram — Atualizar dados 3 vezes por dia
+  - [x] Criar serviço instagramSync.ts com funções de sincronização
+  - [x] Implementar agendamento de sincronização (3x por dia: 8h, 14h, 20h)
+  - [x] Adicionar tabela instagramMetrics no banco de dados
+  - [x] Buscar dados reais via Instagram Graph API
+  - [x] Calcular engagement rate e médias
+  - [x] Testes de sincronização (5 testes passando)

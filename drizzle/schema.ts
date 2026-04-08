@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -66,3 +66,23 @@ export const postStatusHistory = mysqlTable("post_status_history", {
 
 export type PostStatusHistory = typeof postStatusHistory.$inferSelect;
 export type InsertPostStatusHistory = typeof postStatusHistory.$inferInsert;
+
+// Métricas do perfil do Instagram sincronizadas em tempo real
+export const instagramMetrics = mysqlTable("instagram_metrics", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 255 }).notNull().unique(),
+  followers: int("followers").default(0).notNull(),
+  following: int("following").default(0).notNull(),
+  postsCount: int("postsCount").default(0).notNull(),
+  biography: text("biography"),
+  profilePictureUrl: text("profilePictureUrl"),
+  engagementRate: int("engagementRate").default(0).notNull(),
+  averageLikes: int("averageLikes").default(0).notNull(),
+  averageComments: int("averageComments").default(0).notNull(),
+  lastSyncedAt: timestamp("lastSyncedAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InstagramMetrics = typeof instagramMetrics.$inferSelect;
+export type InsertInstagramMetrics = typeof instagramMetrics.$inferInsert;
