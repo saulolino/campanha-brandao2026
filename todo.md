@@ -476,3 +476,5 @@
 - [x] Botão para dispensar alertas individualmente
 - [x] Navegação entre meses no calendário mensal
 - [x] Legenda de tipos no calendário mensal
+
+- [x] Fix: Erro "Please login (10001)" em /conteudo — Redirecionar para login quando não autenticado

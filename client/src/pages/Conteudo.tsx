@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import SidebarNav from "@/components/SidebarNav";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -126,6 +127,7 @@ function formatDateForInput(date: Date): string {
 }
 
 export default function Conteudo() {
+  const { isAuthenticated, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [viewMode, setViewMode] = useState<ViewMode>("semanal");
   const [currentWeekRef, setCurrentWeekRef] = useState(() => new Date());
   const [monthRef, setMonthRef] = useState(() => new Date());
@@ -138,7 +140,10 @@ export default function Conteudo() {
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
 
   const utils = trpc.useUtils();
-  const { data: postsData, isLoading } = trpc.posts.list.useQuery({ limit: 500, offset: 0 });
+  const { data: postsData, isLoading } = trpc.posts.list.useQuery(
+    { limit: 500, offset: 0 },
+    { enabled: isAuthenticated } // Só busca posts quando autenticado
+  );
   const posts: any[] = postsData || [];
 
   const createPost = trpc.posts.create.useMutation({
