@@ -17,6 +17,7 @@ import DashboardOverview from "./pages/DashboardOverview";
 import PlanningPage from "./pages/PlanningPage";
 import ContentPage from "./pages/ContentPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path={"/planejamento"} component={PlanningPage} />
       <Route path={"/conteudo"} component={ContentPage} />
       <Route path={"/analise"} component={AnalyticsPage} />
+      <Route path={"/configuracoes"} component={SettingsPage} />
       <Route path={"/publicacoes"} component={PublicationManager} />
       <Route path={"/performance"} component={PostPerformance} />
       <Route path={"/performance-dashboard"} component={PerformanceDashboard} />

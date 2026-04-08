@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { usePageTransition } from "@/hooks/usePageTransition";
 import Sidebar from "@/components/Sidebar";
 import ContentBankSection from "@/components/ContentBankSection";
 import CreativeBriefingSection from "@/components/CreativeBriefingSection";
@@ -7,6 +8,7 @@ import MoodboardSection from "@/components/MoodboardSection";
 
 export default function ContentPage() {
   const [, navigate] = useLocation();
+  const { animationClass } = usePageTransition();
   const [activeTab, setActiveTab] = useState("bank");
 
   const handleNavigate = (itemId: string) => {
@@ -43,7 +45,7 @@ export default function ContentPage() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar activeSection="conteudo" onNavigate={handleNavigate} />
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">Conteúdo</h1>

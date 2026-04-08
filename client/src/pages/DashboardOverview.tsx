@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { usePageTransition } from "@/hooks/usePageTransition";
 import Sidebar from "@/components/Sidebar";
 import MetricCard from "@/components/MetricCard";
 import RealTimeMetricsSection from "@/components/RealTimeMetricsSection";
@@ -6,6 +7,7 @@ import { UserPlus, TrendingUp, Target, Calendar } from "lucide-react";
 
 export default function DashboardOverview() {
   const [, navigate] = useLocation();
+  const { animationClass } = usePageTransition();
 
   const handleNavigate = (itemId: string) => {
     const routeMap: Record<string, string> = {
@@ -41,7 +43,7 @@ export default function DashboardOverview() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar activeSection="dashboard" onNavigate={handleNavigate} />
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">Visão Geral</h1>

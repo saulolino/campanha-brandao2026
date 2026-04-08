@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { usePageTransition } from "@/hooks/usePageTransition";
 import Sidebar from "@/components/Sidebar";
 import NextWeekSection from "@/components/NextWeekSection";
 import MonthlyCalendarSection from "@/components/MonthlyCalendarSection";
 
 export default function PlanningPage() {
   const [, navigate] = useLocation();
+  const { animationClass } = usePageTransition();
   const [activeTab, setActiveTab] = useState("nextweek");
 
   const handleNavigate = (itemId: string) => {
@@ -42,7 +44,7 @@ export default function PlanningPage() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar activeSection="planejamento" onNavigate={handleNavigate} />
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">Planejamento</h1>

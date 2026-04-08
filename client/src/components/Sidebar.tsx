@@ -30,6 +30,7 @@ import {
   TrendingUp,
   Shield,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -233,6 +234,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: "Checklist",
         tooltip: "Lista de verificação antes de publicar",
         icon: CheckSquare,
+      },
+      {
+        id: "configuracoes",
+        label: "Configurações",
+        tooltip: "Credenciais do Instagram, sincronização e relatórios",
+        icon: Settings,
       },
     ],
   },

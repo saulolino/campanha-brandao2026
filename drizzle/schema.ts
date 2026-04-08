@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -86,3 +86,26 @@ export const instagramMetrics = mysqlTable("instagram_metrics", {
 
 export type InstagramMetrics = typeof instagramMetrics.$inferSelect;
 export type InsertInstagramMetrics = typeof instagramMetrics.$inferInsert;
+
+// Configurações da campanha
+export const campaignSettings = mysqlTable("campaign_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  // Credenciais do Instagram
+  instagramAccessToken: text("instagramAccessToken"),
+  instagramBusinessAccountId: varchar("instagramBusinessAccountId", { length: 255 }),
+  instagramUsername: varchar("instagramUsername", { length: 255 }),
+  // Horários de sincronização (em formato HH:mm, ex: "08:00", "14:00", "20:00")
+  syncSchedule: varchar("syncSchedule", { length: 255 }).default("08:00,14:00,20:00").notNull(),
+  // Preferências de relatório
+  reportFormat: mysqlEnum("reportFormat", ["pdf", "csv", "both"]).default("pdf").notNull(),
+  reportFrequency: mysqlEnum("reportFrequency", ["daily", "weekly", "monthly"]).default("weekly").notNull(),
+  reportRecipients: text("reportRecipients"), // JSON array de emails
+  // Controle
+  isActive: tinyint("isActive").default(1).notNull(),
+  lastUpdatedBy: int("lastUpdatedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CampaignSettings = typeof campaignSettings.$inferSelect;
+export type InsertCampaignSettings = typeof campaignSettings.$inferInsert;

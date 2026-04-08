@@ -249,3 +249,35 @@
   - [ ] Criar página de Suporte/Ajuda
   - [ ] Atualizar sidebar para apontar para novas páginas
   - [ ] Testar navegação entre páginas
+
+- [x] Página de Configurações
+  - [x] Criar SettingsPage.tsx com abas para diferentes configurações
+  - [x] Aba de Credenciais do Instagram — Campo para token de acesso
+  - [x] Aba de Sincronização — Configurar horários de sincronização (8h, 14h, 20h)
+  - [x] Aba de Relatórios — Preferências de formato e frequência
+  - [x] Validar permissão (apenas Coordenador/Superadmin)
+  - [x] Salvar configurações no banco de dados (localStorage)
+  - [x] Testes de configurações
+
+- [ ] Integração do Instagram Graph API
+  - [ ] Criar endpoint tRPC para validar token de acesso
+  - [ ] Implementar busca de perfil do Instagram
+  - [ ] Buscar dados de posts publicados
+  - [ ] Calcular engagement rate e métricas
+  - [ ] Armazenar dados em instagramMetrics
+  - [ ] Testes de API
+
+- [ ] Sincronização de dados reais
+  - [ ] Atualizar dashboard com dados reais do Instagram
+  - [ ] Exibir seguidores, engagement, posts publicados
+  - [ ] Atualizar gráficos de performance
+  - [ ] Mostrar último horário de sincronização
+  - [ ] Indicador de status de sincronização
+  - [ ] Testes de sincronização
+
+- [x] Animações de transição entre páginas
+  - [x] Adicionar fade-in/fade-out no App.tsx
+  - [x] Implementar transição suave entre rotas
+  - [x] Adicionar animação de carregamento
+  - [x] Testar performance das animações
+  - [x] Testes de animações
