@@ -55,7 +55,16 @@ export const postsRouter = router({
     .input(z.object({
       title: z.string().min(1),
       scheduledDate: z.date(),
-      mediaUrls: z.string().optional(), // JSON string de URLs
+      scheduledTime: z.string().optional().default("12:00"),
+      type: z.enum(["reels", "carrossel", "video", "story", "imagem"]).optional().default("imagem"),
+      objective: z.string().optional(),
+      description: z.string().optional(),
+      expectedReach: z.number().optional().default(0),
+      expectedLikes: z.number().optional().default(0),
+      expectedComments: z.number().optional().default(0),
+      budget: z.string().optional(),
+      notes: z.string().optional(),
+      mediaUrls: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -64,9 +73,18 @@ export const postsRouter = router({
       const result = await db.insert(instagramPosts).values({
         title: input.title,
         scheduledDate: input.scheduledDate,
+        scheduledTime: input.scheduledTime,
+        type: input.type,
+        objective: input.objective,
+        description: input.description,
+        expectedReach: input.expectedReach,
+        expectedLikes: input.expectedLikes,
+        expectedComments: input.expectedComments,
+        budget: input.budget,
+        notes: input.notes,
         mediaUrls: input.mediaUrls,
         designerId: ctx.user.id,
-        status: "design",
+        status: "draft",
       });
 
       return { id: (result as any).insertId || 0 };
@@ -289,46 +307,62 @@ export const postsRouter = router({
       return { success: true, media };
     }),
 
-  // Atualizar post (coordenador)
+  // Atualizar post (qualquer membro da equipe)
   updatePost: protectedProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().optional(),
+      description: z.string().optional(),
       caption: z.string().optional(),
       scheduledDate: z.date().optional(),
+      scheduledTime: z.string().optional(),
+      type: z.enum(["reels", "carrossel", "video", "story", "imagem"]).optional(),
+      objective: z.string().optional(),
+      expectedReach: z.number().optional(),
+      expectedLikes: z.number().optional(),
+      expectedComments: z.number().optional(),
+      budget: z.string().optional(),
+      notes: z.string().optional(),
+      status: z.enum(["draft", "design", "caption", "review", "scheduled", "published", "failed"]).optional(),
       comment: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      // Verificar se é coordenador ou superadmin
-      if (ctx.user.role !== "coordinator" && ctx.user.role !== "superadmin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only coordinators can update scheduled posts" });
-      }
-
       const post = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
       if (!post.length) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
 
       // Preparar updates
       const updates: any = {};
-      if (input.title) updates.title = input.title;
-      if (input.caption) updates.caption = input.caption;
-      if (input.scheduledDate) updates.scheduledDate = input.scheduledDate;
-      updates.updatedAt = new Date();
+      if (input.title !== undefined) updates.title = input.title;
+      if (input.description !== undefined) updates.description = input.description;
+      if (input.caption !== undefined) updates.caption = input.caption;
+      if (input.scheduledDate !== undefined) updates.scheduledDate = input.scheduledDate;
+      if (input.scheduledTime !== undefined) updates.scheduledTime = input.scheduledTime;
+      if (input.type !== undefined) updates.type = input.type;
+      if (input.objective !== undefined) updates.objective = input.objective;
+      if (input.expectedReach !== undefined) updates.expectedReach = input.expectedReach;
+      if (input.expectedLikes !== undefined) updates.expectedLikes = input.expectedLikes;
+      if (input.expectedComments !== undefined) updates.expectedComments = input.expectedComments;
+      if (input.budget !== undefined) updates.budget = input.budget;
+      if (input.notes !== undefined) updates.notes = input.notes;
+      if (input.status !== undefined) updates.status = input.status;
 
       // Atualizar post
       await db.update(instagramPosts).set(updates).where(eq(instagramPosts.id, input.id));
 
-      // Registrar no histórico de status
-      await db.insert(postStatusHistory).values({
-        postId: input.id,
-        previousStatus: post[0].status,
-        newStatus: post[0].status, // Status permanece o mesmo, apenas editado
-        changedBy: ctx.user.id,
-        comment: input.comment || "Post updated",
-      });
+      return { success: true };
+    }),
 
+  // Deletar post
+  deletePost: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      await db.delete(instagramPosts).where(eq(instagramPosts.id, input.id));
       return { success: true };
     }),
 

@@ -64,6 +64,13 @@
       "when": 1775615593312,
       "tag": "0008_premium_flatman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1775667696828,
+      "tag": "0009_chilly_daredevil",
+      "breakpoints": true
     }
   ]
 }

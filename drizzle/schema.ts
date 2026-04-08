@@ -33,10 +33,25 @@ export const instagramPosts = mysqlTable("instagram_posts", {
   scheduledDate: timestamp("scheduledDate").notNull(),
   // Status do fluxo: draft → design → caption → review → scheduled → published
   status: mysqlEnum("status", ["draft", "design", "caption", "review", "scheduled", "published", "failed"]).default("draft").notNull(),
+  // Tipo de conteúdo
+  type: mysqlEnum("type", ["reels", "carrossel", "video", "story", "imagem"]).default("imagem").notNull(),
+  // Objetivo
+  objective: varchar("objective", { length: 255 }),
+  // Hora do post (HH:mm)
+  scheduledTime: varchar("scheduledTime", { length: 5 }).default("12:00"),
   // Conteúdo
+  description: text("description"),
   mediaUrls: text("mediaUrls"), // JSON array de URLs das imagens/vídeos
   caption: text("caption"),
   hashtags: text("hashtags"),
+  // Métricas projetadas
+  expectedReach: int("expectedReach").default(0),
+  expectedLikes: int("expectedLikes").default(0),
+  expectedComments: int("expectedComments").default(0),
+  // Orçamento
+  budget: decimal("budget", { precision: 10, scale: 2 }),
+  // Observações
+  notes: text("notes"),
   // Responsáveis
   designerId: int("designerId"),
   captionWriterId: int("captionWriterId"),

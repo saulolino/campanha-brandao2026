@@ -450,3 +450,14 @@
 - [x] Testes passando (7/7)
 
 - [x] Fix: Erro NaN na página /relatorios — Valor numérico renderizado como NaN
+
+# RESTAURAÇÃO MÓDULO AGENDA /conteudo (CRÍTICO)
+- [ ] Verificar estrutura existente no backend (schema, procedures)
+- [ ] Garantir tabela de posts agendados com todos os campos
+- [ ] Implementar calendário semanal com navegação entre semanas
+- [ ] Exibir posts por dia/horário com tipo identificado (Reels, Carrossel, Vídeo, Story)
+- [ ] Modal de edição completo (título, descrição, tipo, data, hora, objetivo, orçamento, observações)
+- [ ] Botão "Novo Post" com fluxo completo de criação
+- [ ] Posts aparecem imediatamente no calendário após criação
+- [ ] Edição persiste corretamente no banco de dados
+- [ ] Testes do módulo de agenda
