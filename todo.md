@@ -239,3 +239,13 @@
   - [x] Buscar dados reais via Instagram Graph API
   - [x] Calcular engagement rate e médias
   - [x] Testes de sincronização (5 testes passando)
+
+- [ ] Remodelar página home — Subdividir em novas páginas sem scrolls
+  - [ ] Analisar estrutura atual da home e menu
+  - [ ] Criar página de Visão Geral
+  - [ ] Criar página de Análise de Performance
+  - [ ] Criar página de Calendário Mensal
+  - [ ] Criar página de Publicações
+  - [ ] Criar página de Suporte/Ajuda
+  - [ ] Atualizar sidebar para apontar para novas páginas
+  - [ ] Testar navegação entre páginas

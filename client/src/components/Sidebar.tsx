@@ -362,13 +362,11 @@ function NavGroupComponent({
             return (
               <div key={item.id} className="flex items-center gap-2 group/item">
                 <a
-                  href={item.id === "admin" ? "/admin" : "#"}
+                  href={getRouteForItem(item.id)}
                   onClick={(e) => {
-                    if (item.id !== "admin") {
-                      e.preventDefault();
-                      onNavigate(item.id);
-                      setMobileOpen(false);
-                    }
+                    e.preventDefault();
+                    onNavigate(getRouteForItem(item.id));
+                    setMobileOpen(false);
                   }}
                   className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
                     isActive
@@ -390,6 +388,37 @@ function NavGroupComponent({
     </div>
   );
 }
+
+
+const getRouteForItem = (itemId: string): string => {
+  const routes: Record<string, string> = {
+  "dashboard": "/dashboard",
+  "realtime": "/dashboard",
+  "publicacoes": "/publicacoes",
+  "performance": "/performance",
+  "nextweek": "/planejamento",
+  "calendar": "/planejamento",
+  "monthlycal": "/planejamento",
+  "contentbank": "/conteudo",
+  "content": "/conteudo",
+  "briefing": "/conteudo",
+  "tracker": "/analise",
+  "growth": "/analise",
+  "report": "/analise",
+  "competitors": "/analise",
+  "pillars": "/conteudo",
+  "donts": "/conteudo",
+  "moodboard": "/conteudo",
+  "team": "/conteudo",
+  "budget": "/conteudo",
+  "supporters": "/apoiadores",
+  "notifications": "/home",
+  "testimonials": "/home",
+  "checklist": "/home",
+  "admin": "/admin"
+};
+  return routes[itemId] || "/home";
+};
 
 export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
