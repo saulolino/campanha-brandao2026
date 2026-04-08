@@ -7,7 +7,34 @@ import { UserPlus, TrendingUp, Target, Calendar } from "lucide-react";
 export default function DashboardOverview() {
   const [, navigate] = useLocation();
 
-  const handleNavigate = (route: string) => {
+  const handleNavigate = (itemId: string) => {
+    const routeMap: Record<string, string> = {
+      "dashboard": "/dashboard",
+      "realtime": "/dashboard",
+      "publicacoes": "/publicacoes",
+      "performance": "/performance",
+      "nextweek": "/planejamento",
+      "calendar": "/planejamento",
+      "monthlycal": "/planejamento",
+      "contentbank": "/conteudo",
+      "content": "/conteudo",
+      "briefing": "/conteudo",
+      "tracker": "/analise",
+      "growth": "/analise",
+      "report": "/analise",
+      "competitors": "/analise",
+      "pillars": "/conteudo",
+      "donts": "/conteudo",
+      "moodboard": "/conteudo",
+      "team": "/conteudo",
+      "budget": "/conteudo",
+      "supporters": "/apoiadores",
+      "notifications": "/home",
+      "testimonials": "/home",
+      "checklist": "/home",
+      "admin": "/admin"
+    };
+    const route = routeMap[itemId] || "/home";
     navigate(route);
   };
 

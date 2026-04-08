@@ -365,7 +365,7 @@ function NavGroupComponent({
                   href={getRouteForItem(item.id)}
                   onClick={(e) => {
                     e.preventDefault();
-                    onNavigate(getRouteForItem(item.id));
+                    onNavigate(item.id);
                     setMobileOpen(false);
                   }}
                   className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all duration-200 ${
