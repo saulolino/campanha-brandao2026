@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog } from "lucide-react";
+import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog, UserPlus } from "lucide-react";
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
@@ -48,9 +48,20 @@ export default function SettingsPage() {
   const isSuperAdmin = effectiveRole === "superadmin";
 
   // Estado do modal de edição
-  const [editingUser, setEditingUser] = useState<{ id: number; name: string; role: string } | null>(null);
+  const [editingUser, setEditingUser] = useState<{ id: number; name: string; email: string; role: string } | null>(null);
   const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<"visitor" | "team" | "coordinator" | "superadmin">("visitor");
+  const [editPassword, setEditPassword] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
+
+  // Estado do modal de criação
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<"visitor" | "team" | "coordinator" | "superadmin">("visitor");
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Estado do confirm de exclusão
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
@@ -59,22 +70,24 @@ export default function SettingsPage() {
   const usersQuery = trpc.users.list.useQuery(undefined, { enabled: isSuperAdmin });
   const utils = trpc.useUtils();
 
-  const updateRoleMutation = trpc.users.updateRole.useMutation({
-    onSuccess: () => {
-      utils.users.list.invalidate();
-      toast.success("Role atualizado com sucesso");
-      setEditingUser(null);
-    },
-    onError: (err) => toast.error(err.message),
+  const updateMutation = trpc.users.update.useMutation({
+    onSuccess: () => { utils.users.list.invalidate(); toast.success("Usuário atualizado com sucesso"); },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const updateNameMutation = trpc.users.updateName.useMutation({
+  const updatePasswordMutation = trpc.users.updatePassword.useMutation({
+    onSuccess: () => { toast.success("Senha atualizada com sucesso"); setEditPassword(""); },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const createMutation = trpc.users.create.useMutation({
     onSuccess: () => {
       utils.users.list.invalidate();
-      toast.success("Nome atualizado com sucesso");
-      setEditingUser(null);
+      toast.success("Usuário criado com sucesso");
+      setCreatingUser(false);
+      setNewName(""); setNewEmail(""); setNewPassword(""); setNewRole("visitor");
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
   const deleteMutation = trpc.users.delete.useMutation({
@@ -83,26 +96,33 @@ export default function SettingsPage() {
       toast.success("Usuário removido");
       setDeletingUserId(null);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const openEditModal = (u: { id: number; name: string | null; role: string | null }) => {
-    setEditingUser({ id: u.id, name: u.name || "", role: u.role || "visitor" });
+  const openEditModal = (u: { id: number; name: string | null; email: string | null; role: string | null }) => {
+    setEditingUser({ id: u.id, name: u.name || "", email: u.email || "", role: u.role || "visitor" });
     setEditName(u.name || "");
+    setEditEmail(u.email || "");
     setEditRole((u.role as any) || "visitor");
+    setEditPassword("");
   };
 
   const handleSaveEdit = () => {
     if (!editingUser) return;
-    if (editName !== editingUser.name) {
-      updateNameMutation.mutate({ userId: editingUser.id, name: editName });
+    const hasDataChanges = editName !== editingUser.name || editEmail !== editingUser.email || editRole !== editingUser.role;
+    const hasPasswordChange = editPassword.trim().length >= 4;
+    if (hasDataChanges) {
+      updateMutation.mutate({ userId: editingUser.id, name: editName, email: editEmail || undefined, role: editRole });
     }
-    if (editRole !== editingUser.role) {
-      updateRoleMutation.mutate({ userId: editingUser.id, newRole: editRole });
+    if (hasPasswordChange) {
+      updatePasswordMutation.mutate({ userId: editingUser.id, newPassword: editPassword });
     }
-    if (editName === editingUser.name && editRole === editingUser.role) {
+    if (!hasDataChanges && !hasPasswordChange) {
       setEditingUser(null);
+      return;
     }
+    // Fechar modal após salvar
+    setTimeout(() => setEditingUser(null), 500);
   };
 
   const roleLabel: Record<string, string> = {
@@ -472,7 +492,13 @@ export default function SettingsPage() {
                         </CardTitle>
                         <CardDescription>Visualize, edite roles e remova membros da equipe da campanha.</CardDescription>
                       </div>
-                      <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>
+                        <Button size="sm" onClick={() => setCreatingUser(true)} className="flex items-center gap-2">
+                          <UserPlus className="w-4 h-4" />
+                          Novo Usuário
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -540,7 +566,7 @@ export default function SettingsPage() {
                 </Card>
               )}
 
-              {/* Modal de Edição */}
+              {/* Modal de Edição Completa */}
               <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
                 <DialogContent className="max-w-md">
                   <DialogHeader>
@@ -549,43 +575,112 @@ export default function SettingsPage() {
                   <div className="space-y-4 py-2">
                     <div className="space-y-2">
                       <Label htmlFor="edit-name">Nome</Label>
-                      <Input
-                        id="edit-name"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Nome completo"
-                      />
+                      <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Nome completo" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">E-mail</Label>
+                      <Input id="edit-email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="email@exemplo.com" />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-role">Nível de Acesso</Label>
                       <Select value={editRole} onValueChange={(v) => setEditRole(v as any)}>
-                        <SelectTrigger id="edit-role">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <SelectTrigger id="edit-role"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="visitor">
-                            <div className="flex items-center gap-2"><Eye className="w-4 h-4" /> Visitante — só visualização</div>
-                          </SelectItem>
-                          <SelectItem value="team">
-                            <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Equipe — acesso total sem publicação</div>
-                          </SelectItem>
-                          <SelectItem value="coordinator">
-                            <div className="flex items-center gap-2"><UserCog className="w-4 h-4" /> Coordenador — acesso total com publicação</div>
-                          </SelectItem>
-                          <SelectItem value="superadmin">
-                            <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Superadmin — acesso total e administração</div>
-                          </SelectItem>
+                          <SelectItem value="visitor"><div className="flex items-center gap-2"><Eye className="w-4 h-4" /> Visitante — só visualização</div></SelectItem>
+                          <SelectItem value="team"><div className="flex items-center gap-2"><Users className="w-4 h-4" /> Equipe — acesso total sem publicação</div></SelectItem>
+                          <SelectItem value="coordinator"><div className="flex items-center gap-2"><UserCog className="w-4 h-4" /> Coordenador — acesso total com publicação</div></SelectItem>
+                          <SelectItem value="superadmin"><div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Superadmin — acesso total e administração</div></SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-password">Nova Senha <span className="text-muted-foreground text-xs">(deixe em branco para não alterar)</span></Label>
+                      <div className="relative">
+                        <Input
+                          id="edit-password"
+                          type={showEditPassword ? "text" : "password"}
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          placeholder="Mínimo 4 caracteres"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowEditPassword(!showEditPassword)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
                     <Button
                       onClick={handleSaveEdit}
-                      disabled={updateRoleMutation.isPending || updateNameMutation.isPending || !editName.trim()}
+                      disabled={updateMutation.isPending || updatePasswordMutation.isPending || !editName.trim()}
                     >
-                      {(updateRoleMutation.isPending || updateNameMutation.isPending) ? "Salvando..." : "Salvar"}
+                      {(updateMutation.isPending || updatePasswordMutation.isPending) ? "Salvando..." : "Salvar"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Modal de Criação de Usuário */}
+              <Dialog open={creatingUser} onOpenChange={(open) => !open && setCreatingUser(false)}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Novo Usuário</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-name">Nome</Label>
+                      <Input id="new-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nome completo" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-email">E-mail</Label>
+                      <Input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="email@exemplo.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">Senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="new-password"
+                          type={showNewPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Mínimo 4 caracteres"
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-role">Nível de Acesso</Label>
+                      <Select value={newRole} onValueChange={(v) => setNewRole(v as any)}>
+                        <SelectTrigger id="new-role"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="visitor"><div className="flex items-center gap-2"><Eye className="w-4 h-4" /> Visitante</div></SelectItem>
+                          <SelectItem value="team"><div className="flex items-center gap-2"><Users className="w-4 h-4" /> Equipe</div></SelectItem>
+                          <SelectItem value="coordinator"><div className="flex items-center gap-2"><UserCog className="w-4 h-4" /> Coordenador</div></SelectItem>
+                          <SelectItem value="superadmin"><div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Superadmin</div></SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreatingUser(false)}>Cancelar</Button>
+                    <Button
+                      onClick={() => createMutation.mutate({ name: newName, email: newEmail, password: newPassword, role: newRole })}
+                      disabled={createMutation.isPending || !newName.trim() || !newEmail.trim() || newPassword.length < 4}
+                    >
+                      {createMutation.isPending ? "Criando..." : "Criar Usuário"}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

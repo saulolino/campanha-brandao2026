@@ -503,3 +503,6 @@
 - [x] Fix: CRUD de usuários retorna erro de permissão mesmo logado como Superadmin
 
 - [x] Fix: botão Sair no sidebar não funciona (não faz logout nem redireciona para /login)
+
+- [x] Fix: usuários fantasmas sendo criados — causa raiz corrigida (UNIQUE index + SELECT/UPDATE explícito)
+- [x] CRUD usuários: edição completa (nome, email, senha, role) + criação de novo usuário
