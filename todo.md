@@ -488,3 +488,8 @@
 - [x] Seed do banco com posts agendados do plano de comunicação (históricos + futuros planejados)
 
 - [x] Fix: instagram.getMetrics retorna 500 em produção — página /home não carrega dados
+
+- [ ] Reconstruir página /projecoes com dados completos do plano de comunicação (projeção mensal, orçamento, KPIs, metas)
+
+- [x] Reconstruir página /projecoes com dados completos do plano de comunicação (projeção mensal, orçamento, KPIs, metas, pilares, equipe, regras)
+- [x] Corrigir default do campo role no schema (adicionar .default('visitor') e migrar)

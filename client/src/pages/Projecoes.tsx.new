@@ -22,7 +22,7 @@ import {
   CONTENT_PILLARS, VIRAL_TYPES, DONT_DO_RULES, TEAM,
 } from "@/lib/campaignData";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   UserPlus, Heart, MessageCircle, TrendingUp, Eye, Zap, Bookmark, Share2,
   DollarSign, Users, Star, Globe,
 };
@@ -55,7 +55,7 @@ export default function Projecoes() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <SidebarNav activeSection="projecoes" />
+      <SidebarNav />
       <main className={`flex-1 p-6 overflow-y-auto ${animationClass}`}>
 
         <div className="mb-8">

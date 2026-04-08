@@ -71,6 +71,13 @@
       "when": 1775667696828,
       "tag": "0009_chilly_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1775683400942,
+      "tag": "0010_purple_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }
