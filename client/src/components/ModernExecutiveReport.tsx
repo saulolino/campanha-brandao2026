@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, Loader2, TrendingUp, BarChart3 } from "lucide-react";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -115,13 +115,28 @@ export function ModernExecutiveReport({
     {} as Record<string, number>
   );
 
+  // Guard contra divisão por zero
+  if (monthPosts.length === 0) {
+    return (
+      <Button
+        disabled
+        variant="default"
+        size="sm"
+        className="gap-2 bg-gray-400"
+      >
+        <BarChart3 size={16} />
+        Sem posts
+      </Button>
+    );
+  }
+
   const postsWithAds = monthPosts.filter((p) => p.hasAds).length;
   const adsPercentage = ((postsWithAds / monthPosts.length) * 100).toFixed(1);
   
   // Find top pillar
   const topPillar = Object.entries(pillarCounts).sort(([, a], [, b]) => b - a)[0];
   const topPillarLabel = topPillar ? pillarLabels[topPillar[0]] || topPillar[0] : "N/A";
-  const topPillarPercentage = topPillar ? ((topPillar[1] / monthPosts.length) * 100).toFixed(1) : "0";
+  const topPillarPercentage = topPillar && monthPosts.length > 0 ? ((topPillar[1] / monthPosts.length) * 100).toFixed(1) : "0";
 
   // Find top format
   const topFormat = Object.entries(formatCounts).sort(([, a], [, b]) => b - a)[0];
@@ -187,8 +202,8 @@ export function ModernExecutiveReport({
       doc.text("Total de Posts", margin + 6, yPosition + 24);
 
       // Card 2: Planejados %
-      const plannedCount = statusCounts["planejado"] || 0;
-      const plannedPercentage = ((plannedCount / monthPosts.length) * 100).toFixed(0);
+  const plannedCount = statusCounts["planejado"] || 0;
+  const plannedPercentage = monthPosts.length > 0 ? ((plannedCount / monthPosts.length) * 100).toFixed(0) : "0";
       const card2X = margin + cardWidth + 3;
 
       doc.setFillColor(255, 250, 245);
@@ -325,7 +340,7 @@ export function ModernExecutiveReport({
           post.hasAds ? "Sim" : "Não",
         ]);
 
-        autoTable(doc, {
+        (doc as any).autoTable({
           head: [["Data", "Título", "Status", "Formato", "Pilar", "Anúncios"]],
           body: tableData,
           startY: yPosition,
@@ -355,7 +370,7 @@ export function ModernExecutiveReport({
             4: { cellWidth: 22 },
             5: { cellWidth: 15 },
           },
-          didDrawPage: (data) => {
+          didDrawPage: (data: any) => {
             const pageCount = (doc as any).internal.pages.length - 1;
             const currentPage = data.pageNumber;
             doc.setFontSize(8);

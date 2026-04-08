@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CALENDAR_MONTHS, PILLAR_COLORS, type CalendarPost } from "@/lib/monthlyCalendar";
 import { ScheduledPostEditor } from "./ScheduledPostEditor";
 import { MonthlyReportExporterWithCharts } from "./MonthlyReportExporterWithCharts";
+import { ModernExecutiveReport } from "./ModernExecutiveReport";
 import {
   Calendar,
   ChevronLeft,
@@ -160,12 +161,20 @@ export default function MonthlyCalendarSection() {
           </button>
         </div>
         
-        <MonthlyReportExporterWithCharts
-          posts={month.posts}
-          year={month.year}
-          month={month.month}
-          monthName={month.name}
-        />
+        <div className="flex gap-2">
+          <ModernExecutiveReport
+            posts={month.posts}
+            year={month.year}
+            month={month.month}
+            monthName={month.name}
+          />
+          <MonthlyReportExporterWithCharts
+            posts={month.posts}
+            year={month.year}
+            month={month.month}
+            monthName={month.name}
+          />
+        </div>
       </div>
 
       {/* Month info */}
