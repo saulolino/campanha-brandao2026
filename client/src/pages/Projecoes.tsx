@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
-import Sidebar from "@/components/SidebarNew";
+import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { TrendingUp, Target, DollarSign, Zap } from "lucide-react";
@@ -56,7 +56,7 @@ export default function Projecoes() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="projecoes" onNavigate={handleNavigate} />
+      <SidebarNav activeSection="projecoes" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {/* Header */}

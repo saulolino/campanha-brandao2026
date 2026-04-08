@@ -13,7 +13,6 @@ import PerformanceDashboard from "./pages/PerformanceDashboard";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
 import Conteudo from "./pages/Conteudo";
 import Estrategia from "./pages/Estrategia";
 import Metricas from "./pages/Metricas";
@@ -26,7 +25,6 @@ function Router() {
       <Route path={"/"} component={Login} />
       <Route path={"/login"} component={Login} />
       <Route path={"/home"} component={Home} />
-      <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/conteudo"} component={Conteudo} />
       <Route path={"/estrategia"} component={Estrategia} />
       <Route path={"/metricas"} component={Metricas} />

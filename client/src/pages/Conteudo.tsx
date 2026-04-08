@@ -1,27 +1,12 @@
-import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
-import Sidebar from "@/components/SidebarNew";
+import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Video, Image, MessageSquare } from "lucide-react";
 
 export default function Conteudo() {
-  const [, navigate] = useLocation();
   const { animationClass } = usePageTransition();
-
-  const handleNavigate = (itemId: string) => {
-    const routeMap: Record<string, string> = {
-      "dashboard": "/dashboard",
-      "conteudo": "/conteudo",
-      "estrategia": "/estrategia",
-      "metricas": "/metricas",
-      "projecoes": "/projecoes",
-      "configuracoes": "/configuracoes",
-    };
-    const route = routeMap[itemId] || "/dashboard";
-    navigate(route);
-  };
 
   const weeklyPosts = [
     { id: 1, day: "Segunda", date: "10 de Abril", type: "Reel", title: "Qualidade de Vida em BCP", status: "Agendado", time: "08:00" },
@@ -67,23 +52,23 @@ export default function Conteudo() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="conteudo" onNavigate={handleNavigate} />
+      <SidebarNav activeSection="conteudo" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Calendar className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-foreground">Conteúdo</h1>
+              <h1 className="text-3xl font-bold text-foreground">Conteúdo</h1>
             </div>
-            <p className="text-muted-foreground">Calendário semanal, timeline de posts e tipos de conteúdo</p>
+            <p className="text-muted-foreground">Calendário, cronograma e execução editorial de posts</p>
           </div>
 
           <Tabs defaultValue="calendario" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="calendario">Calendário</TabsTrigger>
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="tipos">Tipos de Conteúdo</TabsTrigger>
+              <TabsTrigger value="tipos">Tipos</TabsTrigger>
             </TabsList>
 
             {/* Calendário */}
@@ -180,33 +165,6 @@ export default function Conteudo() {
                           <h4 className="font-semibold mb-1">{type.name}</h4>
                           <p className="text-3xl font-bold text-primary">{type.count}</p>
                           <p className="text-xs text-muted-foreground mt-2">{Math.round((type.count / weeklyPosts.length) * 100)}% da semana</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Detalhes por Tipo */}
-                  <div className="mt-8 space-y-4">
-                    {contentTypes.map((type) => {
-                      const Icon = type.icon;
-                      const postsOfType = weeklyPosts.filter((p) => p.type === type.name);
-                      return (
-                        <div key={type.name} className="border border-border/50 rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Icon className="w-4 h-4" />
-                            <h4 className="font-semibold">{type.name}</h4>
-                            <Badge variant="secondary">{postsOfType.length}</Badge>
-                          </div>
-                          <div className="space-y-2">
-                            {postsOfType.map((post) => (
-                              <div key={post.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
-                                <span>{post.title}</span>
-                                <Badge variant="outline" className={getStatusColor(post.status)}>
-                                  {post.status}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       );
                     })}

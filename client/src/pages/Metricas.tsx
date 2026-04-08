@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
-import Sidebar from "@/components/SidebarNew";
+import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Heart, MessageCircle, Eye, TrendingUp } from "lucide-react";
@@ -54,7 +54,7 @@ export default function Metricas() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="metricas" onNavigate={handleNavigate} />
+      <SidebarNav activeSection="metricas" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {/* Header */}

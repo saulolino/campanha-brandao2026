@@ -1,57 +1,39 @@
-import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
-import Sidebar from "@/components/SidebarNew";
+import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Lightbulb, Target, MessageSquare, Zap } from "lucide-react";
 
 export default function Estrategia() {
-  const [, navigate] = useLocation();
   const { animationClass } = usePageTransition();
-
-  const handleNavigate = (itemId: string) => {
-    const routeMap: Record<string, string> = {
-      "dashboard": "/dashboard",
-      "conteudo": "/conteudo",
-      "estrategia": "/estrategia",
-      "metricas": "/metricas",
-      "projecoes": "/projecoes",
-      "configuracoes": "/configuracoes",
-    };
-    const route = routeMap[itemId] || "/dashboard";
-    navigate(route);
-  };
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="estrategia" onNavigate={handleNavigate} />
+      <SidebarNav activeSection="estrategia" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Lightbulb className="w-8 h-8 text-primary" />
-              <h1 className="text-4xl font-bold text-foreground">Estratégia</h1>
+              <h1 className="text-3xl font-bold text-foreground">Estratégia</h1>
             </div>
-            <p className="text-muted-foreground">Direcionamento estratégico e narrativa da campanha</p>
+            <p className="text-muted-foreground">Direção estratégica, narrativa e objetivos da campanha</p>
           </div>
 
           <Tabs defaultValue="tema" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="tema" className="flex items-center gap-2">
                 <Target className="w-4 h-4" />
-                <span className="hidden sm:inline">Tema da Semana</span>
-                <span className="sm:hidden">Tema</span>
+                <span className="hidden sm:inline">Tema</span>
               </TabsTrigger>
               <TabsTrigger value="narrativa" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 <span className="hidden sm:inline">Narrativa</span>
-                <span className="sm:hidden">Narr.</span>
               </TabsTrigger>
               <TabsTrigger value="objetivos" className="flex items-center gap-2">
                 <Zap className="w-4 h-4" />
                 <span className="hidden sm:inline">Objetivos</span>
-                <span className="sm:hidden">Obj.</span>
               </TabsTrigger>
             </TabsList>
 
@@ -60,7 +42,7 @@ export default function Estrategia() {
               <Card>
                 <CardHeader>
                   <CardTitle>Tema da Semana</CardTitle>
-                  <CardDescription>Foco principal de comunicação</CardDescription>
+                  <CardDescription>Foco principal de comunicação estratégica</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-primary/10 border border-primary/20 rounded-lg p-6">

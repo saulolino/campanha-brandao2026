@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
-import Sidebar from "@/components/SidebarNew";
+import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +130,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="configuracoes" onNavigate={handleNavigate} />
+      <SidebarNav activeSection="configuracoes" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-4xl mx-auto">
           <div className="mb-8">
