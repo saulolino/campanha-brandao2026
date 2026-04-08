@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { CALENDAR_MONTHS, PILLAR_COLORS, type CalendarPost } from "@/lib/monthlyCalendar";
 import { ScheduledPostEditor } from "./ScheduledPostEditor";
+import { MonthlyReportExporterWithCharts } from "./MonthlyReportExporterWithCharts";
 import {
   Calendar,
   ChevronLeft,
@@ -123,39 +124,48 @@ export default function MonthlyCalendarSection() {
         <span className="text-xs font-mono text-muted-foreground ml-2">{totalPosts} posts planejados</span>
       </div>
 
-      {/* Month navigation */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setSelectedMonthIdx(Math.max(0, selectedMonthIdx - 1))}
-          disabled={selectedMonthIdx === 0}
-          className="p-2 rounded-lg bg-card border border-border hover:border-primary/20 disabled:opacity-30 transition-all"
-        >
-          <ChevronLeft size={16} />
-        </button>
+      {/* Month navigation and export */}
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div className="flex items-center gap-2 flex-1">
+          <button
+            onClick={() => setSelectedMonthIdx(Math.max(0, selectedMonthIdx - 1))}
+            disabled={selectedMonthIdx === 0}
+            className="p-2 rounded-lg bg-card border border-border hover:border-primary/20 disabled:opacity-30 transition-all"
+          >
+            <ChevronLeft size={16} />
+          </button>
 
-        <div className="flex flex-wrap gap-1.5 justify-center">
-          {CALENDAR_MONTHS.map((m, i) => (
-            <button
-              key={m.id}
-              onClick={() => setSelectedMonthIdx(i)}
-              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
-                selectedMonthIdx === i
-                  ? "bg-primary/15 text-primary border border-primary/40 ring-1 ring-primary/20"
-                  : "bg-card text-muted-foreground border border-border hover:border-primary/20"
-              }`}
-            >
-              {m.name.substring(0, 3)}
-            </button>
-          ))}
+          <div className="flex flex-wrap gap-1.5 justify-center">
+            {CALENDAR_MONTHS.map((m, i) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMonthIdx(i)}
+                className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  selectedMonthIdx === i
+                    ? "bg-primary/15 text-primary border border-primary/40 ring-1 ring-primary/20"
+                    : "bg-card text-muted-foreground border border-border hover:border-primary/20"
+                }`}
+              >
+                {m.name.substring(0, 3)}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setSelectedMonthIdx(Math.min(CALENDAR_MONTHS.length - 1, selectedMonthIdx + 1))}
+            disabled={selectedMonthIdx === CALENDAR_MONTHS.length - 1}
+            className="p-2 rounded-lg bg-card border border-border hover:border-primary/20 disabled:opacity-30 transition-all"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
-
-        <button
-          onClick={() => setSelectedMonthIdx(Math.min(CALENDAR_MONTHS.length - 1, selectedMonthIdx + 1))}
-          disabled={selectedMonthIdx === CALENDAR_MONTHS.length - 1}
-          className="p-2 rounded-lg bg-card border border-border hover:border-primary/20 disabled:opacity-30 transition-all"
-        >
-          <ChevronRight size={16} />
-        </button>
+        
+        <MonthlyReportExporterWithCharts
+          posts={month.posts}
+          year={month.year}
+          month={month.month}
+          monthName={month.name}
+        />
       </div>
 
       {/* Month info */}

@@ -208,3 +208,26 @@
   - [x] Modal com seleção de formato
   - [x] Testes de exportação (7 testes passando)
   - [ ] Integrar no calendário mensal (próximo passo)
+
+- [x] Integrar MonthlyReportExporter no calendário — Adicionar botão de exportação
+  - [x] Integrar no MonthlyCalendarSection.tsx
+  - [x] Adicionar botão no cabeçalho do calendário
+  - [x] Passar dados do mês selecionado
+  - [x] Botão aparece ao lado dos controles de navegação
+  - [x] Sem erros de TypeScript
+
+- [x] Adicionar gráficos nos relatórios — Incluir gráficos de distribuição
+  - [x] Criar MonthlyReportExporterWithCharts com estatísticas
+  - [x] Distribuição por status
+  - [x] Distribuição por pilares
+  - [x] Distribuição por formatos
+  - [x] PDF com página de capa com estatísticas
+  - [x] Tabela formatada de posts no PDF
+  - [x] Testes de gráficos (8 testes passando)
+
+- [ ] Implementar agendamento de relatórios — Agendar envio automático por email
+  - [ ] Criar componente ReportScheduler
+  - [ ] Modal para configurar agendamento
+  - [ ] Validação de permissão (Coordenador)
+  - [ ] Integração com tRPC para persistência
+  - [ ] Testes de agendamento
