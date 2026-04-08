@@ -74,7 +74,8 @@ export default function Projecoes() {
       <SidebarNav activeSection="projecoes" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
-          {metricsError <div className="p-8 max-w-6xl mx-auto"><div className="p-8 max-w-6xl mx-auto"> <InstagramErrorAlert error={metricsError as unknown as Error} />}
+          {metricsError && <InstagramErrorAlert error={metricsError as unknown as Error} />}
+          
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
