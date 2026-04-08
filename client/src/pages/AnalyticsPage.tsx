@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import StatusTrackerSection from "@/components/StatusTrackerSection";
 import PostPerformance from "@/pages/PostPerformance";
@@ -6,11 +7,16 @@ import WeeklyReportSection from "@/components/WeeklyReportSection";
 import CompetitorsSection from "@/components/CompetitorsSection";
 
 export default function AnalyticsPage() {
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("tracker");
+
+  const handleNavigate = (route: string) => {
+    navigate(route);
+  };
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="analise" onNavigate={() => {}} />
+      <Sidebar activeSection="analise" onNavigate={handleNavigate} />
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">

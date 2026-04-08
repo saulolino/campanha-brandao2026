@@ -1,14 +1,20 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import NextWeekSection from "@/components/NextWeekSection";
 import MonthlyCalendarSection from "@/components/MonthlyCalendarSection";
 
 export default function PlanningPage() {
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("nextweek");
+
+  const handleNavigate = (route: string) => {
+    navigate(route);
+  };
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="planejamento" onNavigate={() => {}} />
+      <Sidebar activeSection="planejamento" onNavigate={handleNavigate} />
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">

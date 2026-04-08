@@ -1,15 +1,21 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import ContentBankSection from "@/components/ContentBankSection";
 import CreativeBriefingSection from "@/components/CreativeBriefingSection";
 import MoodboardSection from "@/components/MoodboardSection";
 
 export default function ContentPage() {
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("bank");
+
+  const handleNavigate = (route: string) => {
+    navigate(route);
+  };
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="conteudo" onNavigate={() => {}} />
+      <Sidebar activeSection="conteudo" onNavigate={handleNavigate} />
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">

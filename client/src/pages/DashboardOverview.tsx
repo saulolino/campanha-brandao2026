@@ -1,12 +1,19 @@
+import { useLocation } from "wouter";
 import Sidebar from "@/components/Sidebar";
 import MetricCard from "@/components/MetricCard";
 import RealTimeMetricsSection from "@/components/RealTimeMetricsSection";
 import { UserPlus, TrendingUp, Target, Calendar } from "lucide-react";
 
 export default function DashboardOverview() {
+  const [, navigate] = useLocation();
+
+  const handleNavigate = (route: string) => {
+    navigate(route);
+  };
+
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeSection="dashboard" onNavigate={() => {}} />
+      <Sidebar activeSection="dashboard" onNavigate={handleNavigate} />
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
