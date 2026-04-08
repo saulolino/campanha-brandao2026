@@ -281,3 +281,70 @@
   - [x] Adicionar animação de carregamento
   - [x] Testar performance das animações
   - [x] Testes de animações
+
+
+# REFATORAÇÃO ARQUITETURAL (NOVO)
+
+## Fase 1: Reorganização de Rotas e Páginas
+- [x] Remover componentes sobrecarregados da Home
+- [x] Criar nova página /conteudo (calendário, timeline, tipos de conteúdo)
+- [x] Criar nova página /estrategia (tema, narrativa, objetivos)
+- [x] Criar nova página /metricas (engajamento, curtidas, performance)
+- [x] Criar nova página /projecoes (crescimento, metas, investimento)
+- [x] Refatorar Home para conter APENAS KPIs principais
+
+## Fase 2: Refatoração da Home (Dashboard)
+- [x] KPI: Seguidores atuais
+- [x] KPI: Meta final
+- [x] KPI: Crescimento necessário
+- [x] KPI: Crescimento semanal
+- [x] Barra de progresso visual
+- [x] Cards de indicadores
+- [x] Atalhos rápidos para outras páginas
+- [x] Remover timeline, planejamento detalhado, textos longos
+
+## Fase 3: Página /conteudo
+- [x] Calendário semanal
+- [x] Timeline de posts
+- [x] Detalhamento de conteúdos
+- [x] Tipos de conteúdo (Reels, Carrossel, etc)
+- [x] Projeções por post
+
+## Fase 4: Página /estrategia
+- [x] Tema da semana
+- [x] Narrativa da campanha
+- [x] Objetivos estratégicos
+- [x] Direcionamento de comunicação
+- [x] Remover duplicação com conteúdo
+
+## Fase 5: Página /metricas
+- [x] Engajamento
+- [x] Curtidas
+- [x] Comentários
+- [x] Taxa de crescimento
+- [x] Performance por post
+
+## Fase 6: Página /projecoes
+- [x] Gráfico de crescimento
+- [x] Crescimento mensal
+- [x] Tabela detalhada
+- [x] Investimento vs resultado
+
+## Fase 7: Correção de Sidebar e Navegação
+- [x] Atualizar sidebar com nova estrutura
+- [x] Garantir navegação funcional em todas as rotas
+- [x] Remover links quebrados
+- [x] Testar navegação completa
+
+## Fase 8: Padrão de UI
+- [x] Remover estilo de landing page
+- [x] Adotar padrão SaaS
+- [x] Layout baseado em grid
+- [x] Reduzir altura de banners
+- [x] Eliminar elementos decorativos desnecessários
+
+## Fase 9: Melhorias de UX
+- [x] Cada página com UMA função clara
+- [x] Evitar scroll excessivo
+- [x] Cards mais compactos
+- [x] Hierarquia visual clara

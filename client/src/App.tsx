@@ -13,10 +13,11 @@ import PerformanceDashboard from "./pages/PerformanceDashboard";
 import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
-import DashboardOverview from "./pages/DashboardOverview";
-import PlanningPage from "./pages/PlanningPage";
-import ContentPage from "./pages/ContentPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
+import Dashboard from "./pages/Dashboard";
+import Conteudo from "./pages/Conteudo";
+import Estrategia from "./pages/Estrategia";
+import Metricas from "./pages/Metricas";
+import Projecoes from "./pages/Projecoes";
 import SettingsPage from "./pages/SettingsPage";
 
 function Router() {
@@ -25,15 +26,15 @@ function Router() {
       <Route path={"/"} component={Login} />
       <Route path={"/login"} component={Login} />
       <Route path={"/home"} component={Home} />
-      <Route path={"/apoiadores"} component={Apoiadores} />
-      <Route path={"/dashboard"} component={DashboardOverview} />
-      <Route path={"/planejamento"} component={PlanningPage} />
-      <Route path={"/conteudo"} component={ContentPage} />
-      <Route path={"/analise"} component={AnalyticsPage} />
+      <Route path={"/dashboard"} component={Dashboard} />
+      <Route path={"/conteudo"} component={Conteudo} />
+      <Route path={"/estrategia"} component={Estrategia} />
+      <Route path={"/metricas"} component={Metricas} />
+      <Route path={"/projecoes"} component={Projecoes} />
       <Route path={"/configuracoes"} component={SettingsPage} />
+      <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
       <Route path={"/performance"} component={PostPerformance} />
-      <Route path={"/performance-dashboard"} component={PerformanceDashboard} />
       <Route path={"/usuarios"} component={UserManagement} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
