@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, Loader2, TrendingUp, BarChart3 } from "lucide-react";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+// Removido jspdf-autotable - usando tabela manual
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -331,58 +331,72 @@ export function ModernExecutiveReport({
       yPosition += 10;
 
       if (monthPosts.length > 0) {
-        const tableData = monthPosts.map((post) => [
-          format(new Date(post.date), "dd/MM", { locale: ptBR }),
-          post.title.substring(0, 35) + (post.title.length > 35 ? "..." : ""),
-          statusLabels[post.status] || post.status,
-          formatLabels[post.format] || post.format,
-          pillarLabels[post.pillar] || post.pillar,
-          post.hasAds ? "Sim" : "Não",
-        ]);
+        // Tabela manual com jsPDF
+        const colWidths = [16, 65, 22, 22, 22, 15];
+        const rowHeight = 6;
+        const headerHeight = 8;
+        let tableY = yPosition;
 
-        (doc as any).autoTable({
-          head: [["Data", "Título", "Status", "Formato", "Pilar", "Anúncios"]],
-          body: tableData,
-          startY: yPosition,
-          margin: margin,
-          headStyles: {
-            fillColor: [52, 152, 219],
-            textColor: [255, 255, 255],
-            fontStyle: "bold",
-            fontSize: 9,
-            halign: "left",
-            cellPadding: 4,
-          },
-          bodyStyles: {
-            fontSize: 8,
-            textColor: [50, 50, 50],
-            halign: "left",
-            cellPadding: 3,
-          },
-          alternateRowStyles: {
-            fillColor: [245, 247, 250],
-          },
-          columnStyles: {
-            0: { cellWidth: 16 },
-            1: { cellWidth: 65 },
-            2: { cellWidth: 22 },
-            3: { cellWidth: 22 },
-            4: { cellWidth: 22 },
-            5: { cellWidth: 15 },
-          },
-          didDrawPage: (data: any) => {
-            const pageCount = (doc as any).internal.pages.length - 1;
-            const currentPage = data.pageNumber;
-            doc.setFontSize(8);
-            doc.setTextColor(150, 160, 180);
-            const pageHeight = doc.internal.pageSize.getHeight();
-            doc.text(
-              `Página ${currentPage} de ${pageCount} | Brasília Cidade Parque`,
-              margin,
-              pageHeight - 8
-            );
-          },
+        // Header
+        doc.setFillColor(52, 152, 219);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+
+        const headers = ["Data", "Título", "Status", "Formato", "Pilar", "Anúncios"];
+        let headerX = margin;
+        headers.forEach((header, i) => {
+          doc.rect(headerX, tableY, colWidths[i], headerHeight, "F");
+          doc.text(header, headerX + 1, tableY + 5);
+          headerX += colWidths[i];
         });
+
+        tableY += headerHeight;
+
+        // Rows
+        monthPosts.forEach((post, idx) => {
+          const isAlternate = idx % 2 === 0;
+          if (isAlternate) {
+            doc.setFillColor(245, 247, 250);
+            let rowX = margin;
+            colWidths.forEach((width) => {
+              doc.rect(rowX, tableY, width, rowHeight, "F");
+              rowX += width;
+            });
+          }
+
+          doc.setTextColor(50, 50, 50);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7);
+
+          const rowData = [
+            format(new Date(post.date), "dd/MM", { locale: ptBR }),
+            post.title.substring(0, 30) + (post.title.length > 30 ? "..." : ""),
+            statusLabels[post.status] || post.status,
+            formatLabels[post.format] || post.format,
+            pillarLabels[post.pillar] || post.pillar,
+            post.hasAds ? "Sim" : "Não",
+          ];
+
+          let cellX = margin;
+          rowData.forEach((text, i) => {
+            doc.text(text, cellX + 1, tableY + 4);
+            cellX += colWidths[i];
+          });
+
+          tableY += rowHeight;
+        });
+
+        // Footer
+        doc.setFontSize(8);
+        doc.setTextColor(150, 160, 180);
+        doc.setFont("helvetica", "normal");
+        const pageHeight = doc.internal.pageSize.getHeight();
+        doc.text(
+          `Página 2 | Brasília Cidade Parque`,
+          margin,
+          pageHeight - 8
+        );
       }
 
       // Save PDF
