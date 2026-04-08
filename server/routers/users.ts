@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../\_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -81,11 +81,40 @@ export const usersRouter = router({
     }),
 
   /**
-   * Ativar/Desativar usuário (apenas SuperAdmin)
+   * Atualizar nome do usuário — apenas SuperAdmin
    */
+  updateName: protectedProcedure
+    .input(z.object({
+      userId: z.number(),
+      name: z.string().min(1).max(120),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "superadmin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas SuperAdmin pode editar usuários" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      await db.update(users).set({ name: input.name }).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
 
-
-
+  /**
+   * Remover usuário — apenas SuperAdmin, não pode remover a si mesmo
+   */
+  delete: protectedProcedure
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "superadmin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas SuperAdmin pode remover usuários" });
+      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+      if (input.userId === ctx.user.id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode remover sua própria conta" });
+      }
+      await db.delete(users).where(eq(users.id, input.userId));
+      return { success: true };
+    }),
 
   /**
    * Obter permissões do usuário atual

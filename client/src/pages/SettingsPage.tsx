@@ -1,4 +1,12 @@
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
+import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog } from "lucide-react";
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
@@ -28,6 +36,83 @@ export default function SettingsPage() {
   const [reportFormat, setReportFormat] = useState(localStorage.getItem("reportFormat") || "pdf");
   const [reportFrequency, setReportFrequency] = useState(localStorage.getItem("reportFrequency") || "weekly");
   const [reportRecipients, setReportRecipients] = useState(localStorage.getItem("reportRecipients") || "");
+
+  // ─── CRUD de Usuários ────────────────────────────────────────────────────
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "superadmin";
+
+  // Estado do modal de edição
+  const [editingUser, setEditingUser] = useState<{ id: number; name: string; role: string } | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState<"visitor" | "team" | "coordinator" | "superadmin">("visitor");
+
+  // Estado do confirm de exclusão
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+
+  // Query e mutations
+  const usersQuery = trpc.users.list.useQuery(undefined, { enabled: isSuperAdmin });
+  const utils = trpc.useUtils();
+
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: () => {
+      utils.users.list.invalidate();
+      toast.success("Role atualizado com sucesso");
+      setEditingUser(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const updateNameMutation = trpc.users.updateName.useMutation({
+    onSuccess: () => {
+      utils.users.list.invalidate();
+      toast.success("Nome atualizado com sucesso");
+      setEditingUser(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const deleteMutation = trpc.users.delete.useMutation({
+    onSuccess: () => {
+      utils.users.list.invalidate();
+      toast.success("Usuário removido");
+      setDeletingUserId(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const openEditModal = (u: { id: number; name: string | null; role: string | null }) => {
+    setEditingUser({ id: u.id, name: u.name || "", role: u.role || "visitor" });
+    setEditName(u.name || "");
+    setEditRole((u.role as any) || "visitor");
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingUser) return;
+    if (editName !== editingUser.name) {
+      updateNameMutation.mutate({ userId: editingUser.id, name: editName });
+    }
+    if (editRole !== editingUser.role) {
+      updateRoleMutation.mutate({ userId: editingUser.id, newRole: editRole });
+    }
+    if (editName === editingUser.name && editRole === editingUser.role) {
+      setEditingUser(null);
+    }
+  };
+
+  const roleLabel: Record<string, string> = {
+    visitor: "Visitante",
+    team: "Equipe",
+    coordinator: "Coordenador",
+    superadmin: "Superadmin",
+  };
+
+  const roleBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    visitor: "outline",
+    team: "secondary",
+    coordinator: "default",
+    superadmin: "destructive",
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleNavigate = (itemId: string) => {
     const routeMap: Record<string, string> = {
@@ -142,7 +227,7 @@ export default function SettingsPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="instagram" className="flex items-center gap-2">
                 <Key className="w-4 h-4" />
                 <span className="hidden sm:inline">Credenciais Instagram</span>
@@ -157,6 +242,11 @@ export default function SettingsPage() {
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Relatórios</span>
                 <span className="sm:hidden">Reports</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Usuários</span>
+                <span className="sm:hidden">Users</span>
               </TabsTrigger>
             </TabsList>
 
@@ -356,6 +446,168 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+            {/* Users CRUD Tab */}
+            <TabsContent value="users">
+              {!isSuperAdmin ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+                    <ShieldCheck className="w-12 h-12 text-muted-foreground" />
+                    <p className="text-muted-foreground text-center">Apenas Superadmin pode gerenciar usuários.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <UserCog className="w-5 h-5" />
+                          Gerenciamento de Usuários
+                        </CardTitle>
+                        <CardDescription>Visualize, edite roles e remova membros da equipe da campanha.</CardDescription>
+                      </div>
+                      <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {usersQuery.isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                      </div>
+                    ) : usersQuery.isError ? (
+                      <div className="flex items-center gap-2 text-destructive py-8 justify-center">
+                        <AlertCircle className="w-5 h-5" />
+                        <span>Erro ao carregar usuários</span>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>E-mail</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Cadastro</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {usersQuery.data?.map((u) => (
+                            <TableRow key={u.id}>
+                              <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                              <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
+                              <TableCell>
+                                <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
+                                  {roleLabel[u.role ?? "visitor"]}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openEditModal(u)}
+                                    title="Editar"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => setDeletingUserId(u.id)}
+                                    disabled={u.id === currentUser?.id}
+                                    title={u.id === currentUser?.id ? "Não pode remover a si mesmo" : "Remover"}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Modal de Edição */}
+              <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Editar Usuário</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Nome</Label>
+                      <Input
+                        id="edit-name"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-role">Nível de Acesso</Label>
+                      <Select value={editRole} onValueChange={(v) => setEditRole(v as any)}>
+                        <SelectTrigger id="edit-role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="visitor">
+                            <div className="flex items-center gap-2"><Eye className="w-4 h-4" /> Visitante — só visualização</div>
+                          </SelectItem>
+                          <SelectItem value="team">
+                            <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Equipe — acesso total sem publicação</div>
+                          </SelectItem>
+                          <SelectItem value="coordinator">
+                            <div className="flex items-center gap-2"><UserCog className="w-4 h-4" /> Coordenador — acesso total com publicação</div>
+                          </SelectItem>
+                          <SelectItem value="superadmin">
+                            <div className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Superadmin — acesso total e administração</div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setEditingUser(null)}>Cancelar</Button>
+                    <Button
+                      onClick={handleSaveEdit}
+                      disabled={updateRoleMutation.isPending || updateNameMutation.isPending || !editName.trim()}
+                    >
+                      {(updateRoleMutation.isPending || updateNameMutation.isPending) ? "Salvando..." : "Salvar"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Confirm de Exclusão */}
+              <AlertDialog open={!!deletingUserId} onOpenChange={(open) => !open && setDeletingUserId(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remover usuário?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. O usuário perderá acesso à plataforma imediatamente.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => deletingUserId && deleteMutation.mutate({ userId: deletingUserId })}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending ? "Removendo..." : "Remover"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </TabsContent>
+
           </Tabs>
         </div>
       </main>

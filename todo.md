@@ -497,3 +497,5 @@
 - [ ] Criar página /relatorios com geração de PDF da agenda semanal e mensal de postagens
 
 - [x] Criar página /relatorios com agenda semanal e mensal + exportação PDF (jsPDF) — dados reais do banco
+
+- [x] CRUD de usuários na página /configuracoes (listar, editar role, remover, convidar)
