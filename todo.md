@@ -480,3 +480,5 @@
 - [x] Fix: Erro "Please login (10001)" em /conteudo — Redirecionar para login quando não autenticado
 
 - [x] Fix: Página /conteudo exige segundo login — useAuth do Manus OAuth conflita com sistema de login local
+
+- [x] Fix: posts.list usa protectedProcedure do Manus OAuth — mudar para publicProcedure compatível com sistema local

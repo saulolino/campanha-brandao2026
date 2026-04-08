@@ -174,7 +174,7 @@ export default function Conteudo() {
     },
   });
 
-  const updatePost = trpc.posts.updatePost.useMutation({
+  const updatePost = trpc.posts.update.useMutation({
     onSuccess: () => {
       utils.posts.list.invalidate();
       setModalOpen(false);
@@ -187,7 +187,7 @@ export default function Conteudo() {
     },
   });
 
-  const deletePost = trpc.posts.deletePost.useMutation({
+  const deletePost = trpc.posts.delete.useMutation({
     onSuccess: () => {
       utils.posts.list.invalidate();
       toast.success("Post removido.");
