@@ -48,7 +48,7 @@ export default function Home() {
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
           {/* Error Alert */}
-          {metricsError && <InstagramErrorAlert error={metricsError as Error} />}
+          {metricsError && <InstagramErrorAlert error={metricsError as unknown as Error} />}
           
           {/* Header com perfil real */}
           <div className="mb-8 flex items-center justify-between">

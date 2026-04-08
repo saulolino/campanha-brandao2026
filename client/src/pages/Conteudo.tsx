@@ -694,7 +694,8 @@ export default function Conteudo() {
           if (!open) { setEditingPost(null); setForm(defaultForm); }
         }}
       >
-        <DialogContent className="bg-[#0f1724] border-white/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-[#0f1724] border-white/20 text-white max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
+          <div className="overflow-y-auto flex-1 px-6 pt-6">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               {editingPost ? <Edit3 className="w-4 h-4 text-[#4ade80]" /> : <Plus className="w-4 h-4 text-[#4ade80]" />}
@@ -880,9 +881,9 @@ export default function Conteudo() {
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
               />
             </div>
+           </div>
           </div>
-
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 px-6 py-4 border-t border-white/10 bg-[#0f1724] flex-shrink-0">
             <Button
               variant="outline"
               onClick={() => { setModalOpen(false); setEditingPost(null); setForm(defaultForm); }}

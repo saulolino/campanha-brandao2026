@@ -52,21 +52,22 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
-    // Map new roles to database roles (database only has 'user' and 'admin')
-    const roleMap: Record<string, 'user' | 'admin'> = {
-      'visitor': 'user',
-      'team': 'user',
-      'coordinator': 'user',
-      'superadmin': 'admin',
-      'user': 'user',
-      'admin': 'admin',
+    // Map roles to database enum values: 'visitor' | 'team' | 'coordinator' | 'superadmin'
+    type DbRole = 'visitor' | 'team' | 'coordinator' | 'superadmin';
+    const roleMap: Record<string, DbRole> = {
+      'visitor': 'visitor',
+      'team': 'team',
+      'coordinator': 'coordinator',
+      'superadmin': 'superadmin',
+      'user': 'visitor',
+      'admin': 'superadmin',
     };
 
-    let dbRole: 'user' | 'admin' = 'user';
+    let dbRole: DbRole = 'visitor';
     if (user.role !== undefined && user.role !== null) {
-      dbRole = roleMap[user.role] || 'user';
+      dbRole = roleMap[user.role] || 'visitor';
     } else if (user.openId === ENV.ownerOpenId) {
-      dbRole = 'admin';
+      dbRole = 'superadmin';
     }
 
     values.role = dbRole as any;
@@ -219,16 +220,8 @@ export async function updateUserRole(userId: number, newRole: "visitor" | "team"
   }
 
   try {
-    const roleMap: Record<string, 'user' | 'admin'> = {
-      'visitor': 'user',
-      'team': 'user',
-      'coordinator': 'user',
-      'superadmin': 'admin',
-    };
-
-    const dbRole = roleMap[newRole] || 'user';
-
-    await db.update(users).set({ role: dbRole as any }).where(eq(users.id, userId));
+    // newRole is already a valid DB enum value
+    await db.update(users).set({ role: newRole as any }).where(eq(users.id, userId));
   } catch (error) {
     console.error("[Database] Failed to update user role:", error);
     throw error;
