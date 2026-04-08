@@ -1,3 +1,4 @@
+import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
 import { useState } from "react";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
@@ -12,7 +13,7 @@ export default function Relatorios() {
   const { animationClass } = usePageTransition();
 
   // Buscar dados reais do Instagram
-  const { data: metrics, isLoading: metricsLoading } = trpc.instagram.getMetrics.useQuery();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
   const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery();
   const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery();
   const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
@@ -50,6 +51,7 @@ export default function Relatorios() {
       <SidebarNav activeSection="relatorios" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
+          {metricsError <div className="p-8 max-w-6xl mx-auto"><div className="p-8 max-w-6xl mx-auto"> <InstagramErrorAlert error={metricsError as unknown as Error} />}
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">

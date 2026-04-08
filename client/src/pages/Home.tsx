@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
 
 export default function Home() {
   const [, navigate] = useLocation();
   const [lastSync, setLastSync] = useState<string>('');
   
   // Buscar métricas reais do Instagram
-  const { data: metrics, isLoading: metricsLoading } = trpc.instagram.getMetrics.useQuery();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
   
   const handleNavigate = (route: string) => {
     navigate(route);
@@ -46,6 +47,9 @@ export default function Home() {
       
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
+          {/* Error Alert */}
+          {metricsError && <InstagramErrorAlert error={metricsError as Error} />}
+          
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground mb-2">Painel Principal</h1>

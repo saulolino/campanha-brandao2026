@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Video, Image, MessageSquare, Heart, MessageCircle, Share2, Loader } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
 
 export default function Conteudo() {
   const { animationClass } = usePageTransition();
   
   // Buscar posts reais do Instagram
-  const { data: posts, isLoading: postsLoading } = trpc.instagram.getPosts.useQuery({ limit: 20 });
-  const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
+  const { data: posts, isLoading: postsLoading, error: postsError } = trpc.instagram.getPosts.useQuery({ limit: 20 });
+  const { data: topPosts, isLoading: topLoading, error: topError } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
 
   const getTypeIcon = (type: string) => {
     const typeStr = type?.toLowerCase() || '';
@@ -43,6 +44,9 @@ export default function Conteudo() {
       <SidebarNav activeSection="conteudo" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
+          {/* Error Alert */}
+          {(postsError || topError) && <InstagramErrorAlert error={(postsError || topError) as unknown as Error} />}
+          
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
