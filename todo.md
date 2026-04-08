@@ -190,3 +190,12 @@
   - [ ] Exibir toast com "Post atualizado por [Coordenador] às [Hora]"
   - [ ] Adicionar histórico de edições ao post
   - [ ] Testes de notificação
+
+- [x] Criar seção de histórico no modal — Exibir histórico completo de alterações
+  - [x] Criar componente PostEditHistory com timeline collapsível
+  - [x] Integrar no ScheduledPostEditor
+  - [x] Exibir quem editou, quando e o quê mudou
+  - [x] Mostrar valores antigos e novos com cores
+  - [x] Suporte a comentários de edição
+  - [x] Testes de histórico (8 testes passando)
+  - [ ] Criar procedure tRPC para buscar histórico (próximo passo)

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle, Save, X } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { usePostPermissions } from "@/hooks/usePostPermissions";
+import { PostEditHistory, EditHistoryEntry } from "./PostEditHistory";
 
 interface ScheduledPost {
   id: string;
@@ -182,6 +183,26 @@ export function ScheduledPostEditor({
                 {formData.status === "published" && "Este post já foi publicado"}
               </p>
             </div>
+          </div>
+
+          {/* Histórico de Alterações */}
+          <div className="space-y-2">
+            <Label>Histórico de Alterações</Label>
+            <PostEditHistory
+              postId={formData.id}
+              history={[
+                {
+                  id: "1",
+                  timestamp: new Date(),
+                  changedBy: user?.name || "Usuário",
+                  changedByRole: user?.role || "unknown",
+                  fieldChanged: "Título",
+                  oldValue: "Post anterior",
+                  newValue: formData.title,
+                  comment: "Atualizado via editor",
+                },
+              ]}
+            />
           </div>
 
           {/* Mensagens de Erro e Sucesso */}
