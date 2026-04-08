@@ -1,6 +1,7 @@
 import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { FileText } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "home", label: "Home", icon: LayoutDashboard, route: "/home" },
@@ -8,6 +9,7 @@ const NAV_ITEMS = [
   { id: "estrategia", label: "Estratégia", icon: Lightbulb, route: "/estrategia" },
   { id: "metricas", label: "Métricas", icon: BarChart3, route: "/metricas" },
   { id: "projecoes", label: "Projeções", icon: TrendingUp, route: "/projecoes" },
+  { id: "relatorios", label: "Relatórios", icon: FileText, route: "/relatorios" },
   { id: "configuracoes", label: "Configurações", icon: Settings, route: "/configuracoes" },
 ];
 

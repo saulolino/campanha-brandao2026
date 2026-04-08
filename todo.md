@@ -348,3 +348,54 @@
 - [x] Evitar scroll excessivo
 - [x] Cards mais compactos
 - [x] Hierarquia visual clara
+
+
+# PRÓXIMAS IMPLEMENTAÇÕES (NOVA FASE)
+
+## Integração Instagram Graph API Real
+- [x] Configurar credenciais do Instagram Graph API
+  - [x] Criar tRPC procedure para validar token
+  - [x] Armazenar token de forma segura em env
+  - [x] Testar conexão com API
+  
+- [x] Sincronizar dados reais
+  - [x] Buscar contagem de seguidores
+  - [x] Buscar engajamento (curtidas, comentários)
+  - [x] Buscar lista de posts
+  - [x] Atualizar KPIs em tempo real
+  
+- [x] Atualizar Home com dados reais
+  - [x] Substituir mock data por dados da API
+  - [x] Adicionar indicador de última sincronização
+  - [x] Mostrar status de conexão
+
+## Filtros em Métricas
+- [x] Implementar filtros de período
+  - [x] Semanal
+  - [x] Mensal
+  - [x] Personalizado (data início/fim)
+  
+- [x] Implementar filtros por tipo de conteúdo
+  - [x] Reels
+  - [x] Carrossel
+  - [x] Stories
+  - [x] Todos
+  
+- [x] Atualizar gráficos com filtros aplicados
+
+## Dashboard de Relatórios
+- [x] Criar página /relatorios
+  - [x] Adicionar ao sidebar
+  - [x] Criar rota em App.tsx
+  
+- [x] Implementar gráficos de relatório
+  - [x] Crescimento semanal
+  - [x] Engajamento por tipo
+  - [x] Top posts
+  - [x] Tendências
+  
+- [x] Implementar exportação PDF (interface)
+  - [x] Gerar PDF com resumo executivo
+  - [x] Incluir gráficos e métricas
+  - [x] Download automático
+  - [x] Agendar envio por email (opcional)

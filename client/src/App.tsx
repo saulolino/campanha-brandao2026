@@ -17,6 +17,7 @@ import Conteudo from "./pages/Conteudo";
 import Estrategia from "./pages/Estrategia";
 import Metricas from "./pages/Metricas";
 import Projecoes from "./pages/Projecoes";
+import Relatorios from "./pages/Relatorios";
 import SettingsPage from "./pages/SettingsPage";
 
 function Router() {
@@ -27,9 +28,10 @@ function Router() {
       <Route path={"/home"} component={Home} />
       <Route path={"/conteudo"} component={Conteudo} />
       <Route path={"/estrategia"} component={Estrategia} />
-      <Route path={"/metricas"} component={Metricas} />
-      <Route path={"/projecoes"} component={Projecoes} />
-      <Route path={"/configuracoes"} component={SettingsPage} />
+            <Route path="/metricas" component={Metricas} />
+      <Route path="/projecoes" component={Projecoes} />
+      <Route path="/relatorios" component={Relatorios} />
+      <Route path="/configuracoes" component={SettingsPage} />
       <Route path={"/apoiadores"} component={Apoiadores} />
       <Route path={"/publicacoes"} component={PublicationManager} />
       <Route path={"/performance"} component={PostPerformance} />

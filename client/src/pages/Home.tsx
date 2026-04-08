@@ -1,22 +1,41 @@
 import { useLocation } from "wouter";
+import { useEffect, useState } from "react";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings } from "lucide-react";
+import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings, RefreshCw } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 export default function Home() {
   const [, navigate] = useLocation();
-
+  const [lastSync, setLastSync] = useState<string>('');
+  
+  // Buscar métricas reais do Instagram
+  const { data: metrics, isLoading: metricsLoading } = trpc.instagram.getMetrics.useQuery();
+  
   const handleNavigate = (route: string) => {
     navigate(route);
   };
 
-  // Mock data - será substituído por dados reais do Instagram
+  // Calcular KPIs baseado em dados reais
+  const targetFollowers = 20000;
+  const currentFollowers = metrics?.followers || 0;
+  const requiredGrowth = Math.max(0, targetFollowers - currentFollowers);
+  const weeklyGrowth = Math.floor(currentFollowers * 0.02); // Estimativa: 2% crescimento semanal
+  
+  // Atualizar timestamp de última sincronização
+  useEffect(() => {
+    if (metrics) {
+      const now = new Date().toLocaleTimeString('pt-BR');
+      setLastSync(now);
+    }
+  }, [metrics]);
+  
   const kpis = {
-    currentFollowers: 15234,
-    targetFollowers: 20000,
-    requiredGrowth: 4766,
-    weeklyGrowth: 234,
+    currentFollowers,
+    targetFollowers,
+    requiredGrowth,
+    weeklyGrowth,
   };
 
   const progressPercentage = (kpis.currentFollowers / kpis.targetFollowers) * 100;
@@ -33,6 +52,14 @@ export default function Home() {
             <p className="text-muted-foreground">Visão executiva da campanha Eduardo Brandão — Brasília Cidade Parque</p>
           </div>
 
+          {/* Status de Sincronização */}
+          {lastSync && (
+            <div className="flex items-center justify-between mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <span className="text-sm text-muted-foreground">Última sincronização: {lastSync}</span>
+              <RefreshCw className="w-4 h-4 text-green-500" />
+            </div>
+          )}
+          
           {/* KPI Cards - 4 colunas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Card className="border border-border/50">
@@ -43,8 +70,10 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-primary">{kpis.currentFollowers.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Contagem em tempo real</p>
+                <div className="text-3xl font-bold text-primary">
+                  {metricsLoading ? '...' : kpis.currentFollowers.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Do Instagram em tempo real</p>
               </CardContent>
             </Card>
 
@@ -82,8 +111,8 @@ export default function Home() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-500">+{kpis.weeklyGrowth}</div>
-                <p className="text-xs text-muted-foreground mt-1">Novos seguidores</p>
+                <div className="text-3xl font-bold text-green-500">+{metricsLoading ? '...' : kpis.weeklyGrowth}</div>
+                <p className="text-xs text-muted-foreground mt-1">Estimativa semanal</p>
               </CardContent>
             </Card>
           </div>
