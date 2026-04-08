@@ -484,3 +484,5 @@
 - [x] Fix: posts.list usa protectedProcedure do Manus OAuth — mudar para publicProcedure compatível com sistema local
 
 - [ ] Fix: Falha na query SQL instagram_posts — colunas novas não migradas para o banco
+
+- [x] Seed do banco com posts agendados do plano de comunicação (históricos + futuros planejados)
