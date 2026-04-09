@@ -125,3 +125,32 @@ export const campaignSettings = mysqlTable("campaign_settings", {
 
 export type CampaignSettings = typeof campaignSettings.$inferSelect;
 export type InsertCampaignSettings = typeof campaignSettings.$inferInsert;
+
+// Log de acesso — registra cada login bem-sucedido
+export const accessLogs = mysqlTable("access_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  userEmail: varchar("userEmail", { length: 320 }),
+  userName: text("userName"),
+  userRole: mysqlEnum("userRole", ["visitor", "team", "coordinator", "superadmin"]).default("visitor"),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  userAgent: text("userAgent"),
+  loginMethod: varchar("loginMethod", { length: 64 }).default("local"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AccessLog = typeof accessLogs.$inferSelect;
+export type InsertAccessLog = typeof accessLogs.$inferInsert;
+
+// Tokens de recuperação de senha
+export const passwordResetTokens = mysqlTable("password_reset_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;

@@ -5,6 +5,38 @@ import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import crypto from "crypto";
 
+async function logAccess({
+  userId, userEmail, userName, userRole, req, loginMethod
+}: {
+  userId: number;
+  userEmail?: string | null;
+  userName?: string | null;
+  userRole?: string;
+  req: Request;
+  loginMethod?: string;
+}) {
+  try {
+    const { getDb } = await import("../db");
+    const { accessLogs } = await import("../../drizzle/schema");
+    const drizzle = await getDb();
+    if (!drizzle) return;
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
+    const userAgent = req.headers["user-agent"] || "unknown";
+    await drizzle.insert(accessLogs).values({
+      userId,
+      userEmail: userEmail || null,
+      userName: userName || null,
+      userRole: (userRole as any) || "visitor",
+      ipAddress: ip.substring(0, 64),
+      userAgent: userAgent.substring(0, 500),
+      loginMethod: loginMethod || "local",
+    });
+  } catch (e) {
+    // Log silencioso — não deve quebrar o login
+    console.warn("[AccessLog] Failed to log access:", e);
+  }
+}
+
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
   return typeof value === "string" ? value : undefined;
@@ -85,7 +117,14 @@ export function registerOAuthRoutes(app: Express) {
         });
         const cookieOptions = getSessionCookieOptions(req);
         res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        res.json({ success: true, role: persona.role });
+        // Registrar log de acesso (persona)
+        if (drizzle) {
+          const personaUser = await drizzle.select({ id: users.id }).from(users).where(eq(users.email, persona.email)).limit(1);
+          if (personaUser.length > 0) {
+            await logAccess({ userId: personaUser[0].id, userEmail: persona.email, userName: persona.nome, userRole: persona.role, req, loginMethod: "local" });
+          }
+        }
+        res.json({ success: true, role: persona.role, name: persona.nome, email: persona.email });
         return;
       }
 
@@ -100,7 +139,9 @@ export function registerOAuthRoutes(app: Express) {
       });
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      res.json({ success: true, role: authenticatedRole });
+      // Registrar log de acesso (banco)
+      await logAccess({ userId: userRecord.id, userEmail: userRecord.email, userName: userRecord.name, userRole: authenticatedRole, req, loginMethod: "local" });
+      res.json({ success: true, role: authenticatedRole, name: userRecord.name || "", email: userRecord.email || "" });
 
     } catch (error) {
       console.error("[LocalLogin] Failed", error);

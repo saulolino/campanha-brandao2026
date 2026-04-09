@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog, UserPlus } from "lucide-react";
+import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog, UserPlus, Activity, Link2, Copy, Check, RefreshCw, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
@@ -39,8 +39,6 @@ export default function SettingsPage() {
 
   // ─── CRUD de Usuários ────────────────────────────────────────────────────
   const { user: currentUser } = useAuth();
-  // O sistema usa login local (localStorage) independente do OAuth
-  // Verifica role tanto no banco (useAuth) quanto no localStorage
   const localUser = (() => {
     try { return JSON.parse(localStorage.getItem("user") || "null"); } catch { return null; }
   })();
@@ -70,6 +68,41 @@ export default function SettingsPage() {
   const [userSearch, setUserSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
+
+  // ─── Log de Acesso ────────────────────────────────────────────────────────
+  const [logLimit, setLogLimit] = useState(50);
+  const [logUserFilter, setLogUserFilter] = useState<number | undefined>(undefined);
+  const accessLogsQuery = trpc.users.listAccessLogs.useQuery(
+    { limit: logLimit },
+    { enabled: isSuperAdmin && activeTab === "users" }
+  );
+
+  // ─── Recuperação de Senha ─────────────────────────────────────────────────
+  const [resetTokenResult, setResetTokenResult] = useState<{
+    token: string; expiresAt: Date; userName: string | null; userEmail: string | null;
+  } | null>(null);
+  const [copiedResetLink, setCopiedResetLink] = useState(false);
+  const generateResetTokenMutation = trpc.users.generatePasswordResetToken.useMutation({
+    onSuccess: (data) => {
+      setResetTokenResult(data as any);
+      toast.success(`Link de recuperação gerado para ${data.userName || data.userEmail}`);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleGenerateResetLink = (userId: number) => {
+    generateResetTokenMutation.mutate({ userId });
+  };
+
+  const getResetLink = (token: string) => {
+    return `${window.location.origin}/redefinir-senha?token=${token}`;
+  };
+
+  const handleCopyResetLink = (token: string) => {
+    navigator.clipboard.writeText(getResetLink(token));
+    setCopiedResetLink(true);
+    setTimeout(() => setCopiedResetLink(false), 3000);
+  };
 
   // Query e mutations
   const usersQuery = trpc.users.list.useQuery(undefined, { enabled: isSuperAdmin });
@@ -126,7 +159,6 @@ export default function SettingsPage() {
       setEditingUser(null);
       return;
     }
-    // Fechar modal após salvar
     setTimeout(() => setEditingUser(null), 500);
   };
 
@@ -179,19 +211,14 @@ export default function SettingsPage() {
   const handleSaveInstagramSettings = async () => {
     setIsSaving(true);
     setSaveStatus("idle");
-
     try {
-      // Validar token
       if (!instagramToken.trim()) {
         setSaveStatus("error");
         setIsSaving(false);
         return;
       }
-
-      // Salvar no localStorage (em produção, seria no banco de dados via tRPC)
       localStorage.setItem("instagramAccessToken", instagramToken);
       localStorage.setItem("instagramUsername", instagramUsername);
-
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (error) {
@@ -204,18 +231,14 @@ export default function SettingsPage() {
   const handleSaveSyncSettings = async () => {
     setIsSaving(true);
     setSaveStatus("idle");
-
     try {
-      // Validar formato HH:mm,HH:mm,HH:mm
       const times = syncSchedule.split(",").map(t => t.trim());
       const validTimes = times.every(t => /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(t));
-
       if (!validTimes) {
         setSaveStatus("error");
         setIsSaving(false);
         return;
       }
-
       localStorage.setItem("syncSchedule", syncSchedule);
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3000);
@@ -229,12 +252,10 @@ export default function SettingsPage() {
   const handleSaveReportSettings = async () => {
     setIsSaving(true);
     setSaveStatus("idle");
-
     try {
       localStorage.setItem("reportFormat", reportFormat);
       localStorage.setItem("reportFrequency", reportFrequency);
       localStorage.setItem("reportRecipients", reportRecipients);
-
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (error) {
@@ -248,7 +269,7 @@ export default function SettingsPage() {
     <div className="flex h-screen bg-background">
       <SidebarNav activeSection="configuracoes" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
-        <div className="p-8 max-w-4xl mx-auto">
+        <div className="p-8 max-w-5xl mx-auto">
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <Settings className="w-8 h-8 text-primary" />
@@ -449,7 +470,6 @@ export default function SettingsPage() {
                       placeholder="email@example.com, outro@example.com"
                       value={reportRecipients}
                       onChange={(e) => setReportRecipients(e.target.value)}
-                      type="email"
                     />
                   </div>
 
@@ -477,6 +497,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
             {/* Users CRUD Tab */}
             <TabsContent value="users">
               {!isSuperAdmin ? (
@@ -487,135 +508,212 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               ) : (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <UserCog className="w-5 h-5" />
-                          Gerenciamento de Usuários
-                        </CardTitle>
-                        <CardDescription>Visualize, edite roles e remova membros da equipe da campanha.</CardDescription>
+                <div className="space-y-6">
+                  {/* ── Tabela de Usuários ── */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <UserCog className="w-5 h-5" />
+                            Gerenciamento de Usuários
+                          </CardTitle>
+                          <CardDescription>Visualize, edite roles e remova membros da equipe da campanha.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>
+                          <Button size="sm" onClick={() => setCreatingUser(true)} className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4" />
+                            Novo Usuário
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>
-                        <Button size="sm" onClick={() => setCreatingUser(true)} className="flex items-center gap-2">
-                          <UserPlus className="w-4 h-4" />
-                          Novo Usuário
+                      <div className="mt-3">
+                        <Input
+                          placeholder="Buscar por nome ou e-mail..."
+                          value={userSearch}
+                          onChange={(e) => { setUserSearch(e.target.value); setCurrentPage(1); }}
+                          className="max-w-sm"
+                        />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {usersQuery.isLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                        </div>
+                      ) : usersQuery.isError ? (
+                        <div className="flex items-center gap-2 text-destructive py-8 justify-center">
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Erro ao carregar usuários</span>
+                        </div>
+                      ) : (() => {
+                        const filtered = (usersQuery.data ?? []).filter(u => {
+                          const q = userSearch.toLowerCase();
+                          return !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+                        });
+                        const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                        const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+                        return (
+                          <>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Nome</TableHead>
+                                  <TableHead>E-mail</TableHead>
+                                  <TableHead>Role</TableHead>
+                                  <TableHead>Cadastro</TableHead>
+                                  <TableHead className="text-right">Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {paginated.length === 0 ? (
+                                  <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                      Nenhum usuário encontrado
+                                    </TableCell>
+                                  </TableRow>
+                                ) : paginated.map((u) => (
+                                  <TableRow key={u.id}>
+                                    <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                                    <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
+                                        {roleLabel[u.role ?? "visitor"]}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleGenerateResetLink(u.id)}
+                                          title="Gerar link de recuperação de senha"
+                                          disabled={generateResetTokenMutation.isPending}
+                                        >
+                                          <Link2 className="w-4 h-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => openEditModal(u)} title="Editar">
+                                          <Pencil className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="text-destructive hover:text-destructive"
+                                          onClick={() => setDeletingUserId(u.id)}
+                                          disabled={u.id === currentUser?.id}
+                                          title={u.id === currentUser?.id ? "Não pode remover a si mesmo" : "Remover"}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {totalPages > 1 && (
+                              <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                                <span>
+                                  Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} usuários
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
+                                  <span className="px-2">{currentPage} / {totalPages}</span>
+                                  <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Próxima</Button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+
+                  {/* ── Log de Acesso ── */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Activity className="w-5 h-5" />
+                            Log de Acesso
+                          </CardTitle>
+                          <CardDescription>Histórico de logins bem-sucedidos na plataforma.</CardDescription>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => accessLogsQuery.refetch()}
+                          disabled={accessLogsQuery.isFetching}
+                          className="flex items-center gap-2"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${accessLogsQuery.isFetching ? "animate-spin" : ""}`} />
+                          Atualizar
                         </Button>
                       </div>
-                    </div>
-                    {/* Barra de busca */}
-                    <div className="mt-3">
-                      <Input
-                        placeholder="Buscar por nome ou e-mail..."
-                        value={userSearch}
-                        onChange={(e) => { setUserSearch(e.target.value); setCurrentPage(1); }}
-                        className="max-w-sm"
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {usersQuery.isLoading ? (
-                      <div className="flex items-center justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                      </div>
-                    ) : usersQuery.isError ? (
-                      <div className="flex items-center gap-2 text-destructive py-8 justify-center">
-                        <AlertCircle className="w-5 h-5" />
-                        <span>Erro ao carregar usuários</span>
-                      </div>
-                    ) : (() => {
-                      const filtered = (usersQuery.data ?? []).filter(u => {
-                        const q = userSearch.toLowerCase();
-                        return !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
-                      });
-                      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-                      const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-                      return (
+                    </CardHeader>
+                    <CardContent>
+                      {accessLogsQuery.isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                        </div>
+                      ) : accessLogsQuery.isError ? (
+                        <div className="flex items-center gap-2 text-destructive py-6 justify-center">
+                          <AlertCircle className="w-5 h-5" />
+                          <span>Erro ao carregar logs</span>
+                        </div>
+                      ) : (
                         <>
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Nome</TableHead>
+                                <TableHead>Usuário</TableHead>
                                 <TableHead>E-mail</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead>Cadastro</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
+                                <TableHead>IP</TableHead>
+                                <TableHead>Data/Hora</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {paginated.length === 0 ? (
+                              {(accessLogsQuery.data ?? []).length === 0 ? (
                                 <TableRow>
                                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                    Nenhum usuário encontrado
+                                    Nenhum acesso registrado ainda
                                   </TableCell>
                                 </TableRow>
-                              ) : paginated.map((u) => (
-                                <TableRow key={u.id}>
-                                  <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                                  <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
+                              ) : (accessLogsQuery.data ?? []).map((log) => (
+                                <TableRow key={log.id}>
+                                  <TableCell className="font-medium">{log.userName || "—"}</TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">{log.userEmail || "—"}</TableCell>
                                   <TableCell>
-                                    <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
-                                      {roleLabel[u.role ?? "visitor"]}
+                                    <Badge variant={roleBadgeVariant[log.userRole ?? "visitor"]}>
+                                      {roleLabel[log.userRole ?? "visitor"]}
                                     </Badge>
                                   </TableCell>
+                                  <TableCell className="text-muted-foreground text-xs font-mono">{log.ipAddress || "—"}</TableCell>
                                   <TableCell className="text-muted-foreground text-sm">
-                                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button variant="ghost" size="sm" onClick={() => openEditModal(u)} title="Editar">
-                                        <Pencil className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => setDeletingUserId(u.id)}
-                                        disabled={u.id === currentUser?.id}
-                                        title={u.id === currentUser?.id ? "Não pode remover a si mesmo" : "Remover"}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
+                                    {log.createdAt ? new Date(log.createdAt).toLocaleString("pt-BR") : "—"}
                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
-                          {/* Paginação */}
-                          {totalPages > 1 && (
-                            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-                              <span>
-                                Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} usuários
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                  disabled={currentPage === 1}
-                                >
-                                  Anterior
-                                </Button>
-                                <span className="px-2">{currentPage} / {totalPages}</span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                  disabled={currentPage === totalPages}
-                                >
-                                  Próxima
-                                </Button>
-                              </div>
+                          {(accessLogsQuery.data?.length ?? 0) >= logLimit && (
+                            <div className="mt-4 text-center">
+                              <Button variant="outline" size="sm" onClick={() => setLogLimit(l => l + 50)}>
+                                Carregar mais
+                              </Button>
                             </div>
                           )}
                         </>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               )}
 
               {/* Modal de Edição Completa */}
@@ -661,7 +759,7 @@ export default function SettingsPage() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowEditPassword(!showEditPassword)}
                         >
-                          <Eye className="w-4 h-4" />
+                          {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -709,7 +807,7 @@ export default function SettingsPage() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
-                          <Eye className="w-4 h-4" />
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -759,6 +857,54 @@ export default function SettingsPage() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+
+              {/* Modal: Link de Recuperação de Senha Gerado */}
+              <Dialog open={!!resetTokenResult} onOpenChange={(open) => !open && setResetTokenResult(null)}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Link2 className="w-5 h-5 text-primary" />
+                      Link de Recuperação Gerado
+                    </DialogTitle>
+                  </DialogHeader>
+                  {resetTokenResult && (
+                    <div className="space-y-4 py-2">
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm font-medium">{resetTokenResult.userName || resetTokenResult.userEmail}</p>
+                        <p className="text-xs text-muted-foreground">{resetTokenResult.userEmail}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Link de Redefinição de Senha</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            readOnly
+                            value={getResetLink(resetTokenResult.token)}
+                            className="font-mono text-xs"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyResetLink(resetTokenResult.token)}
+                            className="shrink-0"
+                          >
+                            {copiedResetLink ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-700">
+                          <strong>Atenção:</strong> Este link expira em{" "}
+                          <strong>{new Date(resetTokenResult.expiresAt).toLocaleString("pt-BR")}</strong>.
+                          Envie-o ao usuário pelo WhatsApp ou e-mail.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <DialogFooter>
+                    <Button onClick={() => setResetTokenResult(null)}>Fechar</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
           </Tabs>

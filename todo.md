@@ -510,3 +510,8 @@
 - [x] Segurança: senha individual definida para Superadmin (Lino43210#) via hash SHA-256 no banco
 - [x] Segurança: botões de teste rápido e senha visível removidos da tela de login
 - [x] UX: paginação (10/página) e busca por nome/e-mail adicionados na tabela de usuários
+
+- [ ] Sidebar: exibir nome, e-mail e badge de role do usuário logado no rodapé do menu
+- [ ] Fix: botão de logoff no sidebar não está funcionando corretamente
+- [ ] Fluxo de recuperação de senha: Superadmin recebe link de redefinição por notificação
+- [ ] Log de acesso: registrar logins no banco e exibir histórico de auditoria em /configuracoes

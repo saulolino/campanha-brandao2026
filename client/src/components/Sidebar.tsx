@@ -490,11 +490,14 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm border border-primary/30">
-              {user?.name?.charAt(0).toUpperCase() || "U"}
+              {(user?.nome || user?.name)?.charAt(0).toUpperCase() || "U"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name || "Usuário"}</p>
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.nome || user?.name || "Usuário"}</p>
               <p className="text-[10px] text-muted-foreground truncate">
+                {user?.email || ""}
+              </p>
+              <p className="text-[10px] text-primary/70 truncate">
                 {isSuperAdmin ? "🔑 SuperAdmin" : isCoordinator ? "📋 Coordenador" : isTeam ? "👥 Equipe" : "👁️ Visitante"}
               </p>
             </div>

@@ -19,12 +19,14 @@ import Metricas from "./pages/Metricas";
 import Projecoes from "./pages/Projecoes";
 import Relatorios from "./pages/Relatorios";
 import SettingsPage from "./pages/SettingsPage";
+import RedefinirSenha from "./pages/RedefinirSenha";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Login} />
       <Route path={"/login"} component={Login} />
+      <Route path="/redefinir-senha" component={RedefinirSenha} />
       <Route path={"/home"} component={Home} />
       <Route path={"/conteudo"} component={Conteudo} />
       <Route path={"/estrategia"} component={Estrategia} />

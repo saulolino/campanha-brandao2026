@@ -1,13 +1,12 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { users, accessLogs, passwordResetTokens } from "../../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 
 // Utilitário simples de hash de senha (SHA-256 com salt fixo)
-// Em produção real, use bcrypt — aqui usamos SHA-256 para evitar dependência extra
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(`campanha2026:${password}`).digest("hex");
 }
@@ -229,4 +228,103 @@ export const usersRouter = router({
     const { getPermissions } = await import("../../shared/permissions");
     return getPermissions(ctx.user?.role || "visitor");
   }),
+
+  /**
+   * Listar log de acessos (apenas SuperAdmin)
+   */
+  listAccessLogs: protectedProcedure
+    .use(superadminMiddleware)
+    .input(z.object({
+      limit: z.number().min(1).max(200).default(50),
+      userId: z.number().optional(), // filtrar por usuário específico
+    }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      let query = db.select().from(accessLogs).orderBy(desc(accessLogs.createdAt)).limit(input.limit);
+      return await query;
+    }),
+
+  /**
+   * Gerar token de recuperação de senha (apenas SuperAdmin)
+   * Cria um token válido por 24h e retorna o link de redefinição
+   */
+  generatePasswordResetToken: protectedProcedure
+    .use(superadminMiddleware)
+    .input(z.object({ userId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se usuário existe
+      const user = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users).where(eq(users.id, input.userId)).limit(1);
+      if (!user.length) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Usuário não encontrado" });
+      }
+
+      // Invalidar tokens anteriores do mesmo usuário
+      await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, input.userId));
+
+      // Criar novo token
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
+      await db.insert(passwordResetTokens).values({
+        userId: input.userId,
+        token,
+        expiresAt,
+      });
+
+      return {
+        success: true,
+        token,
+        expiresAt,
+        userName: user[0].name,
+        userEmail: user[0].email,
+      };
+    }),
+
+  /**
+   * Redefinir senha via token (público — não requer autenticação)
+   */
+  resetPasswordWithToken: publicProcedure
+    .input(z.object({
+      token: z.string().min(1),
+      newPassword: z.string().min(4).max(100),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Buscar token válido
+      const tokenRecord = await db.select()
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.token, input.token))
+        .limit(1);
+
+      if (!tokenRecord.length) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Token inválido ou expirado" });
+      }
+
+      const record = tokenRecord[0];
+
+      if (record.usedAt) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este link já foi utilizado" });
+      }
+
+      if (new Date() > record.expiresAt) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este link expirou. Solicite um novo ao administrador" });
+      }
+
+      // Atualizar senha
+      const passwordHash = hashPassword(input.newPassword);
+      await db.update(users).set({ passwordHash }).where(eq(users.id, record.userId));
+
+      // Marcar token como usado
+      await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, record.id));
+
+      return { success: true, message: "Senha redefinida com sucesso" };
+    }),
 });
