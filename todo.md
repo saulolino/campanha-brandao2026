@@ -541,3 +541,12 @@
   - [x] Navegação por abas com badge mostrando quantidade de mídias
   - [x] Botão de atalho "Mídia & Legenda" no rodapé do modal
   - [x] Campos caption e hashtags salvos no banco junto com o post
+
+- [x] Suporte a carrossel com número de slides e geração de imagens consistentes pela IA
+  - [x] Campo "Número de slides" visível apenas quando tipo=carrossel (mín 2, máx 10)
+  - [x] Procedure tRPC posts.generateCarousel: gera N imagens com consistência visual
+  - [x] Prompt de carrossel com seed visual compartilhado (paleta, estilo, tema)
+  - [x] Botão "Gerar Carrossel com IA" na aba Mídia & Legenda
+  - [x] Progresso visual durante geração (barra de progresso animada)
+  - [x] Legenda adaptada para carrossel gerada automaticamente após as imagens
+  - [x] Salvar slideCount no banco junto com o post

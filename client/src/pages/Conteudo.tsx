@@ -62,6 +62,7 @@ interface PostForm {
   caption: string;
   hashtags: string;
   mediaUrls: string; // JSON array de URLs
+  slideCount: number; // Número de slides (carrossel)
 }
 
 const defaultForm: PostForm = {
@@ -78,6 +79,7 @@ const defaultForm: PostForm = {
   budget: "",
   notes: "",
   caption: "",
+  slideCount: 5,
   hashtags: "",
   mediaUrls: "",
 };
@@ -204,6 +206,36 @@ export default function Conteudo() {
     onError: (err) => toast.error(`Erro ao gerar imagem: ${err.message}`),
   });
 
+  const [carouselProgress, setCarouselProgress] = useState<{ current: number; total: number } | null>(null);
+
+  const generateCarouselMutation = trpc.posts.generateCarousel.useMutation({
+    onMutate: () => {
+      setCarouselProgress({ current: 0, total: form.slideCount });
+      toast.loading(`Gerando ${form.slideCount} slides do carrossel...`, { id: "carousel-gen" });
+    },
+    onSuccess: (data) => {
+      const urls = data.urls.filter(Boolean);
+      setMediaPreviewUrls(urls);
+      setForm(f => ({ ...f, mediaUrls: JSON.stringify(urls) }));
+      setCarouselProgress(null);
+      toast.dismiss("carousel-gen");
+      toast.success(`${urls.length} slides gerados com consistência visual!`);
+      // Gerar legenda adaptada para carrossel automaticamente
+      generateCaptionMutation.mutate({
+        title: form.title,
+        description: form.description,
+        type: form.type,
+        objective: form.objective,
+        mediaUrl: urls[0],
+      });
+    },
+    onError: (err) => {
+      setCarouselProgress(null);
+      toast.dismiss("carousel-gen");
+      toast.error(`Erro ao gerar carrossel: ${err.message}`);
+    },
+  });
+
   // Sincronizar previews quando editar post existente
   useEffect(() => {
     if (modalOpen && form.mediaUrls) {
@@ -323,6 +355,7 @@ export default function Conteudo() {
       caption: post.caption || "",
       hashtags: post.hashtags || "",
       mediaUrls: post.mediaUrls || "",
+      slideCount: post.slideCount || 5,
     });
     setModalOpen(true);
   }
@@ -346,6 +379,7 @@ export default function Conteudo() {
       caption: form.caption || undefined,
       hashtags: form.hashtags || undefined,
       mediaUrls: form.mediaUrls || undefined,
+      slideCount: form.type === "carrossel" ? form.slideCount : undefined,
     };
     if (editingPost) {
       updatePost.mutate({ id: editingPost.id, ...payload, status: form.status });
@@ -834,6 +868,51 @@ export default function Conteudo() {
                   </Select>
                 </div>
 
+                {/* Número de slides (apenas carrossel) */}
+                {form.type === "carrossel" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-white/70 text-xs flex items-center gap-1.5">
+                      <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
+                      Número de Slides *
+                      <span className="text-[10px] text-white/30 font-normal">(mín 2, máx 10)</span>
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, slideCount: Math.max(2, f.slideCount - 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center text-lg font-bold transition-colors"
+                      >-</button>
+                      <div className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-center">
+                        <span className="text-white font-bold text-lg">{form.slideCount}</span>
+                        <span className="text-white/40 text-xs ml-1">slides</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, slideCount: Math.min(10, f.slideCount + 1) }))}
+                        className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center text-lg font-bold transition-colors"
+                      >+</button>
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {[3, 4, 5, 6, 7, 8, 10].map(n => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, slideCount: n }))}
+                          className={`px-2 py-0.5 rounded text-xs transition-colors border ${
+                            form.slideCount === n
+                              ? "bg-blue-500/30 border-blue-500/50 text-blue-300"
+                              : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                          }`}
+                        >{n}</button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      A IA gerará {form.slideCount} imagens com consistência visual de carrossel
+                    </p>
+                  </div>
+                )}
+
                 {/* Objetivo */}
                 <div className="space-y-1.5">
                   <Label className="text-white/70 text-xs">Objetivo</Label>
@@ -965,30 +1044,51 @@ export default function Conteudo() {
                       <ImageIcon className="w-4 h-4 text-[#4ade80]" />
                       Mídia do Post
                     </Label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap justify-end">
                       {/* Upload manual */}
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={uploadingMedia}
+                        disabled={uploadingMedia || generateCarouselMutation.isPending}
                         onClick={() => fileInputRef.current?.click()}
                         className="border-white/20 text-white/70 hover:bg-white/10 text-xs gap-1.5"
                       >
                         {uploadingMedia ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                         {uploadingMedia ? "Enviando..." : "Upload"}
                       </Button>
-                      {/* Gerar imagem com IA */}
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={generateImageMutation.isPending || !form.title}
-                        onClick={() => generateImageMutation.mutate({ title: form.title, description: form.description, type: form.type, objective: form.objective })}
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
-                      >
-                        {generateImageMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                        {generateImageMutation.isPending ? "Gerando..." : "Gerar com IA"}
-                      </Button>
+
+                      {form.type === "carrossel" ? (
+                        /* Botão especial para carrossel */
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={generateCarouselMutation.isPending || !form.title}
+                          onClick={() => generateCarouselMutation.mutate({
+                            title: form.title,
+                            description: form.description,
+                            objective: form.objective,
+                            slideCount: form.slideCount,
+                          })}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
+                        >
+                          {generateCarouselMutation.isPending
+                            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Gerando {form.slideCount} slides...</>
+                            : <><LayoutGrid className="w-3.5 h-3.5" /> Gerar Carrossel com IA ({form.slideCount} slides)</>}
+                        </Button>
+                      ) : (
+                        /* Botão normal para imagem única */
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={generateImageMutation.isPending || !form.title}
+                          onClick={() => generateImageMutation.mutate({ title: form.title, description: form.description, type: form.type, objective: form.objective })}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
+                        >
+                          {generateImageMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                          {generateImageMutation.isPending ? "Gerando..." : "Gerar com IA"}
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -1030,45 +1130,93 @@ export default function Conteudo() {
 
                   {/* Tipo aceito */}
                   <p className="text-[11px] text-white/30">
-                    {["reels", "video"].includes(form.type)
+                    {form.type === "carrossel"
+                      ? `Carrossel: ${form.slideCount} slides — a IA gerará todas as imagens com consistência visual`
+                      : ["reels", "video"].includes(form.type)
                       ? "Aceita: MP4, MOV (vídeo) ou imagens JPG/PNG/WebP"
                       : "Aceita: JPG, PNG, WebP (máx. 50MB)"}
                   </p>
 
+                  {/* Barra de progresso do carrossel */}
+                  {generateCarouselMutation.isPending && (
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-blue-300 flex items-center gap-1.5">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Gerando carrossel com IA...
+                        </span>
+                        <span className="text-xs text-blue-400/60">{form.slideCount} slides</span>
+                      </div>
+                      <div className="w-full bg-blue-500/20 rounded-full h-1.5">
+                        <div
+                          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
+                          style={{ width: `${mediaPreviewUrls.length > 0 ? (mediaPreviewUrls.length / form.slideCount) * 100 : 15}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-blue-400/50">
+                        A IA está planejando a narrativa e gerando {form.slideCount} imagens com consistência visual...
+                      </p>
+                    </div>
+                  )}
+
                   {/* Grid de previews */}
                   {mediaPreviewUrls.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {mediaPreviewUrls.map((url, idx) => (
-                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/20 bg-white/5 aspect-square">
-                          {url.match(/\.(mp4|mov)$/i) ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-1">
-                              <FileVideo className="w-8 h-8 text-white/40" />
-                              <span className="text-[10px] text-white/40">Vídeo</span>
-                            </div>
-                          ) : (
-                            <img src={url} alt={`Mídia ${idx + 1}`} className="w-full h-full object-cover" />
-                          )}
-                          <button
-                            onClick={() => {
-                              const updated = mediaPreviewUrls.filter((_, i) => i !== idx);
-                              setMediaPreviewUrls(updated);
-                              setForm(f => ({ ...f, mediaUrls: JSON.stringify(updated) }));
-                            }}
-                            className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3 text-white" />
-                          </button>
+                    <div className="space-y-2">
+                      {form.type === "carrossel" && (
+                        <div className="flex items-center gap-2 text-xs text-blue-300/70">
+                          <LayoutGrid className="w-3.5 h-3.5" />
+                          {mediaPreviewUrls.length} slide{mediaPreviewUrls.length !== 1 ? "s" : ""} — arraste para reordenar
                         </div>
-                      ))}
+                      )}
+                      <div className={`grid gap-2 ${form.type === "carrossel" ? "grid-cols-4" : "grid-cols-3"}`}>
+                        {mediaPreviewUrls.map((url, idx) => (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/20 bg-white/5 aspect-square">
+                            {url.match(/\.(mp4|mov)$/i) ? (
+                              <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                <FileVideo className="w-8 h-8 text-white/40" />
+                                <span className="text-[10px] text-white/40">Vídeo</span>
+                              </div>
+                            ) : (
+                              <img src={url} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" />
+                            )}
+                            {/* Número do slide para carrossel */}
+                            {form.type === "carrossel" && (
+                              <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                {idx + 1}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => {
+                                const updated = mediaPreviewUrls.filter((_, i) => i !== idx);
+                                setMediaPreviewUrls(updated);
+                                setForm(f => ({ ...f, mediaUrls: JSON.stringify(updated) }));
+                              }}
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <div
                       className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-[#4ade80]/50 hover:bg-[#4ade80]/5 transition-colors"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                      <p className="text-sm text-white/40">Clique para fazer upload ou use a IA para gerar</p>
-                      <p className="text-xs text-white/20 mt-1">Arraste e solte ou clique no botão acima</p>
+                      {form.type === "carrossel" ? (
+                        <>
+                          <LayoutGrid className="w-8 h-8 text-blue-400/40 mx-auto mb-2" />
+                          <p className="text-sm text-white/40">Clique em "Gerar Carrossel com IA" para criar {form.slideCount} slides</p>
+                          <p className="text-xs text-white/20 mt-1">Ou faça upload manual de cada slide</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
+                          <p className="text-sm text-white/40">Clique para fazer upload ou use a IA para gerar</p>
+                          <p className="text-xs text-white/20 mt-1">Arraste e solte ou clique no botão acima</p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

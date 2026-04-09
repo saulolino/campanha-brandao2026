@@ -1,0 +1,1 @@
+ALTER TABLE `instagram_posts` ADD `slideCount` int DEFAULT 1;

@@ -45,6 +45,7 @@ export const instagramPosts = mysqlTable("instagram_posts", {
   mediaUrls: text("mediaUrls"), // JSON array de URLs das imagens/vídeos
   caption: text("caption"),
   hashtags: text("hashtags"),
+  slideCount: int("slideCount").default(1), // Número de slides (para carrossel)
   // Métricas projetadas
   expectedReach: int("expectedReach").default(0),
   expectedLikes: int("expectedLikes").default(0),

@@ -223,6 +223,121 @@ Não inclua texto na imagem.`;
       return { url: result.url };
     }),
 
+  // Gerar carrossel com IA (múltiplas imagens consistentes)
+  generateCarousel: publicProcedure
+    .input(z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      objective: z.string().optional(),
+      slideCount: z.number().min(2).max(10),
+    }))
+    .mutation(async ({ input }) => {
+      // Prompt base com identidade visual compartilhada entre todos os slides
+      const styleGuide = `Estilo visual consistente para todos os slides:
+- Paleta de cores: verde vibrante (#4ade80) e branco sobre fundo escuro azul-marinho
+- Estilo: fotorrealista com elementos gráficos modernos, clean e profissional
+- Campanha política de Eduardo Brandão, Brasília Cidade Parque, Brasil
+- Sem texto na imagem
+- Proporção quadrada (1:1) ideal para Instagram`;
+
+      const objectiveLabels: Record<string, string> = {
+        awareness: "conscientização", engajamento: "engajamento", humanização: "humanização",
+        explicação: "explicação", mobilização: "mobilização", captação: "captação de seguidores",
+      };
+
+      const objectiveLabel = objectiveLabels[input.objective || ""] || input.objective || "engajamento";
+
+      // Gerar prompts individuais para cada slide com a IA
+      const planResponse = await invokeLLM({
+        messages: [
+          {
+            role: "system" as const,
+            content: `Você é um diretor de arte especializado em carrosséis do Instagram para campanhas políticas.
+Crie ${input.slideCount} prompts de imagem para um carrossél coeso e narrativo.
+Cada slide deve ter uma cena diferente mas manter a mesma identidade visual.
+O carrossél deve contar uma história progressiva: introdução → desenvolvimento → conclusão/call-to-action.`,
+          },
+          {
+            role: "user" as const,
+            content: `Crie ${input.slideCount} prompts de imagem para um carrossél do Instagram com:
+- Título: ${input.title}
+- Objetivo: ${objectiveLabel}
+${input.description ? `- Contexto: ${input.description}` : ""}
+
+Guia de estilo para TODOS os slides:
+${styleGuide}
+
+Retorne SOMENTE um JSON com o campo "slides" sendo um array de ${input.slideCount} objetos, cada um com:
+- "slideNumber": número do slide (1 a ${input.slideCount})
+- "sceneDescription": descrição da cena em português
+- "imagePrompt": prompt em inglês para geração de imagem (detalhado, 50-100 palavras)
+
+Garanta que os slides formem uma narrativa coesa e que o último slide tenha um elemento de call-to-action visual.`,
+          },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "carousel_plan",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                slides: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      slideNumber: { type: "integer" },
+                      sceneDescription: { type: "string" },
+                      imagePrompt: { type: "string" },
+                    },
+                    required: ["slideNumber", "sceneDescription", "imagePrompt"],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ["slides"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+
+      const planContent = planResponse.choices?.[0]?.message?.content;
+      if (!planContent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IA não retornou plano de slides" });
+
+      const planText = typeof planContent === "string" ? planContent : JSON.stringify(planContent);
+      let slidePlan: { slides: Array<{ slideNumber: number; sceneDescription: string; imagePrompt: string }> };
+
+      try {
+        slidePlan = JSON.parse(planText);
+      } catch {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao processar plano de slides" });
+      }
+
+      // Gerar todas as imagens em paralelo
+      const imagePromises = slidePlan.slides.map(async (slide) => {
+        const fullPrompt = `${slide.imagePrompt}\n\nStyle: ${styleGuide}`;
+        const result = await generateImage({ prompt: fullPrompt });
+        return {
+          slideNumber: slide.slideNumber,
+          sceneDescription: slide.sceneDescription,
+          url: result.url ?? "",
+        };
+      });
+
+      const generatedSlides = await Promise.all(imagePromises);
+
+      // Ordenar por número do slide
+      generatedSlides.sort((a, b) => a.slideNumber - b.slideNumber);
+
+      return {
+        slides: generatedSlides,
+        urls: generatedSlides.map(s => s.url),
+      };
+    }),
+
   // Criar novo post
   create: publicProcedure
     .input(z.object({
@@ -241,6 +356,7 @@ Não inclua texto na imagem.`;
       mediaUrls: z.string().optional(),
       caption: z.string().optional(),
       hashtags: z.string().optional(),
+      slideCount: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -262,6 +378,7 @@ Não inclua texto na imagem.`;
         mediaUrls: input.mediaUrls,
         caption: input.caption,
         hashtags: input.hashtags,
+        slideCount: input.slideCount ?? 1,
       });
 
       return { id: (result as any).insertId || 0 };
@@ -286,6 +403,7 @@ Não inclua texto na imagem.`;
       mediaUrls: z.string().optional(),
       caption: z.string().optional(),
       hashtags: z.string().optional(),
+      slideCount: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
