@@ -515,3 +515,29 @@
 - [ ] Fix: botão de logoff no sidebar não está funcionando corretamente
 - [ ] Fluxo de recuperação de senha: Superadmin recebe link de redefinição por notificação
 - [ ] Log de acesso: registrar logins no banco e exibir histórico de auditoria em /configuracoes
+
+- [x] Upload de mídia no modal de Conteudo — Upload de imagens/vídeos diretamente no modal de criação/edição de posts
+  - [x] Input de arquivo com validação por tipo de conteúdo (imagem para imagem/story/carrossel, vídeo para reels/video)
+  - [x] Preview em grid com opção de remover cada mídia
+  - [x] Upload para S3 via procedure tRPC posts.uploadMedia
+  - [x] Área de drop com feedback visual quando vazia
+
+- [x] Geração de imagem com IA no modal de Conteudo — Botão "Gerar com IA" cria imagem baseada no título/tipo/objetivo
+  - [x] Procedure tRPC posts.generateMediaImage usando generateImage do _core
+  - [x] Prompt contextualizado com identidade visual da campanha (verde/branco, Eduardo Brandão)
+  - [x] Imagem gerada adicionada ao grid de mídia do post
+
+- [x] Legenda e hashtags no modal de Conteudo — Campos dedicados para legenda e hashtags do Instagram
+  - [x] Campo de legenda com contador de caracteres (máx 2200)
+  - [x] Campo de hashtags em fonte monoespaçada
+  - [x] Botão "Copiar" para copiar legenda + hashtags para clipboard
+
+- [x] Geração de legenda com IA no modal de Conteudo — IA cria legenda e hashtags baseada no contexto do post
+  - [x] Procedure tRPC posts.generateCaption usando invokeLLM com prompt contextualizado
+  - [x] Suporte a análise multimodal: se houver imagem, a IA a analisa para gerar legenda mais precisa
+  - [x] Resposta estruturada em JSON com campos caption e hashtags
+
+- [x] Modal de Conteudo reorganizado em abas — Aba "Informações" e aba "Mídia & Legenda"
+  - [x] Navegação por abas com badge mostrando quantidade de mídias
+  - [x] Botão de atalho "Mídia & Legenda" no rodapé do modal
+  - [x] Campos caption e hashtags salvos no banco junto com o post

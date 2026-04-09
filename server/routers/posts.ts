@@ -4,6 +4,9 @@ import { getDb } from "../db";
 import { instagramPosts } from "../../drizzle/schema";
 import { eq, desc, gte, lte, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { uploadMedia, serializeMediaUrls, deserializeMediaUrls } from "../media";
+import { invokeLLM, type Message, type MessageContent } from "../_core/llm";
+import { generateImage } from "../_core/imageGeneration";
 
 export const postsRouter = router({
   // Listar todos os posts com filtro por status
@@ -101,6 +104,125 @@ export const postsRouter = router({
       return { posts, monthStart, monthEnd };
     }),
 
+  // Upload de mídia para S3
+  uploadMedia: publicProcedure
+    .input(z.object({
+      fileBase64: z.string(), // base64 encoded file
+      mimeType: z.string(),
+      fileName: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const result = await uploadMedia(buffer, input.mimeType, input.fileName);
+      return result;
+    }),
+
+  // Gerar legenda com IA
+  generateCaption: publicProcedure
+    .input(z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      type: z.string(),
+      objective: z.string().optional(),
+      mediaUrl: z.string().optional(), // URL da imagem para análise multimodal
+    }))
+    .mutation(async ({ input }) => {
+      const typeLabels: Record<string, string> = {
+        reels: "Reels", carrossel: "Carrossel", video: "Vídeo", story: "Story", imagem: "Imagem",
+      };
+      const objectiveLabels: Record<string, string> = {
+        awareness: "Conscientização", engajamento: "Engajamento", humanização: "Humanização",
+        explicação: "Explicação", mobilização: "Mobilização", captação: "Captação de seguidores",
+      };
+
+      const systemPrompt = `Você é um especialista em marketing político digital para Instagram.
+Você cria legendas impactantes para a campanha do candidato Eduardo Brandão, em Brasília Cidade Parque.
+A meta é atingir 20.000 seguidores. O estilo é próximo, autêntico e mobilizador.
+Sempre use linguagem brasileira informal mas respeitosa. Inclua call-to-action.`;
+
+      const contentParts: any[] = [
+        {
+          type: "text",
+          text: `Crie uma legenda para Instagram com as seguintes informações:
+- Título do post: ${input.title}
+- Tipo de conteúdo: ${typeLabels[input.type] || input.type}
+- Objetivo: ${objectiveLabels[input.objective || ""] || input.objective || "Engajamento"}
+${input.description ? `- Descrição: ${input.description}` : ""}
+
+Retorne SOMENTE um JSON com os campos:
+{
+  "caption": "texto da legenda (máx 2200 caracteres)",
+  "hashtags": "lista de hashtags separadas por espaço (máx 30 hashtags)"
+}`,
+        },
+      ];
+
+      if (input.mediaUrl) {
+        contentParts.push({
+          type: "image_url",
+          image_url: { url: input.mediaUrl, detail: "low" },
+        });
+      }
+
+      const response = await invokeLLM({
+        messages: [
+          { role: "system" as const, content: systemPrompt },
+          { role: "user" as const, content: contentParts as any },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "caption_result",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                caption: { type: "string" },
+                hashtags: { type: "string" },
+              },
+              required: ["caption", "hashtags"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+
+       const rawContent = response.choices?.[0]?.message?.content;
+      if (!rawContent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IA não retornou resposta" });
+      const content = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent);
+      try {
+        const parsed = JSON.parse(content);
+        return { caption: parsed.caption || "", hashtags: parsed.hashtags || "" };
+      } catch {
+        return { caption: content, hashtags: "" };
+      }
+    }),
+
+  // Gerar imagem com IA
+  generateMediaImage: publicProcedure
+    .input(z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      type: z.string(),
+      objective: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const typeLabels: Record<string, string> = {
+        reels: "thumbnail de Reels", carrossel: "slide de Carrossel", video: "thumbnail de Vídeo",
+        story: "Story", imagem: "post de Imagem",
+      };
+
+      const prompt = `Crie uma imagem profissional para ${typeLabels[input.type] || "post"} do Instagram de campanha política.
+Candidato: Eduardo Brandão. Cidade: Brasília Cidade Parque, Brasil.
+Tema: ${input.title}.
+${input.description ? `Contexto: ${input.description}.` : ""}
+Estilo: fotorrealista, cores vibrantes verde e branco (cores da campanha), moderno e impactante.
+Não inclua texto na imagem.`;
+
+      const result = await generateImage({ prompt });
+      return { url: result.url };
+    }),
+
   // Criar novo post
   create: publicProcedure
     .input(z.object({
@@ -117,6 +239,8 @@ export const postsRouter = router({
       budget: z.string().optional(),
       notes: z.string().optional(),
       mediaUrls: z.string().optional(),
+      caption: z.string().optional(),
+      hashtags: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -136,6 +260,8 @@ export const postsRouter = router({
         budget: input.budget,
         notes: input.notes,
         mediaUrls: input.mediaUrls,
+        caption: input.caption,
+        hashtags: input.hashtags,
       });
 
       return { id: (result as any).insertId || 0 };

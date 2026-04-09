@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import SidebarNav from "@/components/SidebarNav";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner"; // sonner toast
+import { toast } from "sonner";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +29,16 @@ import {
   AlertTriangle,
   X,
   CalendarDays,
+  Upload,
+  Sparkles,
+  Wand2,
+  Hash,
+  ImageIcon,
+  FileVideo,
+  Loader2,
+  Copy,
+  Check,
+  Trash,
 } from "lucide-react";
 
 // Tipos
@@ -49,6 +59,9 @@ interface PostForm {
   expectedComments: number;
   budget: string;
   notes: string;
+  caption: string;
+  hashtags: string;
+  mediaUrls: string; // JSON array de URLs
 }
 
 const defaultForm: PostForm = {
@@ -64,6 +77,9 @@ const defaultForm: PostForm = {
   expectedComments: 0,
   budget: "",
   notes: "",
+  caption: "",
+  hashtags: "",
+  mediaUrls: "",
 };
 
 // Helpers
@@ -154,6 +170,54 @@ export default function Conteudo() {
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [form, setForm] = useState<PostForm>(defaultForm);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+  const [modalTab, setModalTab] = useState("info");
+
+  // Upload de mídia
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
+  const [copiedCaption, setCopiedCaption] = useState(false);
+
+  // Mutations de IA
+  const uploadMediaMutation = trpc.posts.uploadMedia.useMutation({
+    onError: (err) => toast.error(`Erro no upload: ${err.message}`),
+  });
+
+  const generateCaptionMutation = trpc.posts.generateCaption.useMutation({
+    onSuccess: (data) => {
+      setForm(f => ({ ...f, caption: data.caption, hashtags: data.hashtags }));
+      setModalTab("midia");
+      toast.success("Legenda gerada pela IA!");
+    },
+    onError: (err) => toast.error(`Erro ao gerar legenda: ${err.message}`),
+  });
+
+  const generateImageMutation = trpc.posts.generateMediaImage.useMutation({
+    onSuccess: (data) => {
+      const current = form.mediaUrls ? JSON.parse(form.mediaUrls) : [];
+      const updated = [...current, data.url];
+      setForm(f => ({ ...f, mediaUrls: JSON.stringify(updated) }));
+      setMediaPreviewUrls(prev => [...prev, data.url ?? ""]);
+      setModalTab("midia");
+      toast.success("Imagem gerada pela IA!");
+    },
+    onError: (err) => toast.error(`Erro ao gerar imagem: ${err.message}`),
+  });
+
+  // Sincronizar previews quando editar post existente
+  useEffect(() => {
+    if (modalOpen && form.mediaUrls) {
+      try {
+        const urls = JSON.parse(form.mediaUrls);
+        setMediaPreviewUrls(Array.isArray(urls) ? urls : []);
+      } catch {
+        setMediaPreviewUrls([]);
+      }
+    } else if (!modalOpen) {
+      setMediaPreviewUrls([]);
+      setModalTab("info");
+    }
+  }, [modalOpen, editingPost]);
 
   const utils = trpc.useUtils();
   const { data: postsData, isLoading } = trpc.posts.list.useQuery(
@@ -256,6 +320,9 @@ export default function Conteudo() {
       expectedComments: post.expectedComments || 0,
       budget: post.budget || "",
       notes: post.notes || "",
+      caption: post.caption || "",
+      hashtags: post.hashtags || "",
+      mediaUrls: post.mediaUrls || "",
     });
     setModalOpen(true);
   }
@@ -276,6 +343,9 @@ export default function Conteudo() {
       expectedComments: form.expectedComments,
       budget: form.budget || undefined,
       notes: form.notes,
+      caption: form.caption || undefined,
+      hashtags: form.hashtags || undefined,
+      mediaUrls: form.mediaUrls || undefined,
     };
     if (editingPost) {
       updatePost.mutate({ id: editingPost.id, ...payload, status: form.status });
@@ -695,194 +765,392 @@ export default function Conteudo() {
         }}
       >
         <DialogContent className="bg-[#0f1724] border-white/20 text-white max-w-2xl max-h-[90vh] flex flex-col overflow-hidden p-0">
-          <div className="overflow-y-auto flex-1 px-6 pt-6">
-          <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              {editingPost ? <Edit3 className="w-4 h-4 text-[#4ade80]" /> : <Plus className="w-4 h-4 text-[#4ade80]" />}
-              {editingPost ? "Editar Post" : "Novo Post"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-4 py-2">
-            {/* Título */}
-            <div className="col-span-2 space-y-1.5">
-              <Label className="text-white/70 text-xs">Título *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Ex: Reels sobre Brasília Cidade Parque"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-              />
+          {/* Header fixo */}
+          <div className="px-6 pt-5 pb-3 border-b border-white/10 flex-shrink-0">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center gap-2">
+                {editingPost ? <Edit3 className="w-4 h-4 text-[#4ade80]" /> : <Plus className="w-4 h-4 text-[#4ade80]" />}
+                {editingPost ? "Editar Post" : "Novo Post"}
+              </DialogTitle>
+            </DialogHeader>
+            {/* Tabs de navegação */}
+            <div className="flex gap-1 mt-3">
+              {[
+                { id: "info", label: "Informações", icon: Edit3 },
+                { id: "midia", label: "Mídia & Legenda", icon: ImageIcon },
+              ].map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => setModalTab(id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    modalTab === id
+                      ? "bg-[#4ade80] text-black"
+                      : "text-white/50 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                  {id === "midia" && mediaPreviewUrls.length > 0 && (
+                    <span className="bg-[#4ade80]/30 text-[#4ade80] text-[10px] px-1.5 py-0.5 rounded-full">
+                      {mediaPreviewUrls.length}
+                    </span>
+                  )}
+                </button>
+              ))}
             </div>
-
-            {/* Tipo */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Tipo de Conteúdo *</Label>
-              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as PostType })}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0f1724] border-white/20">
-                  {(Object.keys(TYPE_CONFIG) as PostType[]).map((t) => (
-                    <SelectItem key={t} value={t} className="text-white hover:bg-white/10">
-                      {TYPE_CONFIG[t].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Objetivo */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Objetivo</Label>
-              <Select value={form.objective} onValueChange={(v) => setForm({ ...form, objective: v })}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0f1724] border-white/20">
-                  {["awareness", "engajamento", "humanização", "explicação", "mobilização", "captação"].map((obj) => (
-                    <SelectItem key={obj} value={obj} className="text-white hover:bg-white/10 capitalize">
-                      {obj.charAt(0).toUpperCase() + obj.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Data */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Data *</Label>
-              <Input
-                type="date"
-                value={form.scheduledDate}
-                onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-
-            {/* Hora */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Hora *</Label>
-              <Input
-                type="time"
-                value={form.scheduledTime}
-                onChange={(e) => setForm({ ...form, scheduledTime: e.target.value })}
-                className="bg-white/10 border-white/20 text-white"
-              />
-            </div>
-
-            {/* Status de Produção */}
-            <div className="col-span-2 space-y-2">
-              <Label className="text-white/70 text-xs">Status de Produção</Label>
-              {/* Pipeline visual */}
-              <div className="flex items-center gap-1">
-                {PRODUCTION_STATUSES.map((s, idx) => {
-                  const cfg = STATUS_CONFIG[s];
-                  const isActive = form.status === s;
-                  const currentStep = STATUS_CONFIG[form.status]?.step || 1;
-                  const isPast = cfg.step < currentStep;
-                  return (
-                    <div key={s} className="flex items-center flex-1">
-                      <button
-                        onClick={() => setForm({ ...form, status: s })}
-                        className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all border text-center ${
-                          isActive
-                            ? cfg.color + " border-current"
-                            : isPast
-                            ? "bg-white/10 text-white/60 border-white/20 hover:bg-white/15"
-                            : "bg-white/5 text-white/30 border-white/10 hover:bg-white/10"
-                        }`}
-                      >
-                        {cfg.label}
-                      </button>
-                      {idx < PRODUCTION_STATUSES.length - 1 && (
-                        <ChevronRight className={`w-3 h-3 flex-shrink-0 mx-0.5 ${isPast ? "text-white/40" : "text-white/15"}`} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Descrição */}
-            <div className="col-span-2 space-y-1.5">
-              <Label className="text-white/70 text-xs">Descrição</Label>
-              <Textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Descreva o conteúdo do post..."
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30 resize-none"
-                rows={3}
-              />
-            </div>
-
-            {/* Métricas Projetadas */}
-            <div className="col-span-2">
-              <p className="text-xs text-white/50 mb-2 flex items-center gap-1">
-                <Eye className="w-3 h-3" /> Métricas Projetadas
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-white/60 text-xs flex items-center gap-1"><Eye className="w-3 h-3" /> Alcance</Label>
-                  <Input
-                    type="number"
-                    value={form.expectedReach}
-                    onChange={(e) => setForm({ ...form, expectedReach: Number(e.target.value) })}
-                    className="bg-white/10 border-white/20 text-white"
-                    min={0}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-white/60 text-xs flex items-center gap-1"><Heart className="w-3 h-3" /> Curtidas</Label>
-                  <Input
-                    type="number"
-                    value={form.expectedLikes}
-                    onChange={(e) => setForm({ ...form, expectedLikes: Number(e.target.value) })}
-                    className="bg-white/10 border-white/20 text-white"
-                    min={0}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-white/60 text-xs flex items-center gap-1"><MessageCircle className="w-3 h-3" /> Comentários</Label>
-                  <Input
-                    type="number"
-                    value={form.expectedComments}
-                    onChange={(e) => setForm({ ...form, expectedComments: Number(e.target.value) })}
-                    className="bg-white/10 border-white/20 text-white"
-                    min={0}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Orçamento */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs flex items-center gap-1">
-                <DollarSign className="w-3 h-3" /> Orçamento (R$)
-              </Label>
-              <Input
-                type="number"
-                value={form.budget}
-                onChange={(e) => setForm({ ...form, budget: e.target.value })}
-                placeholder="0,00"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-                min={0}
-                step={0.01}
-              />
-            </div>
-
-            {/* Observações */}
-            <div className="space-y-1.5">
-              <Label className="text-white/70 text-xs">Observações</Label>
-              <Input
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Notas adicionais..."
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
-              />
-            </div>
-           </div>
           </div>
+
+          {/* Conteúdo scrollável */}
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+
+            {/* === ABA INFORMAÇÕES === */}
+            {modalTab === "info" && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Título */}
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-white/70 text-xs">Título *</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Ex: Reels sobre Brasília Cidade Parque"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                  />
+                </div>
+
+                {/* Tipo */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs">Tipo de Conteúdo *</Label>
+                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as PostType })}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0f1724] border-white/20">
+                      {(Object.keys(TYPE_CONFIG) as PostType[]).map((t) => (
+                        <SelectItem key={t} value={t} className="text-white hover:bg-white/10">
+                          {TYPE_CONFIG[t].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Objetivo */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs">Objetivo</Label>
+                  <Select value={form.objective} onValueChange={(v) => setForm({ ...form, objective: v })}>
+                    <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0f1724] border-white/20">
+                      {["awareness", "engajamento", "humanização", "explicação", "mobilização", "captação"].map((obj) => (
+                        <SelectItem key={obj} value={obj} className="text-white hover:bg-white/10 capitalize">
+                          {obj.charAt(0).toUpperCase() + obj.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Data */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs">Data *</Label>
+                  <Input
+                    type="date"
+                    value={form.scheduledDate}
+                    onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+
+                {/* Hora */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs">Hora *</Label>
+                  <Input
+                    type="time"
+                    value={form.scheduledTime}
+                    onChange={(e) => setForm({ ...form, scheduledTime: e.target.value })}
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+
+                {/* Status de Produção */}
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-white/70 text-xs">Status de Produção</Label>
+                  <div className="flex items-center gap-1">
+                    {PRODUCTION_STATUSES.map((s, idx) => {
+                      const cfg = STATUS_CONFIG[s];
+                      const isActive = form.status === s;
+                      const currentStep = STATUS_CONFIG[form.status]?.step || 1;
+                      const isPast = cfg.step < currentStep;
+                      return (
+                        <div key={s} className="flex items-center flex-1">
+                          <button
+                            onClick={() => setForm({ ...form, status: s })}
+                            className={`flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-all border text-center ${
+                              isActive
+                                ? cfg.color + " border-current"
+                                : isPast
+                                ? "bg-white/10 text-white/60 border-white/20 hover:bg-white/15"
+                                : "bg-white/5 text-white/30 border-white/10 hover:bg-white/10"
+                            }`}
+                          >
+                            {cfg.label}
+                          </button>
+                          {idx < PRODUCTION_STATUSES.length - 1 && (
+                            <ChevronRight className={`w-3 h-3 flex-shrink-0 mx-0.5 ${isPast ? "text-white/40" : "text-white/15"}`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Descrição */}
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-white/70 text-xs">Descrição</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Descreva o conteúdo do post..."
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/30 resize-none"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Métricas Projetadas */}
+                <div className="col-span-2">
+                  <p className="text-xs text-white/50 mb-2 flex items-center gap-1">
+                    <Eye className="w-3 h-3" /> Métricas Projetadas
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-white/60 text-xs flex items-center gap-1"><Eye className="w-3 h-3" /> Alcance</Label>
+                      <Input type="number" value={form.expectedReach} onChange={(e) => setForm({ ...form, expectedReach: Number(e.target.value) })} className="bg-white/10 border-white/20 text-white" min={0} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-white/60 text-xs flex items-center gap-1"><Heart className="w-3 h-3" /> Curtidas</Label>
+                      <Input type="number" value={form.expectedLikes} onChange={(e) => setForm({ ...form, expectedLikes: Number(e.target.value) })} className="bg-white/10 border-white/20 text-white" min={0} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-white/60 text-xs flex items-center gap-1"><MessageCircle className="w-3 h-3" /> Comentários</Label>
+                      <Input type="number" value={form.expectedComments} onChange={(e) => setForm({ ...form, expectedComments: Number(e.target.value) })} className="bg-white/10 border-white/20 text-white" min={0} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Orçamento */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs flex items-center gap-1">
+                    <DollarSign className="w-3 h-3" /> Orçamento (R$)
+                  </Label>
+                  <Input type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} placeholder="0,00" className="bg-white/10 border-white/20 text-white placeholder:text-white/30" min={0} step={0.01} />
+                </div>
+
+                {/* Observações */}
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-xs">Observações</Label>
+                  <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas adicionais..." className="bg-white/10 border-white/20 text-white placeholder:text-white/30" />
+                </div>
+              </div>
+            )}
+
+            {/* === ABA MÍDIA & LEGENDA === */}
+            {modalTab === "midia" && (
+              <div className="space-y-5">
+
+                {/* Upload de Mídia */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-white/70 text-sm font-semibold flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-[#4ade80]" />
+                      Mídia do Post
+                    </Label>
+                    <div className="flex gap-2">
+                      {/* Upload manual */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingMedia}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-white/20 text-white/70 hover:bg-white/10 text-xs gap-1.5"
+                      >
+                        {uploadingMedia ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                        {uploadingMedia ? "Enviando..." : "Upload"}
+                      </Button>
+                      {/* Gerar imagem com IA */}
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={generateImageMutation.isPending || !form.title}
+                        onClick={() => generateImageMutation.mutate({ title: form.title, description: form.description, type: form.type, objective: form.objective })}
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs gap-1.5"
+                      >
+                        {generateImageMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                        {generateImageMutation.isPending ? "Gerando..." : "Gerar com IA"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Input file oculto */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={["reels", "video"].includes(form.type) ? "video/mp4,video/quicktime,image/*" : "image/jpeg,image/png,image/webp"}
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingMedia(true);
+                      try {
+                        const reader = new FileReader();
+                        reader.onload = async (ev) => {
+                          const base64 = (ev.target?.result as string).split(",")[1];
+                          const result = await uploadMediaMutation.mutateAsync({
+                            fileBase64: base64,
+                            mimeType: file.type,
+                            fileName: file.name,
+                          });
+                          if (result.url) {
+                            const current = form.mediaUrls ? JSON.parse(form.mediaUrls) : [];
+                            const updated = [...current, result.url];
+                            setForm(f => ({ ...f, mediaUrls: JSON.stringify(updated) }));
+                            setMediaPreviewUrls(prev => [...prev, result.url]);
+                            toast.success("Mídia enviada com sucesso!");
+                          }
+                          setUploadingMedia(false);
+                        };
+                        reader.readAsDataURL(file);
+                      } catch {
+                        setUploadingMedia(false);
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+
+                  {/* Tipo aceito */}
+                  <p className="text-[11px] text-white/30">
+                    {["reels", "video"].includes(form.type)
+                      ? "Aceita: MP4, MOV (vídeo) ou imagens JPG/PNG/WebP"
+                      : "Aceita: JPG, PNG, WebP (máx. 50MB)"}
+                  </p>
+
+                  {/* Grid de previews */}
+                  {mediaPreviewUrls.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {mediaPreviewUrls.map((url, idx) => (
+                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-white/20 bg-white/5 aspect-square">
+                          {url.match(/\.(mp4|mov)$/i) ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                              <FileVideo className="w-8 h-8 text-white/40" />
+                              <span className="text-[10px] text-white/40">Vídeo</span>
+                            </div>
+                          ) : (
+                            <img src={url} alt={`Mídia ${idx + 1}`} className="w-full h-full object-cover" />
+                          )}
+                          <button
+                            onClick={() => {
+                              const updated = mediaPreviewUrls.filter((_, i) => i !== idx);
+                              setMediaPreviewUrls(updated);
+                              setForm(f => ({ ...f, mediaUrls: JSON.stringify(updated) }));
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-[#4ade80]/50 hover:bg-[#4ade80]/5 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-8 h-8 text-white/30 mx-auto mb-2" />
+                      <p className="text-sm text-white/40">Clique para fazer upload ou use a IA para gerar</p>
+                      <p className="text-xs text-white/20 mt-1">Arraste e solte ou clique no botão acima</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/10" />
+
+                {/* Legenda */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-white/70 text-sm font-semibold flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-[#4ade80]" />
+                      Legenda & Hashtags
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={generateCaptionMutation.isPending || !form.title}
+                      onClick={() => generateCaptionMutation.mutate({
+                        title: form.title,
+                        description: form.description,
+                        type: form.type,
+                        objective: form.objective,
+                        mediaUrl: mediaPreviewUrls[0],
+                      })}
+                      className="bg-[#4ade80] hover:bg-[#22c55e] text-black text-xs gap-1.5"
+                    >
+                      {generateCaptionMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {generateCaptionMutation.isPending ? "Gerando..." : "Gerar Legenda com IA"}
+                    </Button>
+                  </div>
+
+                  {/* Campo de legenda */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white/60 text-xs">Legenda</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-white/30">{form.caption.length}/2200</span>
+                        {form.caption && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(form.caption + (form.hashtags ? "\n\n" + form.hashtags : ""));
+                              setCopiedCaption(true);
+                              setTimeout(() => setCopiedCaption(false), 2000);
+                            }}
+                            className="flex items-center gap-1 text-[10px] text-white/40 hover:text-white/70 transition-colors"
+                          >
+                            {copiedCaption ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+                            {copiedCaption ? "Copiado!" : "Copiar"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <Textarea
+                      value={form.caption}
+                      onChange={(e) => setForm({ ...form, caption: e.target.value })}
+                      placeholder="Escreva a legenda do post ou gere com IA..."
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/30 resize-none"
+                      rows={5}
+                      maxLength={2200}
+                    />
+                  </div>
+
+                  {/* Campo de hashtags */}
+                  <div className="space-y-1.5">
+                    <Label className="text-white/60 text-xs flex items-center gap-1">
+                      <Hash className="w-3 h-3" /> Hashtags
+                    </Label>
+                    <Textarea
+                      value={form.hashtags}
+                      onChange={(e) => setForm({ ...form, hashtags: e.target.value })}
+                      placeholder="#BrasiliaCidadeParque #EduardoBrandao #Brasilia..."
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/30 resize-none font-mono text-xs"
+                      rows={3}
+                    />
+                    <p className="text-[10px] text-white/30">Máximo 30 hashtags por post no Instagram</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter className="gap-2 px-6 py-4 border-t border-white/10 bg-[#0f1724] flex-shrink-0">
             <Button
               variant="outline"
@@ -890,6 +1158,14 @@ export default function Conteudo() {
               className="border-white/20 text-white/70 hover:bg-white/10"
             >
               Cancelar
+            </Button>
+            <Button
+              onClick={() => setModalTab("midia")}
+              variant="outline"
+              className="border-[#4ade80]/40 text-[#4ade80]/80 hover:bg-[#4ade80]/10"
+            >
+              <ImageIcon className="w-4 h-4 mr-1.5" />
+              Mídia & Legenda
             </Button>
             <Button
               onClick={handleSave}
