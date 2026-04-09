@@ -9,32 +9,41 @@ export interface LocalUser {
 }
 
 /**
- * Hook para ler dados do usuário do localStorage
- * Usado para o sistema de login simples
+ * Lê o usuário do localStorage de forma síncrona.
+ * Usado para inicializar o estado sem flash de loading.
+ */
+function readUserFromStorage(): LocalUser | null {
+  try {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      return JSON.parse(storedUser) as LocalUser;
+    }
+  } catch {
+    // Ignorar erros de parse
+  }
+  return null;
+}
+
+/**
+ * Hook para ler dados do usuário do localStorage.
+ * Inicializa de forma síncrona para evitar condição de corrida nos guards de rota.
  */
 export function useLocalAuth() {
-  const [user, setUser] = useState<LocalUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Inicialização síncrona — lê o localStorage imediatamente, sem esperar useEffect
+  const [user, setUser] = useState<LocalUser | null>(() => readUserFromStorage());
+  // loading=false desde o início pois a leitura é síncrona
+  const [loading] = useState(false);
 
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error("Erro ao ler usuário do localStorage:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Recarregar quando o storage muda (em outras abas)
+  // Recarregar quando o storage muda (em outras abas ou após logout)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "user") {
         if (e.newValue) {
-          setUser(JSON.parse(e.newValue));
+          try {
+            setUser(JSON.parse(e.newValue));
+          } catch {
+            setUser(null);
+          }
         } else {
           setUser(null);
         }

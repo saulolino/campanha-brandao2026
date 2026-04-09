@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserRole } from "@shared/permissions";
 
@@ -15,6 +16,11 @@ interface ProtectedRouteProps {
 
 /**
  * Guard de rota baseado no sistema de auth local (useLocalAuth + usePermissions).
+ *
+ * IMPORTANTE: aguarda o loading do localStorage antes de tomar qualquer decisão.
+ * Sem isso, ocorre condição de corrida: user=null enquanto carrega → role="visitor" → redirect indevido.
+ *
+ * - Loading → renderiza null (aguarda)
  * - Visitante → redireciona para /home
  * - Role insuficiente → redireciona para /home
  * - Permissão insuficiente → redireciona para /home
@@ -25,10 +31,13 @@ export function ProtectedRoute({
   requiredPermission,
   redirectTo = "/home",
 }: ProtectedRouteProps) {
+  const { loading } = useLocalAuth();
   const { role, hasPermission, isVisitor } = usePermissions();
   const [, navigate] = useLocation();
 
   const isAllowed = (() => {
+    // Ainda carregando — não decidir ainda
+    if (loading) return null;
     // Visitante não tem acesso a nenhuma rota protegida
     if (isVisitor) return false;
     // Verificar role obrigatório
@@ -39,12 +48,17 @@ export function ProtectedRoute({
   })();
 
   useEffect(() => {
-    if (!isAllowed) {
+    // Só redireciona após o loading terminar e o acesso for negado
+    if (isAllowed === false) {
       navigate(redirectTo);
     }
   }, [isAllowed, navigate, redirectTo]);
 
-  if (!isAllowed) return null;
+  // Aguardando localStorage
+  if (isAllowed === null) return null;
+
+  // Acesso negado — aguardando redirect do useEffect
+  if (isAllowed === false) return null;
 
   return <>{children}</>;
 }
