@@ -68,6 +68,7 @@ interface PostForm {
   hashtags: string;
   mediaUrls: string; // JSON array de URLs
   slideCount: number; // Número de slides (carrossel)
+  scheduledPublishAt: string; // ISO string para agendamento automático
 }
 
 const defaultForm: PostForm = {
@@ -87,6 +88,7 @@ const defaultForm: PostForm = {
   slideCount: 5,
   hashtags: "",
   mediaUrls: "",
+  scheduledPublishAt: "",
 };
 
 // Helpers
@@ -277,6 +279,18 @@ export default function Conteudo() {
     },
   });
 
+  const schedulePublishMutation = trpc.posts.schedulePublish.useMutation({
+    onSuccess: (data) => {
+      utils.posts.list.invalidate();
+      if (data.scheduledPublishAt) {
+        toast.success(`Publicação agendada para ${new Date(data.scheduledPublishAt).toLocaleString("pt-BR")}`);
+      } else {
+        toast.success("Agendamento cancelado.");
+      }
+    },
+    onError: (err) => toast.error(`Erro ao agendar: ${err.message}`),
+  });
+
   const { data: postsData, isLoading } = trpc.posts.list.useQuery(
     { limit: 500, offset: 0 },
     { enabled: !!localUser } // Só busca posts quando autenticado localmente
@@ -381,6 +395,7 @@ export default function Conteudo() {
       hashtags: post.hashtags || "",
       mediaUrls: post.mediaUrls || "",
       slideCount: post.slideCount || 5,
+      scheduledPublishAt: post.scheduledPublishAt ? new Date(post.scheduledPublishAt).toISOString().slice(0, 16) : "",
     });
     setModalOpen(true);
   }
@@ -858,6 +873,7 @@ export default function Conteudo() {
               {[
                 { id: "info", label: "Informações", icon: Edit3 },
                 { id: "midia", label: "Mídia & Legenda", icon: ImageIcon },
+                { id: "revisao", label: "Revisão", icon: Send },
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -1343,6 +1359,162 @@ export default function Conteudo() {
                 </div>
               </div>
             )}
+
+            {/* === ABA REVISÃO === */}
+            {modalTab === "revisao" && (() => {
+              const mediaList = (() => { try { return form.mediaUrls ? JSON.parse(form.mediaUrls) : []; } catch { return []; } })();
+              const hasMedia = mediaList.length > 0;
+              const hasCaption = !!form.caption.trim();
+              const canPublish = permissions.canPublishPost;
+
+              return (
+                <div className="space-y-5">
+                  {/* Preview do post */}
+                  <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3">
+                    <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">Preview</p>
+
+                    {/* Mídia */}
+                    {hasMedia ? (
+                      <div className="relative rounded-lg overflow-hidden bg-black aspect-square">
+                        <img src={mediaList[0]} alt="Preview" className="w-full h-full object-cover" />
+                        {mediaList.length > 1 && (
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                            <LayoutGrid className="w-3 h-3" /> {mediaList.length} slides
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="aspect-square rounded-lg bg-white/5 border border-dashed border-white/20 flex flex-col items-center justify-center gap-2">
+                        <ImageIcon className="w-8 h-8 text-white/20" />
+                        <p className="text-xs text-white/30">Sem mídia adicionada</p>
+                      </div>
+                    )}
+
+                    {/* Legenda */}
+                    {hasCaption ? (
+                      <div className="space-y-1">
+                        <p className="text-sm text-white/80 leading-relaxed line-clamp-4">{form.caption}</p>
+                        {form.hashtags && <p className="text-xs text-blue-400/70">{form.hashtags}</p>}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                        <p className="text-xs">Sem legenda. Adicione na aba Mídia & Legenda.</p>
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex items-center justify-between text-xs text-white/40">
+                      {(() => { const cfg = TYPE_CONFIG[form.type]; const Icon = cfg.icon; return <span className="flex items-center gap-1"><Icon className={`w-3 h-3 ${cfg.color}`} />{cfg.label}</span>; })()}
+                      <span>@eduardobrandaopv</span>
+                    </div>
+                  </div>
+
+                  {/* Bloco de publicação */}
+                  {canPublish ? (
+                    <div className="space-y-3">
+                      {/* Publicar agora */}
+                      <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-white/60 uppercase tracking-wide flex items-center gap-1.5">
+                          <Send className="w-3.5 h-3.5 text-green-400" /> Publicar agora
+                        </p>
+                        <Button
+                          disabled={!hasCaption || publishMutation.isPending}
+                          onClick={() => {
+                            if (!editingPost) { toast.error("Salve o post antes de publicar."); return; }
+                            publishMutation.mutate({
+                              id: editingPost.id,
+                              userRole: (authUser?.role || "visitor") as any,
+                              userName: authUser?.nome || authUser?.name,
+                            }, {
+                              onSuccess: () => {
+                                setModalOpen(false);
+                                setEditingPost(null);
+                                setForm(defaultForm);
+                              },
+                            });
+                          }}
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white gap-2"
+                        >
+                          {publishMutation.isPending
+                            ? <><Loader2 className="w-4 h-4 animate-spin" /> Publicando...</>
+                            : <><Instagram className="w-4 h-4" /> Publicar no Instagram agora</>}
+                        </Button>
+                        {!editingPost && <p className="text-[10px] text-white/30 text-center">Salve o post primeiro para poder publicar.</p>}
+                      </div>
+
+                      {/* Agendar publicação */}
+                      <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3">
+                        <p className="text-xs font-semibold text-white/60 uppercase tracking-wide flex items-center gap-1.5">
+                          <CalendarDays className="w-3.5 h-3.5 text-blue-400" /> Agendar publicação automática
+                        </p>
+                        <div className="space-y-2">
+                          <Input
+                            type="datetime-local"
+                            value={form.scheduledPublishAt}
+                            onChange={(e) => setForm({ ...form, scheduledPublishAt: e.target.value })}
+                            min={new Date().toISOString().slice(0, 16)}
+                            className="bg-white/10 border-white/20 text-white"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!form.scheduledPublishAt || !hasCaption || !editingPost}
+                              onClick={() => {
+                                if (!editingPost) { toast.error("Salve o post antes de agendar."); return; }
+                                schedulePublishMutation.mutate({
+                                  id: editingPost.id,
+                                  scheduledPublishAt: form.scheduledPublishAt ? new Date(form.scheduledPublishAt) : null,
+                                  userRole: (authUser?.role || "visitor") as any,
+                                });
+                              }}
+                              className="flex-1 border-blue-500/40 text-blue-400/80 hover:bg-blue-500/10"
+                            >
+                              {schedulePublishMutation.isPending
+                                ? <><Loader2 className="w-3 h-3 animate-spin mr-1" /> Agendando...</>
+                                : <><CalendarDays className="w-3 h-3 mr-1" /> Agendar</>}
+                            </Button>
+                            {editingPost?.scheduledPublishAt && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  schedulePublishMutation.mutate({
+                                    id: editingPost.id,
+                                    scheduledPublishAt: null,
+                                    userRole: (authUser?.role || "visitor") as any,
+                                  });
+                                  setForm(f => ({ ...f, scheduledPublishAt: "" }));
+                                }}
+                                className="border-red-500/40 text-red-400/80 hover:bg-red-500/10"
+                              >
+                                <X className="w-3 h-3 mr-1" /> Cancelar
+                              </Button>
+                            )}
+                          </div>
+                          {editingPost?.scheduledPublishAt && (
+                            <p className="text-xs text-blue-400/70 flex items-center gap-1">
+                              <CalendarDays className="w-3 h-3" />
+                              Agendado para: {new Date(editingPost.scheduledPublishAt).toLocaleString("pt-BR")}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-white/30">O sistema publicará automaticamente no horário definido.</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                      <ShieldAlert className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm text-yellow-300 font-medium">Permissão insuficiente</p>
+                        <p className="text-xs text-yellow-400/60 mt-1">Apenas Coordenadores e Superadmins podem publicar ou agendar posts no Instagram.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <DialogFooter className="gap-2 px-6 py-4 border-t border-white/10 bg-[#0f1724] flex-shrink-0">

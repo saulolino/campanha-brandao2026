@@ -62,6 +62,9 @@ export const instagramPosts = mysqlTable("instagram_posts", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   publishedAt: timestamp("publishedAt"),
+  // Agendamento automático de publicação
+  scheduledPublishAt: timestamp("scheduledPublishAt"),
+  publishedBy: varchar("publishedBy", { length: 255 }), // nome do usuário que publicou
   // Instagram response
   instagramPostId: varchar("instagramPostId", { length: 255 }),
   instagramError: text("instagramError"),

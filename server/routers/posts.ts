@@ -2,11 +2,12 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { instagramPosts } from "../../drizzle/schema";
-import { eq, desc, gte, lte, and } from "drizzle-orm";
+import { eq, desc, gte, lte, and, isNotNull, lt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { uploadMedia, serializeMediaUrls, deserializeMediaUrls } from "../media";
 import { invokeLLM, type Message, type MessageContent } from "../_core/llm";
 import { generateImage } from "../_core/imageGeneration";
+import { notifyOwner } from "../_core/notification";
 
 export const postsRouter = router({
   // Listar todos os posts com filtro por status
@@ -631,18 +632,28 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
           instagramPostId = publishData.id;
         }
 
-        // Atualizar post no banco: status published + instagramPostId + publishedAt
+        // Atualizar post no banco: status published + instagramPostId + publishedAt + publishedBy
+        const publisherName = input.userName || "Coordenador";
         await db.update(instagramPosts).set({
           status: "published",
           instagramPostId: instagramPostId,
           instagramError: null,
           publishedAt: new Date(),
+          publishedBy: publisherName,
+          scheduledPublishAt: null, // limpar agendamento após publicar
         }).where(eq(instagramPosts.id, input.id));
+
+        // Notificar Superadmin
+        const permalink = `https://www.instagram.com/p/${instagramPostId}/`;
+        await notifyOwner({
+          title: `✅ Post publicado no Instagram`,
+          content: `**${post.title}** foi publicado por **${publisherName}** (${input.userRole}).\n\n[Ver post no Instagram](${permalink})`,
+        }).catch(() => {}); // não bloquear em caso de falha na notificação
 
         return {
           success: true,
           instagramPostId,
-          permalink: `https://www.instagram.com/p/${instagramPostId}/`,
+          permalink,
           publishedAt: new Date().toISOString(),
         };
 
@@ -658,5 +669,35 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
           message: err.message || "Erro ao publicar no Instagram.",
         });
       }
+    }),
+
+  // Agendar publicação automática
+  schedulePublish: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      scheduledPublishAt: z.date().nullable(),
+      userRole: z.enum(["visitor", "team", "coordinator", "superadmin"]),
+    }))
+    .mutation(async ({ input }) => {
+      if (input.userRole !== "coordinator" && input.userRole !== "superadmin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Apenas Coordenadores e Superadmins podem agendar publicações." });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const [post] = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
+      if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post não encontrado." });
+
+      if (input.scheduledPublishAt && !post.caption) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "O post precisa ter uma legenda antes de ser agendado." });
+      }
+
+      await db.update(instagramPosts).set({
+        scheduledPublishAt: input.scheduledPublishAt,
+        status: input.scheduledPublishAt ? "scheduled" : post.status === "scheduled" ? "review" : post.status,
+      }).where(eq(instagramPosts.id, input.id));
+
+      return { success: true, scheduledPublishAt: input.scheduledPublishAt };
     }),
 });

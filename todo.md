@@ -559,3 +559,18 @@
   - [x] Feedback visual: loading, sucesso (link do post) e erro com mensagem
   - [x] Atualizar status do post para "published" e salvar instagramPostId no banco
   - [x] Bloquear publicação se post não tiver legenda
+
+- [x] Agendamento automático de publicação
+  - [x] Campo "Agendar publicação" no modal de edição (data/hora)
+  - [x] Procedure tRPC posts.schedulePublish para salvar scheduledPublishAt
+  - [x] Scheduler no servidor verifica posts agendados a cada minuto e publica automaticamente
+  - [x] Cancelar agendamento (limpar scheduledPublishAt)
+
+- [x] Botão de publicar no modal de edição
+  - [x] Aba "Revisão" no modal com preview completo (mídia + legenda + hashtags)
+  - [x] Botão "Publicar agora" visível apenas para Coordenador e Superadmin
+  - [x] Fechar modal após publicação bem-sucedida
+
+- [x] Notificação ao Superadmin após publicação
+  - [x] Chamar notifyOwner após publicação bem-sucedida com título, link e quem publicou
+  - [x] Notificação também para publicações agendadas automáticas
