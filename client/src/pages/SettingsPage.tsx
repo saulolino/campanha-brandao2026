@@ -66,6 +66,11 @@ export default function SettingsPage() {
   // Estado do confirm de exclusão
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
 
+  // Estado de busca e paginação
+  const [userSearch, setUserSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   // Query e mutations
   const usersQuery = trpc.users.list.useQuery(undefined, { enabled: isSuperAdmin });
   const utils = trpc.useUtils();
@@ -500,6 +505,15 @@ export default function SettingsPage() {
                         </Button>
                       </div>
                     </div>
+                    {/* Barra de busca */}
+                    <div className="mt-3">
+                      <Input
+                        placeholder="Buscar por nome ou e-mail..."
+                        value={userSearch}
+                        onChange={(e) => { setUserSearch(e.target.value); setCurrentPage(1); }}
+                        className="max-w-sm"
+                      />
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {usersQuery.isLoading ? (
@@ -511,57 +525,95 @@ export default function SettingsPage() {
                         <AlertCircle className="w-5 h-5" />
                         <span>Erro ao carregar usuários</span>
                       </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>E-mail</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Cadastro</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {usersQuery.data?.map((u) => (
-                            <TableRow key={u.id}>
-                              <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                              <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
-                              <TableCell>
-                                <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
-                                  {roleLabel[u.role ?? "visitor"]}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => openEditModal(u)}
-                                    title="Editar"
-                                  >
-                                    <Pencil className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                    onClick={() => setDeletingUserId(u.id)}
-                                    disabled={u.id === currentUser?.id}
-                                    title={u.id === currentUser?.id ? "Não pode remover a si mesmo" : "Remover"}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
+                    ) : (() => {
+                      const filtered = (usersQuery.data ?? []).filter(u => {
+                        const q = userSearch.toLowerCase();
+                        return !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+                      });
+                      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                      const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+                      return (
+                        <>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>E-mail</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Cadastro</TableHead>
+                                <TableHead className="text-right">Ações</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {paginated.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                    Nenhum usuário encontrado
+                                  </TableCell>
+                                </TableRow>
+                              ) : paginated.map((u) => (
+                                <TableRow key={u.id}>
+                                  <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                                  <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
+                                  <TableCell>
+                                    <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
+                                      {roleLabel[u.role ?? "visitor"]}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button variant="ghost" size="sm" onClick={() => openEditModal(u)} title="Editar">
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => setDeletingUserId(u.id)}
+                                        disabled={u.id === currentUser?.id}
+                                        title={u.id === currentUser?.id ? "Não pode remover a si mesmo" : "Remover"}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                          {/* Paginação */}
+                          {totalPages > 1 && (
+                            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                              <span>
+                                Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filtered.length)} de {filtered.length} usuários
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                  disabled={currentPage === 1}
+                                >
+                                  Anterior
+                                </Button>
+                                <span className="px-2">{currentPage} / {totalPages}</span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={currentPage === totalPages}
+                                >
+                                  Próxima
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               )}

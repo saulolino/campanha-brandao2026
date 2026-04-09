@@ -506,3 +506,7 @@
 
 - [x] Fix: usuários fantasmas sendo criados — causa raiz corrigida (UNIQUE index + SELECT/UPDATE explícito)
 - [x] CRUD usuários: edição completa (nome, email, senha, role) + criação de novo usuário
+
+- [x] Segurança: senha individual definida para Superadmin (Lino43210#) via hash SHA-256 no banco
+- [x] Segurança: botões de teste rápido e senha visível removidos da tela de login
+- [x] UX: paginação (10/página) e busca por nome/e-mail adicionados na tabela de usuários

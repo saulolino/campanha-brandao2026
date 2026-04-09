@@ -3,98 +3,48 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { AlertCircle, LogIn } from "lucide-react";
-
-// Personas pré-configuradas
-const PERSONAS = [
-  {
-    email: "visitante@teste.com",
-    senha: "senha123",
-    whatsapp: "(61) 98888-8888",
-    role: "visitor",
-    nome: "Visitante",
-  },
-  {
-    email: "equipe@teste.com",
-    senha: "senha123",
-    whatsapp: "(61) 97777-7777",
-    role: "team",
-    nome: "Equipe",
-  },
-  {
-    email: "coordenador@teste.com",
-    senha: "senha123",
-    whatsapp: "(61) 96666-6666",
-    role: "coordinator",
-    nome: "Coordenador",
-  },
-  {
-    email: "superadmin@teste.com",
-    senha: "senha123",
-    whatsapp: "(61) 95555-5555",
-    role: "superadmin",
-    nome: "Superadmin",
-  },
-];
+import { AlertCircle, LogIn, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
-
-  const doLocalLogin = async (emailVal: string, senhaVal: string, persona: (typeof PERSONAS)[0]) => {
-    // Chamar endpoint real que cria sessão JWT no cookie
-    const resp = await fetch("/api/auth/local-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email: emailVal, senha: senhaVal }),
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error((err as any).error || "Erro ao fazer login");
-    }
-    // Manter localStorage para compatibilidade com componentes que usam user.role
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        email: persona.email,
-        nome: persona.nome,
-        role: persona.role,
-        whatsapp: persona.whatsapp,
-      })
-    );
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro("");
     setCarregando(true);
     try {
-      const persona = PERSONAS.find(p => p.email === email && p.senha === senha);
-      if (!persona) {
-        setErro("Email ou senha inválidos");
-        setCarregando(false);
-        return;
-      }
-      await doLocalLogin(email, senha, persona);
-      navigate("/home");
-    } catch (err: any) {
-      setErro(err.message || "Erro ao fazer login");
-      setCarregando(false);
-    }
-  };
+      const resp = await fetch("/api/auth/local-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: email.trim().toLowerCase(), senha }),
+      });
 
-  const handleQuickLogin = async (persona: (typeof PERSONAS)[0]) => {
-    setErro("");
-    setCarregando(true);
-    try {
-      await doLocalLogin(persona.email, persona.senha, persona);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error((err as any).error || "Email ou senha inválidos");
+      }
+
+      const data = await resp.json();
+
+      // Manter localStorage para compatibilidade com componentes legados
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email: email.trim().toLowerCase(),
+          nome: data.name || email.split("@")[0],
+          role: data.role,
+        })
+      );
+
       navigate("/home");
     } catch (err: any) {
-      setErro(err.message || "Erro ao fazer login");
+      setErro(err.message || "Email ou senha inválidos");
       setCarregando(false);
     }
   };
@@ -110,12 +60,12 @@ export default function Login() {
           <h1 className="text-3xl font-bold text-white mb-2">
             Brasília Cidade Parque
           </h1>
-          <p className="text-slate-400">Painel de Campanha - Eduardo Brandão</p>
+          <p className="text-slate-400">Painel de Campanha — Eduardo Brandão</p>
         </div>
 
         {/* Card de Login */}
-        <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm p-6 mb-6">
-          <form onSubmit={handleLogin} className="space-y-4">
+        <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm p-6">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-slate-200 mb-2">
                 Email
@@ -125,8 +75,10 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-green-500"
                 disabled={carregando}
+                autoComplete="email"
+                autoFocus
               />
             </div>
 
@@ -134,19 +86,30 @@ export default function Login() {
               <label className="block text-sm font-medium text-slate-200 mb-2">
                 Senha
               </label>
-              <Input
-                type="password"
-                value={senha}
-                onChange={(e) => setSenha(e.target.value)}
-                placeholder="••••••••"
-                className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                disabled={carregando}
-              />
+              <div className="relative">
+                <Input
+                  type={mostrarSenha ? "text" : "password"}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-green-500 pr-10"
+                  disabled={carregando}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha(!mostrarSenha)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  tabIndex={-1}
+                >
+                  {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
 
             {erro && (
               <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <AlertCircle size={16} className="text-red-500" />
+                <AlertCircle size={16} className="text-red-500 shrink-0" />
                 <p className="text-sm text-red-400">{erro}</p>
               </div>
             )}
@@ -154,7 +117,7 @@ export default function Login() {
             <Button
               type="submit"
               disabled={carregando || !email || !senha}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <LogIn size={18} />
               {carregando ? "Entrando..." : "Entrar"}
@@ -162,37 +125,8 @@ export default function Login() {
           </form>
         </Card>
 
-        {/* Personas de Teste */}
-        <div className="space-y-3">
-          <p className="text-xs text-slate-400 text-center mb-3">
-            Clique em uma persona para teste rápido:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {PERSONAS.map((persona) => (
-              <button
-                key={persona.role}
-                onClick={() => handleQuickLogin(persona)}
-                disabled={carregando}
-                className="p-3 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="text-xs font-medium text-white">
-                  {persona.nome}
-                </div>
-                <div className="text-[10px] text-slate-400 mt-1">
-                  {persona.role}
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-slate-500">
-              Todos usam senha: <span className="font-mono">senha123</span>
-            </p>
-          </div>
-        </div>
-
         {/* Rodapé */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center">
           <p className="text-xs text-slate-500">
             © 2026 Campanha Eduardo Brandão. Todos os direitos reservados.
           </p>
