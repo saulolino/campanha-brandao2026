@@ -550,3 +550,12 @@
   - [x] Progresso visual durante geração (barra de progresso animada)
   - [x] Legenda adaptada para carrossel gerada automaticamente após as imagens
   - [x] Salvar slideCount no banco junto com o post
+
+- [x] Função de publicação no Instagram restrita a Coordenador e Superadmin
+  - [x] Procedure tRPC posts.publish com guarda de role (coordinator/superadmin)
+  - [x] Botão "Publicar" nos cards de post (visível apenas para roles autorizados)
+  - [x] Modal de confirmação com preview da mídia, legenda e hashtags
+  - [x] Integração com Instagram Graph API (imagem única, carrossel e reels)
+  - [x] Feedback visual: loading, sucesso (link do post) e erro com mensagem
+  - [x] Atualizar status do post para "published" e salvar instagramPostId no banco
+  - [x] Bloquear publicação se post não tiver legenda

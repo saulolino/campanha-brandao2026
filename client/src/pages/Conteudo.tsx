@@ -39,7 +39,12 @@ import {
   Copy,
   Check,
   Trash,
+  Send,
+  ExternalLink,
+  ShieldAlert,
+  Instagram,
 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // Tipos
 type PostType = "reels" | "carrossel" | "video" | "story" | "imagem";
@@ -155,6 +160,9 @@ export default function Conteudo() {
     } catch { return null; }
   }, []);
 
+  // Permissões do usuário
+  const { permissions, user: authUser } = usePermissions();
+
   // Redirecionar para login se não autenticado
   useEffect(() => {
     if (!localUser) {
@@ -179,6 +187,10 @@ export default function Conteudo() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [copiedCaption, setCopiedCaption] = useState(false);
+
+  // Modal de publicação
+  const [publishModalPost, setPublishModalPost] = useState<any | null>(null);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; permalink?: string; error?: string } | null>(null);
 
   // Mutations de IA
   const uploadMediaMutation = trpc.posts.uploadMedia.useMutation({
@@ -252,6 +264,19 @@ export default function Conteudo() {
   }, [modalOpen, editingPost]);
 
   const utils = trpc.useUtils();
+
+  const publishMutation = trpc.posts.publish.useMutation({
+    onSuccess: (data) => {
+      utils.posts.list.invalidate();
+      setPublishResult({ success: true, permalink: data.permalink });
+      toast.success("Post publicado no Instagram!");
+    },
+    onError: (err) => {
+      setPublishResult({ success: false, error: err.message });
+      toast.error(`Erro ao publicar: ${err.message}`);
+    },
+  });
+
   const { data: postsData, isLoading } = trpc.posts.list.useQuery(
     { limit: 500, offset: 0 },
     { enabled: !!localUser } // Só busca posts quando autenticado localmente
@@ -661,6 +686,27 @@ export default function Conteudo() {
                             <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_CONFIG[(post.status as PostStatus) || "draft"].color}`}>
                               {STATUS_CONFIG[(post.status as PostStatus) || "draft"].label}
                             </span>
+                            {/* Botão Publicar - apenas coordinator e superadmin */}
+                            {permissions.canPublishPost && post.status !== "published" && (
+                              <button
+                                onClick={() => { setPublishResult(null); setPublishModalPost(post); }}
+                                className="p-1.5 rounded-lg hover:bg-green-500/20 transition-colors"
+                                title="Publicar no Instagram"
+                              >
+                                <Send className="w-3.5 h-3.5 text-green-400/70" />
+                              </button>
+                            )}
+                            {post.status === "published" && post.instagramPostId && (
+                              <a
+                                href={`https://www.instagram.com/p/${post.instagramPostId}/`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg hover:bg-blue-500/20 transition-colors"
+                                title="Ver no Instagram"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-blue-400/70" />
+                              </a>
+                            )}
                             <button
                               onClick={() => openEditPost(post)}
                               className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -1322,6 +1368,160 @@ export default function Conteudo() {
             >
               {createPost.isPending || updatePost.isPending ? "Salvando..." : editingPost ? "Salvar Alterações" : "Criar Post"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== MODAL DE PUBLICAÇÃO NO INSTAGRAM ===== */}
+      <Dialog open={!!publishModalPost} onOpenChange={(open) => { if (!open && !publishMutation.isPending) { setPublishModalPost(null); setPublishResult(null); } }}>
+        <DialogContent className="bg-[#0f1724] border-white/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Instagram className="w-4 h-4 text-white" />
+              </div>
+              Publicar no Instagram
+            </DialogTitle>
+          </DialogHeader>
+
+          {publishModalPost && !publishResult && (
+            <div className="space-y-4">
+              {/* Preview do post */}
+              <div className="bg-white/5 rounded-xl border border-white/10 p-4 space-y-3">
+                {/* Mídia preview */}
+                {publishModalPost.mediaUrls && (() => {
+                  try {
+                    const urls = JSON.parse(publishModalPost.mediaUrls);
+                    if (urls.length > 0) return (
+                      <div className="relative rounded-lg overflow-hidden bg-black aspect-square">
+                        <img src={urls[0]} alt="Preview" className="w-full h-full object-cover" />
+                        {urls.length > 1 && (
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                            <LayoutGrid className="w-3 h-3" /> {urls.length} slides
+                          </div>
+                        )}
+                      </div>
+                    );
+                  } catch { return null; }
+                  return null;
+                })()}
+
+                {/* Legenda */}
+                {publishModalPost.caption ? (
+                  <div className="space-y-1">
+                    <p className="text-xs text-white/50 font-medium">Legenda</p>
+                    <p className="text-sm text-white/80 leading-relaxed line-clamp-4">{publishModalPost.caption}</p>
+                    {publishModalPost.hashtags && (
+                      <p className="text-xs text-blue-400/70">{publishModalPost.hashtags}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <p className="text-xs">Este post não tem legenda. Adicione uma antes de publicar.</p>
+                  </div>
+                )}
+
+                {/* Informações */}
+                <div className="flex items-center justify-between text-xs text-white/40">
+                  <span className="flex items-center gap-1">
+                    {(() => { const t = publishModalPost.type || "imagem"; const cfg = TYPE_CONFIG[t as PostType]; const Icon = cfg.icon; return <><Icon className={`w-3 h-3 ${cfg.color}`} />{cfg.label}</>; })()}
+                  </span>
+                  <span>@eduardobrandaopv</span>
+                </div>
+              </div>
+
+              {/* Aviso de permissão */}
+              <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                <ShieldAlert className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-green-300 font-medium">Publicação autorizada</p>
+                  <p className="text-xs text-green-400/60 mt-0.5">
+                    Você está publicando como <strong>{authUser?.nome || authUser?.name || "Coordenador"}</strong> ({authUser?.role === "superadmin" ? "Superadmin" : "Coordenador"}).
+                    Esta ação é irreversível.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resultado de sucesso */}
+          {publishResult?.success && (
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="w-14 h-14 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                  <Check className="w-7 h-7 text-green-400" />
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-semibold">Publicado com sucesso!</p>
+                  <p className="text-white/50 text-sm mt-1">O post está no ar no Instagram.</p>
+                </div>
+              </div>
+              {publishResult.permalink && (
+                <a
+                  href={publishResult.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Ver post no Instagram
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Resultado de erro */}
+          {publishResult?.success === false && (
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="w-14 h-14 rounded-full bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                  <X className="w-7 h-7 text-red-400" />
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-semibold">Falha na publicação</p>
+                  <p className="text-red-400/70 text-xs mt-1 max-w-xs">{publishResult.error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {!publishResult ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setPublishModalPost(null)}
+                  disabled={publishMutation.isPending}
+                  className="border-white/20 text-white/70 hover:bg-white/10"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={publishMutation.isPending || !publishModalPost?.caption}
+                  onClick={() => {
+                    if (!publishModalPost) return;
+                    publishMutation.mutate({
+                      id: publishModalPost.id,
+                      userRole: (authUser?.role || "visitor") as any,
+                      userName: authUser?.nome || authUser?.name,
+                    });
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white gap-2"
+                >
+                  {publishMutation.isPending
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Publicando...</>
+                    : <><Send className="w-4 h-4" /> Publicar agora</>}
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => { setPublishModalPost(null); setPublishResult(null); }}
+                className="w-full bg-white/10 hover:bg-white/20 text-white"
+              >
+                Fechar
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

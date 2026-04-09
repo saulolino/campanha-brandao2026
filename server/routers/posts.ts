@@ -436,4 +436,227 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
 
       return { success: true };
     }),
+
+  // Publicar post no Instagram (apenas coordinator e superadmin)
+  publish: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      userRole: z.enum(["visitor", "team", "coordinator", "superadmin"]),
+      userName: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      // Verificar permissão de role
+      if (input.userRole !== "coordinator" && input.userRole !== "superadmin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Apenas Coordenadores e Superadmins podem publicar posts no Instagram.",
+        });
+      }
+
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Buscar o post
+      const [post] = await db.select().from(instagramPosts).where(eq(instagramPosts.id, input.id)).limit(1);
+      if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post não encontrado." });
+
+      // Validar dados mínimos
+      if (!post.caption) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "O post precisa ter uma legenda antes de ser publicado." });
+      }
+
+      // Montar legenda completa (caption + hashtags)
+      const fullCaption = post.hashtags
+        ? `${post.caption}\n\n${post.hashtags}`
+        : post.caption;
+
+      const INSTAGRAM_TOKEN = process.env.INSTAGRAM_GRAPH_API_TOKEN;
+      const INSTAGRAM_ACCOUNT_ID = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+
+      if (!INSTAGRAM_TOKEN || !INSTAGRAM_ACCOUNT_ID) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Credenciais do Instagram não configuradas.",
+        });
+      }
+
+      // Parsear URLs de mídia
+      let mediaUrls: string[] = [];
+      if (post.mediaUrls) {
+        try { mediaUrls = JSON.parse(post.mediaUrls); } catch { mediaUrls = []; }
+      }
+
+      let instagramPostId: string | null = null;
+
+      try {
+        const postType = post.type || "imagem";
+
+        if (postType === "carrossel" && mediaUrls.length >= 2) {
+          // === CARROSSEL ===
+          // 1. Criar cada item do carrossel
+          const childIds: string[] = [];
+          for (const url of mediaUrls) {
+            const childRes = await fetch(
+              `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  image_url: url,
+                  is_carousel_item: true,
+                  access_token: INSTAGRAM_TOKEN,
+                }),
+              }
+            );
+            const childData = await childRes.json() as any;
+            if (!childData.id) throw new Error(`Erro ao criar item do carrossel: ${JSON.stringify(childData)}`);
+            childIds.push(childData.id);
+          }
+
+          // 2. Criar container do carrossel
+          const containerRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                media_type: "CAROUSEL",
+                children: childIds.join(","),
+                caption: fullCaption,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const containerData = await containerRes.json() as any;
+          if (!containerData.id) throw new Error(`Erro ao criar container do carrossel: ${JSON.stringify(containerData)}`);
+
+          // 3. Publicar
+          const publishRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media_publish`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                creation_id: containerData.id,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const publishData = await publishRes.json() as any;
+          if (!publishData.id) throw new Error(`Erro ao publicar carrossel: ${JSON.stringify(publishData)}`);
+          instagramPostId = publishData.id;
+
+        } else if ((postType === "reels" || postType === "video") && mediaUrls.length > 0) {
+          // === REELS / VÍDEO ===
+          const videoUrl = mediaUrls[0];
+          const containerRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                media_type: "REELS",
+                video_url: videoUrl,
+                caption: fullCaption,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const containerData = await containerRes.json() as any;
+          if (!containerData.id) throw new Error(`Erro ao criar container de reels: ${JSON.stringify(containerData)}`);
+
+          // Aguardar processamento do vídeo (polling)
+          let attempts = 0;
+          let status = "IN_PROGRESS";
+          while (status === "IN_PROGRESS" && attempts < 20) {
+            await new Promise(r => setTimeout(r, 3000));
+            const statusRes = await fetch(
+              `https://graph.facebook.com/v21.0/${containerData.id}?fields=status_code&access_token=${INSTAGRAM_TOKEN}`
+            );
+            const statusData = await statusRes.json() as any;
+            status = statusData.status_code || "FINISHED";
+            attempts++;
+          }
+
+          const publishRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media_publish`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                creation_id: containerData.id,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const publishData = await publishRes.json() as any;
+          if (!publishData.id) throw new Error(`Erro ao publicar reels: ${JSON.stringify(publishData)}`);
+          instagramPostId = publishData.id;
+
+        } else {
+          // === IMAGEM Única / STORY ===
+          const imageUrl = mediaUrls.length > 0 ? mediaUrls[0] : null;
+          if (!imageUrl) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "O post precisa ter pelo menos uma imagem para ser publicado." });
+          }
+
+          const containerRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                image_url: imageUrl,
+                caption: fullCaption,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const containerData = await containerRes.json() as any;
+          if (!containerData.id) throw new Error(`Erro ao criar container de imagem: ${JSON.stringify(containerData)}`);
+
+          const publishRes = await fetch(
+            `https://graph.facebook.com/v21.0/${INSTAGRAM_ACCOUNT_ID}/media_publish`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                creation_id: containerData.id,
+                access_token: INSTAGRAM_TOKEN,
+              }),
+            }
+          );
+          const publishData = await publishRes.json() as any;
+          if (!publishData.id) throw new Error(`Erro ao publicar imagem: ${JSON.stringify(publishData)}`);
+          instagramPostId = publishData.id;
+        }
+
+        // Atualizar post no banco: status published + instagramPostId + publishedAt
+        await db.update(instagramPosts).set({
+          status: "published",
+          instagramPostId: instagramPostId,
+          instagramError: null,
+          publishedAt: new Date(),
+        }).where(eq(instagramPosts.id, input.id));
+
+        return {
+          success: true,
+          instagramPostId,
+          permalink: `https://www.instagram.com/p/${instagramPostId}/`,
+          publishedAt: new Date().toISOString(),
+        };
+
+      } catch (err: any) {
+        // Salvar erro no banco para auditoria
+        await db.update(instagramPosts).set({
+          status: "failed",
+          instagramError: err.message || "Erro desconhecido",
+        }).where(eq(instagramPosts.id, input.id));
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err.message || "Erro ao publicar no Instagram.",
+        });
+      }
+    }),
 });
