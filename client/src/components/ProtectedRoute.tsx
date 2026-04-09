@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserRole } from "@shared/permissions";
+import AcessoNegado from "@/pages/AcessoNegado";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,8 +11,16 @@ interface ProtectedRouteProps {
   requiredRole?: UserRole[];
   /** Permissão específica necessária */
   requiredPermission?: keyof ReturnType<typeof usePermissions>["permissions"];
-  /** Onde redirecionar se não tiver acesso. Padrão: /home */
+  /** Onde redirecionar se não tiver acesso. Padrão: /home (para visitantes não autenticados) */
   redirectTo?: string;
+  /** Rota tentada — exibida na página de acesso negado */
+  rotaTentada?: string;
+  /**
+   * Se true, exibe a página AcessoNegado em vez de redirecionar silenciosamente.
+   * Use false apenas para rotas que devem redirecionar visitantes não autenticados para login.
+   * Padrão: true
+   */
+  showDeniedPage?: boolean;
 }
 
 /**
@@ -29,9 +38,11 @@ export function ProtectedRoute({
   children,
   requiredRole,
   requiredPermission,
-  redirectTo = "/home",
+  redirectTo = "/login",
+  rotaTentada,
+  showDeniedPage = true,
 }: ProtectedRouteProps) {
-  const { loading } = useLocalAuth();
+  const { loading, user } = useLocalAuth();
   const { role, hasPermission, isVisitor } = usePermissions();
   const [, navigate] = useLocation();
 
@@ -47,18 +58,29 @@ export function ProtectedRoute({
     return true;
   })();
 
+  // Usuário não está logado (visitor sem user no localStorage) → redirecionar para login
+  const isUnauthenticated = isAllowed === false && !user;
+
   useEffect(() => {
-    // Só redireciona após o loading terminar e o acesso for negado
-    if (isAllowed === false) {
+    // Só redireciona se não estiver logado (sem user no localStorage)
+    if (isUnauthenticated) {
       navigate(redirectTo);
     }
-  }, [isAllowed, navigate, redirectTo]);
+  }, [isUnauthenticated, navigate, redirectTo]);
 
   // Aguardando localStorage
   if (isAllowed === null) return null;
 
-  // Acesso negado — aguardando redirect do useEffect
-  if (isAllowed === false) return null;
+  // Não autenticado — aguardando redirect
+  if (isUnauthenticated) return null;
+
+  // Autenticado mas sem permissão → exibir página de acesso negado
+  if (isAllowed === false) {
+    if (showDeniedPage) {
+      return <AcessoNegado rotaTentada={rotaTentada} />;
+    }
+    return null;
+  }
 
   return <>{children}</>;
 }

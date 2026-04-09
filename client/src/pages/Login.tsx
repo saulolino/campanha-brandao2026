@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { AlertCircle, LogIn, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Login() {
   const [, navigate] = useLocation();
@@ -42,6 +43,19 @@ export default function Login() {
         })
       );
 
+      // Toast de boas-vindas com role
+      const roleLabelMap: Record<string, string> = {
+        visitor: "Visitante",
+        team: "Equipe",
+        coordinator: "Coordenador",
+        superadmin: "SuperAdmin",
+      };
+      const nomeExibido = data.name || email.split("@")[0];
+      const roleExibido = roleLabelMap[data.role] || data.role;
+      toast.success(`Bem-vindo, ${nomeExibido}!`, {
+        description: `Você entrou como ${roleExibido}`,
+        duration: 4000,
+      });
       navigate("/home");
     } catch (err: any) {
       setErro(err.message || "Email ou senha inválidos");

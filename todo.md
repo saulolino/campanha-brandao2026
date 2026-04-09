@@ -583,3 +583,7 @@
   - [x] Guard de rota no App.tsx bloqueando acesso direto por URL
   - [x] Sidebar exibe apenas itens permitidos para o role atual
   - [x] Backend: procedures de configurações/usuários já protegidas por superadminMiddleware
+
+- [x] Seletor de role inline na tabela de usuários (/configuracoes)
+- [x] Toast de boas-vindas com role após login
+- [x] Página de acesso negado com mensagem amigável

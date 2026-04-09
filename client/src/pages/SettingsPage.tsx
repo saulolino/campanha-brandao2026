@@ -578,9 +578,33 @@ export default function SettingsPage() {
                                     <TableCell className="font-medium">{u.name || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
                                     <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
                                     <TableCell>
-                                      <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
-                                        {roleLabel[u.role ?? "visitor"]}
-                                      </Badge>
+                                      {/* Seletor de role inline — apenas Superadmin pode alterar */}
+                                      {isSuperAdmin ? (
+                                        <Select
+                                          value={u.role ?? "visitor"}
+                                          onValueChange={(newRole) => {
+                                            updateMutation.mutate({
+                                              userId: u.id,
+                                              role: newRole as "visitor" | "team" | "coordinator" | "superadmin",
+                                            });
+                                          }}
+                                          disabled={updateMutation.isPending}
+                                        >
+                                          <SelectTrigger className="h-7 w-36 text-xs">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="visitor">👁️ Visitante</SelectItem>
+                                            <SelectItem value="team">👥 Equipe</SelectItem>
+                                            <SelectItem value="coordinator">📋 Coordenador</SelectItem>
+                                            <SelectItem value="superadmin">🔑 SuperAdmin</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <Badge variant={roleBadgeVariant[u.role ?? "visitor"]}>
+                                          {roleLabel[u.role ?? "visitor"]}
+                                        </Badge>
+                                      )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground text-sm">
                                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString("pt-BR") : "—"}

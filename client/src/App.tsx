@@ -33,6 +33,9 @@ import SettingsPage from "./pages/SettingsPage";
  * - Equipe     → + conteúdo (leitura), estratégia, métricas, projeções, relatórios, apoiadores
  * - Coordenador→ + publicar/agendar conteúdo (permissão canPublishPost)
  * - Superadmin → + configurações, gerenciamento de usuários, admin
+ *
+ * Acesso negado: usuários autenticados sem permissão veem a página AcessoNegado.
+ * Usuários não autenticados são redirecionados para /login.
  */
 function Router() {
   return (
@@ -48,7 +51,10 @@ function Router() {
       {/* ===== ROTAS PARA EQUIPE, COORDENADOR E SUPERADMIN ===== */}
       <Route path="/conteudo">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/conteudo"
+          >
             <Conteudo />
           </ProtectedRoute>
         )}
@@ -56,7 +62,10 @@ function Router() {
 
       <Route path="/estrategia">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/estrategia"
+          >
             <Estrategia />
           </ProtectedRoute>
         )}
@@ -64,7 +73,10 @@ function Router() {
 
       <Route path="/metricas">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/metricas"
+          >
             <Metricas />
           </ProtectedRoute>
         )}
@@ -72,7 +84,10 @@ function Router() {
 
       <Route path="/projecoes">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/projecoes"
+          >
             <Projecoes />
           </ProtectedRoute>
         )}
@@ -80,7 +95,10 @@ function Router() {
 
       <Route path="/relatorios">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/relatorios"
+          >
             <Relatorios />
           </ProtectedRoute>
         )}
@@ -88,7 +106,10 @@ function Router() {
 
       <Route path="/apoiadores">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/apoiadores"
+          >
             <Apoiadores />
           </ProtectedRoute>
         )}
@@ -96,7 +117,10 @@ function Router() {
 
       <Route path="/publicacoes">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/publicacoes"
+          >
             <PublicationManager />
           </ProtectedRoute>
         )}
@@ -104,7 +128,10 @@ function Router() {
 
       <Route path="/performance">
         {() => (
-          <ProtectedRoute requiredRole={["team", "coordinator", "superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/performance"
+          >
             <PostPerformance />
           </ProtectedRoute>
         )}
@@ -113,7 +140,10 @@ function Router() {
       {/* ===== ROTAS EXCLUSIVAS DO SUPERADMIN ===== */}
       <Route path="/configuracoes">
         {() => (
-          <ProtectedRoute requiredRole={["superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["superadmin"]}
+            rotaTentada="/configuracoes"
+          >
             <SettingsPage />
           </ProtectedRoute>
         )}
@@ -121,7 +151,10 @@ function Router() {
 
       <Route path="/usuarios">
         {() => (
-          <ProtectedRoute requiredRole={["superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["superadmin"]}
+            rotaTentada="/usuarios"
+          >
             <UserManagement />
           </ProtectedRoute>
         )}
@@ -129,7 +162,10 @@ function Router() {
 
       <Route path="/admin">
         {() => (
-          <ProtectedRoute requiredRole={["superadmin"]}>
+          <ProtectedRoute
+            requiredRole={["superadmin"]}
+            rotaTentada="/admin"
+          >
             <AdminDashboard />
           </ProtectedRoute>
         )}
