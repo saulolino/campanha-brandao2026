@@ -3,16 +3,74 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { type UserRole } from "@shared/permissions";
 import LogoutConfirmDialog from "./LogoutConfirmDialog";
 
-const NAV_ITEMS = [
-  { id: "home", label: "Home", icon: LayoutDashboard, route: "/home" },
-  { id: "conteudo", label: "Conteúdo", icon: Calendar, route: "/conteudo" },
-  { id: "estrategia", label: "Estratégia", icon: Lightbulb, route: "/estrategia" },
-  { id: "metricas", label: "Métricas", icon: BarChart3, route: "/metricas" },
-  { id: "projecoes", label: "Projeções", icon: TrendingUp, route: "/projecoes" },
-  { id: "relatorios", label: "Relatórios", icon: FileText, route: "/relatorios" },
-  { id: "configuracoes", label: "Configurações", icon: Settings, route: "/configuracoes" },
+/**
+ * Itens de navegação com controle de acesso por role.
+ *
+ * Hierarquia:
+ * - visitor     → apenas /home
+ * - team        → home + conteúdo + estratégia + métricas + projeções + relatórios
+ * - coordinator → tudo da equipe (pode publicar — controlado dentro das páginas)
+ * - superadmin  → tudo + configurações
+ */
+const NAV_ITEMS: Array<{
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  route: string;
+  allowedRoles: UserRole[];
+}> = [
+  {
+    id: "home",
+    label: "Home",
+    icon: LayoutDashboard,
+    route: "/home",
+    allowedRoles: ["visitor", "team", "coordinator", "superadmin"],
+  },
+  {
+    id: "conteudo",
+    label: "Conteúdo",
+    icon: Calendar,
+    route: "/conteudo",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "estrategia",
+    label: "Estratégia",
+    icon: Lightbulb,
+    route: "/estrategia",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "metricas",
+    label: "Métricas",
+    icon: BarChart3,
+    route: "/metricas",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "projecoes",
+    label: "Projeções",
+    icon: TrendingUp,
+    route: "/projecoes",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "relatorios",
+    label: "Relatórios",
+    icon: FileText,
+    route: "/relatorios",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "configuracoes",
+    label: "Configurações",
+    icon: Settings,
+    route: "/configuracoes",
+    allowedRoles: ["superadmin"], // Exclusivo do Superadmin
+  },
 ];
 
 interface SidebarNavProps {
@@ -24,7 +82,12 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user } = useLocalAuth();
-  const { isSuperAdmin, isCoordinator, isTeam } = usePermissions();
+  const { role, isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
+
+  // Filtrar itens de navegação com base no role atual
+  const visibleNavItems = NAV_ITEMS.filter((item) =>
+    item.allowedRoles.includes(role as UserRole)
+  );
 
   const handleNavigate = (route: string) => {
     navigate(route);
@@ -55,6 +118,14 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
     ? "👥 Equipe"
     : "👁️ Visitante";
 
+  const roleBadgeColor = isSuperAdmin
+    ? "text-yellow-400"
+    : isCoordinator
+    ? "text-blue-400"
+    : isTeam
+    ? "text-green-400"
+    : "text-slate-400";
+
   const displayName = user?.nome || user?.name || "Usuário";
   const initials = displayName.charAt(0).toUpperCase();
 
@@ -83,7 +154,7 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
         {/* User Profile */}
         <div className="px-4 py-3 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
               {initials}
             </div>
             <div className="flex-1 min-w-0">
@@ -91,14 +162,14 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
               {user?.email && (
                 <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
               )}
-              <p className="text-[10px] text-green-400/80">{roleLabel}</p>
+              <p className={`text-[10px] font-medium ${roleBadgeColor}`}>{roleLabel}</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-2 flex-1">
-          {NAV_ITEMS.map((item) => {
+        {/* Navigation — apenas itens permitidos para o role */}
+        <nav className="p-4 space-y-1 flex-1">
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
             return (
@@ -116,6 +187,13 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
               </button>
             );
           })}
+
+          {/* Mensagem para visitante */}
+          {isVisitor && (
+            <p className="text-[11px] text-slate-500 text-center mt-4 px-2">
+              Acesso limitado. Solicite ao administrador para elevar seu nível de acesso.
+            </p>
+          )}
         </nav>
 
         {/* Logout */}

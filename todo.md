@@ -574,3 +574,12 @@
 - [x] Notificação ao Superadmin após publicação
   - [x] Chamar notifyOwner após publicação bem-sucedida com título, link e quem publicou
   - [x] Notificação também para publicações agendadas automáticas
+
+- [x] Hierarquia de acesso por role
+  - [x] Visitante: apenas Home (redirecionar qualquer outra rota para Home)
+  - [x] Equipe: Home + Conteúdo + Estratégia + Métricas + Projeções + Relatórios (somente leitura, sem publicar)
+  - [x] Coordenador: tudo da Equipe + publicar/agendar conteúdo
+  - [x] Superadmin: acesso total incluindo Configurações
+  - [x] Guard de rota no App.tsx bloqueando acesso direto por URL
+  - [x] Sidebar exibe apenas itens permitidos para o role atual
+  - [x] Backend: procedures de configurações/usuários já protegidas por superadminMiddleware

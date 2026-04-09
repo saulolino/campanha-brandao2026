@@ -1,55 +1,57 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserRole } from "@shared/permissions";
-import NotFound from "@/pages/NotFound";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  /** Roles que têm acesso. Se omitido, qualquer role autenticado (não visitor) tem acesso. */
   requiredRole?: UserRole[];
-  requiredPermission?: string;
-  fallback?: React.ReactNode;
+  /** Permissão específica necessária */
+  requiredPermission?: keyof ReturnType<typeof usePermissions>["permissions"];
+  /** Onde redirecionar se não tiver acesso. Padrão: /home */
+  redirectTo?: string;
 }
 
 /**
- * Componente para proteger rotas por role ou permissão
+ * Guard de rota baseado no sistema de auth local (useLocalAuth + usePermissions).
+ * - Visitante → redireciona para /home
+ * - Role insuficiente → redireciona para /home
+ * - Permissão insuficiente → redireciona para /home
  */
 export function ProtectedRoute({
   children,
   requiredRole,
   requiredPermission,
-  fallback,
+  redirectTo = "/home",
 }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
-  const { role, hasPermission } = usePermissions();
+  const { role, hasPermission, isVisitor } = usePermissions();
+  const [, navigate] = useLocation();
 
-  // Enquanto carrega, não renderizar nada
-  if (loading) {
-    return null;
-  }
+  const isAllowed = (() => {
+    // Visitante não tem acesso a nenhuma rota protegida
+    if (isVisitor) return false;
+    // Verificar role obrigatório
+    if (requiredRole && !requiredRole.includes(role)) return false;
+    // Verificar permissão específica
+    if (requiredPermission && !hasPermission(requiredPermission)) return false;
+    return true;
+  })();
 
-  // Visitante não tem acesso a nada
-  if (role === "visitor") {
-    return fallback || <NotFound />;
-  }
-
-  // Verificar role obrigatório
-  if (requiredRole && !requiredRole.includes(role)) {
-    return fallback || <NotFound />;
-  }
-
-  // Verificar permissão específica
-  if (requiredPermission) {
-    const permissionKey = requiredPermission as keyof ReturnType<typeof usePermissions>["permissions"];
-    if (!hasPermission(permissionKey)) {
-      return fallback || <NotFound />;
+  useEffect(() => {
+    if (!isAllowed) {
+      navigate(redirectTo);
     }
-  }
+  }, [isAllowed, navigate, redirectTo]);
+
+  if (!isAllowed) return null;
 
   return <>{children}</>;
 }
 
 /**
- * Componente para renderizar condicional baseado em permissão
+ * Componente para renderizar condicional baseado em permissão.
+ * Não redireciona — apenas oculta o conteúdo.
  */
 export function ConditionalRender({
   children,
