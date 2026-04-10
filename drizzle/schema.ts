@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint, double } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -185,6 +185,9 @@ export const streetEvents = mysqlTable("street_events", {
   mediaUrls: text("mediaUrls"),
   // Observações e notas
   notes: text("notes"),
+  // Coordenadas geográficas (geocodificadas a partir do endereço)
+  lat: decimal("lat", { precision: 10, scale: 7 }),
+  lng: decimal("lng", { precision: 10, scale: 7 }),
   // Responsável
   responsibleId: int("responsibleId"),
   // Timestamps

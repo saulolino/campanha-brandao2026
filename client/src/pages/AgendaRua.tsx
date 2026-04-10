@@ -135,6 +135,44 @@ function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; fi
   const mapMarkersRef = useRef<any[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  // Coordenadas geocodificadas em memória (id -> {lat, lng})
+  const [geocodedCoords, setGeocodedCoords] = useState<Record<number, { lat: number; lng: number }>>({});
+  const geocodingRef = useRef<Set<number>>(new Set());
+  const updateEvent = trpc.streetEvents.update.useMutation();
+
+  // Geocodificar eventos que têm location mas não têm lat/lng
+  useEffect(() => {
+    if (!mapReady) return;
+    const eventsNeedingGeocode = filteredEvents.filter(
+      ev => ev.location && !ev.lat && !ev.lng && !geocodedCoords[ev.id] && !geocodingRef.current.has(ev.id)
+    );
+    if (eventsNeedingGeocode.length === 0) return;
+    if (!window.google?.maps?.Geocoder) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    eventsNeedingGeocode.forEach(ev => {
+      geocodingRef.current.add(ev.id);
+      const query = `${ev.location}${ev.neighborhood ? ", " + ev.neighborhood : ""}, Brasília, DF, Brasil`;
+      geocoder.geocode({ address: query }, (results: any, status: any) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const lat = results[0].geometry.location.lat();
+          const lng = results[0].geometry.location.lng();
+          setGeocodedCoords(prev => ({ ...prev, [ev.id]: { lat, lng } }));
+          // Salvar no banco para não precisar geocodificar novamente
+          updateEvent.mutate({ id: ev.id, lat, lng });
+        }
+      });
+    });
+  }, [filteredEvents, mapReady, geocodedCoords]);
+
+  // Montar eventos com coordenadas (banco ou memória)
+  const eventsWithCoords = useMemo(() => {
+    return filteredEvents.map(ev => {
+      const lat = ev.lat ? Number(ev.lat) : geocodedCoords[ev.id]?.lat;
+      const lng = ev.lng ? Number(ev.lng) : geocodedCoords[ev.id]?.lng;
+      return lat && lng ? { ...ev, _lat: lat, _lng: lng } : null;
+    }).filter(Boolean) as Array<any & { _lat: number; _lng: number }>;
+  }, [filteredEvents, geocodedCoords]);
 
   // Recriar pins sempre que os eventos ou o mapa mudar
   useEffect(() => {
@@ -151,7 +189,6 @@ function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; fi
     mapMarkersRef.current.forEach(m => { m.map = null; });
     mapMarkersRef.current = [];
 
-    const eventsWithCoords = filteredEvents.filter(ev => ev.latitude && ev.longitude);
     if (eventsWithCoords.length === 0) return;
 
     const bounds = new window.google.maps.LatLngBounds();
@@ -166,7 +203,7 @@ function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; fi
       pinEl.style.cssText = `width:22px;height:22px;border-radius:50%;background:${pinColor};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:pointer;`;
 
       const marker = new window.google.maps.marker.AdvancedMarkerElement({
-        position: { lat: Number(ev.latitude), lng: Number(ev.longitude) },
+        position: { lat: ev._lat, lng: ev._lng },
         map,
         title: ev.title,
         content: pinEl,
@@ -189,25 +226,28 @@ function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; fi
       });
 
       mapMarkersRef.current.push(marker);
-      bounds.extend({ lat: Number(ev.latitude), lng: Number(ev.longitude) });
+      bounds.extend({ lat: ev._lat, lng: ev._lng });
     });
 
     if (mapMarkersRef.current.length === 1) {
-      map.setCenter({ lat: Number(eventsWithCoords[0].latitude), lng: Number(eventsWithCoords[0].longitude) });
+      map.setCenter({ lat: eventsWithCoords[0]._lat, lng: eventsWithCoords[0]._lng });
       map.setZoom(14);
     } else {
       map.fitBounds(bounds);
     }
-  }, [filteredEvents, mapReady]);
+  }, [eventsWithCoords, mapReady]);
 
-  const eventsWithCoords = filteredEvents.filter(ev => ev.latitude && ev.longitude);
+  const isGeocoding = filteredEvents.some(
+    ev => ev.location && !ev.lat && !ev.lng && !geocodedCoords[ev.id]
+  );
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs text-gray-400">
           {filterBairro === "todos" ? `${filteredEvents.length} eventos no total` : `${filteredEvents.length} eventos em ${filterBairro}`}
-          {" — clique em um pin para ver detalhes"}
+          {eventsWithCoords.length > 0 ? " — clique em um pin para ver detalhes" : ""}
+          {isGeocoding && mapReady ? " — geocodificando endereços..." : ""}
         </p>
       </div>
       <div className="relative rounded-xl overflow-hidden border border-white/10" style={{ height: 520 }}>
@@ -220,11 +260,17 @@ function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; fi
             setMapReady(true);
           }}
         />
-        {eventsWithCoords.length === 0 && (
+        {mapReady && eventsWithCoords.length === 0 && !isGeocoding && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 pointer-events-none">
             <MapPin className="w-10 h-10 text-gray-500 mb-3" />
             <p className="text-gray-400 text-sm">Nenhum evento com localização definida.</p>
             <p className="text-gray-500 text-xs mt-1">Adicione eventos com endereço para visualizá-los no mapa.</p>
+          </div>
+        )}
+        {mapReady && isGeocoding && eventsWithCoords.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 pointer-events-none">
+            <Loader2 className="w-8 h-8 text-green-400 animate-spin mb-2" />
+            <p className="text-gray-300 text-sm">Localizando endereços no mapa...</p>
           </div>
         )}
       </div>

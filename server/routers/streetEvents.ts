@@ -69,6 +69,8 @@ export const streetEventsRouter = router({
       mediaUrls: z.string().optional(), // JSON array de URLs
       notes: z.string().optional(),
       responsibleId: z.number().optional(),
+      lat: z.number().optional(),
+      lng: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -90,6 +92,8 @@ export const streetEventsRouter = router({
         mediaUrls: input.mediaUrls,
         notes: input.notes,
         responsibleId: input.responsibleId,
+        lat: input.lat ? String(input.lat) : null,
+        lng: input.lng ? String(input.lng) : null,
       });
 
       return { success: true, message: "Evento criado com sucesso" };
@@ -116,16 +120,21 @@ export const streetEventsRouter = router({
       mediaUrls: z.string().optional(),
       notes: z.string().optional(),
       responsibleId: z.number().optional(),
+      lat: z.number().optional(),
+      lng: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
-      const { id, ...updateData } = input;
+      const { id, lat, lng, ...updateData } = input;
       const updateSet: Record<string, unknown> = {};
       Object.entries(updateData).forEach(([key, val]) => {
         if (val !== undefined) updateSet[key] = val;
       });
+      // Coordenadas: aceitar null explicitamente para limpar
+      if (lat !== undefined) updateSet.lat = lat !== null ? String(lat) : null;
+      if (lng !== undefined) updateSet.lng = lng !== null ? String(lng) : null;
 
       if (Object.keys(updateSet).length === 0) {
         return { success: true, message: "Nenhuma alteração" };
