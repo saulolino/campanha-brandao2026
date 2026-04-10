@@ -141,9 +141,15 @@ export default function Login() {
           </form>
         </Card>
 
-        {/* Rodapé */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-slate-500">
+        {/* Link para cadastro */}
+        <div className="mt-5 text-center">
+          <p className="text-sm text-slate-400">
+            Ainda não tem acesso?{" "}
+            <a href="/cadastro" className="text-green-400 hover:text-green-300 font-medium transition-colors">
+              Solicitar acesso
+            </a>
+          </p>
+          <p className="text-xs text-slate-500 mt-3">
             © 2026 Pré campanha Eduardo Brandão. Todos os direitos reservados.
           </p>
         </div>

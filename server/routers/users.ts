@@ -287,6 +287,76 @@ export const usersRouter = router({
     }),
 
   /**
+   * Cadastro público — cria usuário como visitante para posterior classificação pelo admin
+   */
+  register: publicProcedure
+    .input(z.object({
+      name: z.string().min(2).max(120),
+      email: z.string().email(),
+      whatsapp: z.string().min(10).max(20),
+      password: z.string().min(6).max(100),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Verificar se email já existe
+      const existing = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, input.email))
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new TRPCError({ code: "CONFLICT", message: "Já existe uma conta com este e-mail" });
+      }
+
+      const openId = `local:${input.email}`;
+      const passwordHash = hashPassword(input.password);
+
+      await db.insert(users).values({
+        openId,
+        name: input.name,
+        email: input.email,
+        whatsapp: input.whatsapp,
+        role: "visitor", // sempre visitante até o admin classificar
+        loginMethod: "local",
+        passwordHash,
+        lastSignedIn: new Date(),
+      });
+
+      return { success: true, message: "Cadastro realizado! Aguarde a aprovação do administrador para acessar o painel." };
+    }),
+
+  /**
+   * Listar usuários visitantes pendentes de classificação (apenas SuperAdmin e Coordenador)
+   */
+  listPending: protectedProcedure
+    .use(async ({ ctx, next }: any) => {
+      if (!ctx.user || !['superadmin', 'coordinator'].includes(ctx.user.role)) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sem permissão' });
+      }
+      return next({ ctx });
+    })
+    .query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      const pending = await db.select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        whatsapp: users.whatsapp,
+        role: users.role,
+        createdAt: users.createdAt,
+        loginMethod: users.loginMethod,
+      }).from(users)
+        .where(eq(users.role, "visitor"))
+        .orderBy(desc(users.createdAt));
+
+      return pending;
+    }),
+
+  /**
    * Redefinir senha via token (público — não requer autenticação)
    */
   resetPasswordWithToken: publicProcedure

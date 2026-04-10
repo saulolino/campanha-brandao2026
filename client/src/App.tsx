@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 // Páginas públicas
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import RedefinirSenha from "./pages/RedefinirSenha";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/" component={Login} />
       <Route path="/login" component={Login} />
       <Route path="/redefinir-senha" component={RedefinirSenha} />
+      <Route path="/cadastro" component={Register} />
 
       {/* ===== HOME — acessível a qualquer usuário autenticado ===== */}
       <Route path="/home" component={Home} />
