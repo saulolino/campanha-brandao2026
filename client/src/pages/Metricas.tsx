@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader } from "lucide-react";
+import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 export default function Metricas() {
@@ -14,17 +15,38 @@ export default function Metricas() {
   const [period, setPeriod] = useState("semanal");
   const [contentType, setContentType] = useState("todos");
 
+  const utils = trpc.useUtils();
+
   // Buscar dados reais do Instagram
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
   const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery();
   const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
   const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery();
+  const { data: lastSync } = trpc.instagram.getLastSync.useQuery();
 
-  // Preparar dados para gráficos
+  // Mutação de sincronização
+  const syncMutation = trpc.instagram.syncFromAPI.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(`Sincronizado! ${result.followers} seguidores · ${result.posts} posts atualizados.`);
+        utils.instagram.getMetrics.invalidate();
+        utils.instagram.getGrowth.invalidate();
+        utils.instagram.getEngagementByType.invalidate();
+        utils.instagram.getTopPosts.invalidate();
+        utils.instagram.getLastSync.invalidate();
+      } else {
+        toast.error(`Erro na sincronização: ${result.error || 'Tente novamente.'}`);
+      }
+    },
+    onError: () => toast.error('Falha ao sincronizar com Instagram.'),
+  });
+
+  // Preparar dados para gráficos — o backend retorna engagement/posts por semana (não followers)
   const growthData = growth?.daily?.map((item: any) => ({
     date: new Date(item.date).toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' }),
-    followers: item.followers,
-    engagement: item.engagement,
+    engagement: item.engagement || 0,
+    posts: item.posts || 0,
+    avgEngagement: item.avgEngagement || 0,
   })) || [];
 
   // Filtrar posts por tipo de conteúdo
@@ -52,6 +74,23 @@ export default function Metricas() {
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {metricsError && <InstagramErrorAlert error={metricsError as unknown as Error} />}
+
+          {/* Barra de status de sincronização */}
+          <div className="flex items-center justify-between mb-4 px-1">
+            <p className="text-xs text-muted-foreground">
+              {lastSync?.lastSync
+                ? `Última sincronização: ${new Date(lastSync.lastSync).toLocaleString('pt-BR')}`
+                : 'Dados do cache local'}
+            </p>
+            <button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
+            </button>
+          </div>
           
           {/* Header */}
           <div className="mb-8">
@@ -142,13 +181,16 @@ export default function Metricas() {
 
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Alcance</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-500" />
+                  Seguidores
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-primary">
-                  {metricsLoading ? '...' : (metrics?.reach || 0).toLocaleString()}
+                  {metricsLoading ? '...' : (metrics?.followers || 0).toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Pessoas alcançadas</p>
+                <p className="text-xs text-muted-foreground mt-1">Total atual</p>
               </CardContent>
             </Card>
           </div>
@@ -164,8 +206,8 @@ export default function Metricas() {
             <TabsContent value="crescimento" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Crescimento de Seguidores</CardTitle>
-                  <CardDescription>Evolução nos últimos 7 dias</CardDescription>
+                  <CardTitle>Engajamento por Semana</CardTitle>
+                  <CardDescription>Curtidas + comentários por semana (últimos posts)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {growthLoading ? (
@@ -184,16 +226,17 @@ export default function Metricas() {
                         />
                         <Line 
                           type="monotone" 
-                          dataKey="followers" 
+                          dataKey="engagement" 
                           stroke="#10b981" 
                           strokeWidth={2}
                           dot={{ fill: '#10b981' }}
+                          name="Engajamento"
                         />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
-                      Dados de crescimento não disponíveis
+                      Nenhum dado de engajamento disponível. Clique em "Sincronizar agora".
                     </div>
                   )}
                 </CardContent>

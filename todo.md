@@ -605,3 +605,4 @@
 - [x] Incluir logo Ativo1 no painel interno (sidebar) e no rodapé global de todas as páginas
 - [x] Corrigir erro de autenticação na plataforma
 - [x] Renovar token do Instagram Graph API
+- [x] Corrigir inconsistências na página /metricas
