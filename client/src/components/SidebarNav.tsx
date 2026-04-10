@@ -5,6 +5,7 @@ import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserRole } from "@shared/permissions";
 import LogoutConfirmDialog from "./LogoutConfirmDialog";
+import { trpc } from "@/lib/trpc";
 
 /**
  * Itens de navegação com controle de acesso por role.
@@ -21,6 +22,7 @@ const NAV_ITEMS: Array<{
   icon: React.ElementType;
   route: string;
   allowedRoles: UserRole[];
+  showPendingBadge?: boolean;
 }> = [
   {
     id: "home",
@@ -77,6 +79,7 @@ const NAV_ITEMS: Array<{
     icon: Settings,
     route: "/configuracoes",
     allowedRoles: ["superadmin"], // Exclusivo do Superadmin
+    showPendingBadge: true, // Exibir badge de usuários pendentes
   },
 ];
 
@@ -90,6 +93,15 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user } = useLocalAuth();
   const { role, isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
+
+  // Buscar contagem de usuários pendentes (apenas para superadmin e coordinator)
+  const canSeePending = isSuperAdmin || isCoordinator;
+  const { data: pendingData } = trpc.users.countPending.useQuery(undefined, {
+    enabled: canSeePending,
+    refetchInterval: 60_000, // Atualizar a cada 60 segundos
+    staleTime: 30_000,
+  });
+  const pendingCount = pendingData?.count ?? 0;
 
   // Filtrar itens de navegação com base no role atual
   const visibleNavItems = NAV_ITEMS.filter((item) =>
@@ -179,6 +191,7 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
           {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
+            const showBadge = item.showPendingBadge && canSeePending && pendingCount > 0;
             return (
               <button
                 key={item.id}
@@ -190,7 +203,12 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
                 }`}
               >
                 <Icon size={18} />
-                <span>{item.label}</span>
+                <span className="flex-1 text-left">{item.label}</span>
+                {showBadge && (
+                  <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
               </button>
             );
           })}

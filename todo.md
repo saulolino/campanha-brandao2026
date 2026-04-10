@@ -623,3 +623,5 @@
 - [x] Botão "Novo Evento" nas vistas Semanal e Mensal da Agenda de Rua
 - [x] Notificação ao admin (in-app) quando novo cadastro é criado
 - [x] Sincronização automática diária do Instagram às 08h (job agendado no servidor)
+- [x] Badge de pendentes no menu Usuários (contador vermelho de visitantes aguardando classificação)
+- [x] Exportar agenda de rua em PDF (vista Lista com eventos do mês filtrado) — já estava implementado

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { users, accessLogs, passwordResetTokens } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { notifyOwner } from "../_core/notification";
 import crypto from "crypto";
@@ -411,5 +411,29 @@ export const usersRouter = router({
       await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, record.id));
 
       return { success: true, message: "Senha redefinida com sucesso" };
+    }),
+
+  /**
+   * Contar visitantes pendentes de classificação (apenas SuperAdmin e Coordenador)
+   * Usado para exibir badge no menu.
+   */
+  countPending: protectedProcedure
+    .use(async ({ ctx, next }: any) => {
+      if (!ctx.user || !['superadmin', 'coordinator'].includes(ctx.user.role)) {
+        // Retornar 0 silenciosamente para outros roles (não lançar erro)
+        return { count: 0 } as any;
+      }
+      return next({ ctx });
+    })
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return { count: 0 };
+
+      const result = await db.select({ count: sql`COUNT(*)` })
+        .from(users)
+        .where(eq(users.role, "visitor"));
+
+      const count = Number(result[0]?.count ?? 0);
+      return { count };
     }),
 });
