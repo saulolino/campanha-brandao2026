@@ -612,3 +612,5 @@
 - [x] Criar módulo Agenda de Rua (schema DB, backend, página, modal, upload de materiais)
 - [x] Integrar Google Maps com autocomplete de endereço no modal da Agenda de Rua
 - [x] Botão de exportação da agenda mensal em PDF
+- [x] Notificação automática no WhatsApp 24h antes de eventos confirmados
+- [x] Botão "Criar post" nos cards da Agenda de Rua com pré-preenchimento na agenda de conteúdo

@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { getDb } from "./db";
-import { instagramPosts } from "../drizzle/schema";
-import { eq, and, isNotNull, lt } from "drizzle-orm";
+import { instagramPosts, streetEvents } from "../drizzle/schema";
+import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
 let schedulerInitialized = false;
@@ -177,6 +177,54 @@ async function processScheduledPosts(): Promise<void> {
 }
 
 /**
+ * Verificar eventos de rua confirmados com 24h de antecedência e notificar o owner.
+ */
+async function processEventReminders(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  const now = new Date();
+  // Janela: entre 23h e 25h a partir de agora (para cobrir a verificação horária)
+  const windowStart = new Date(now.getTime() + 23 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 25 * 60 * 60 * 1000);
+
+  const upcomingEvents = await db
+    .select()
+    .from(streetEvents)
+    .where(
+      and(
+        eq(streetEvents.status, "confirmado"),
+        gte(streetEvents.eventDate, windowStart),
+        lte(streetEvents.eventDate, windowEnd)
+      )
+    );
+
+  for (const event of upcomingEvents) {
+    const eventDateStr = new Date(event.eventDate).toLocaleDateString("pt-BR", {
+      weekday: "long", day: "2-digit", month: "long",
+    });
+    const time = event.eventTime || "";
+    const location = [event.location, event.neighborhood, event.city].filter(Boolean).join(" — ");
+    const attendees = event.expectedAttendees ? `Público esperado: **${event.expectedAttendees} pessoas**` : "";
+
+    await notifyOwner({
+      title: `📍 Evento amanhã: ${event.title}`,
+      content: [
+        `**${event.title}** está confirmado para amanhã.`,
+        ``,
+        `📅 **Data:** ${eventDateStr}`,
+        time ? `⏰ **Horário:** ${time}` : "",
+        `📍 **Local:** ${location}`,
+        attendees,
+        event.notes ? `📝 **Notas:** ${event.notes}` : "",
+      ].filter(Boolean).join("\n"),
+    }).catch(() => {});
+
+    console.log(`[Scheduler] Lembrete enviado para evento #${event.id}: ${event.title}`);
+  }
+}
+
+/**
  * Inicializar scheduler — verifica posts agendados a cada minuto.
  */
 export function initializeScheduler(): void {
@@ -192,7 +240,16 @@ export function initializeScheduler(): void {
     }
   });
 
-  console.log("[Scheduler] Scheduler inicializado — verificando posts agendados a cada minuto.");
+  // Verificar lembretes de eventos a cada hora
+  cron.schedule("0 * * * *", async () => {
+    try {
+      await processEventReminders();
+    } catch (err: any) {
+      console.error("[Scheduler] Erro no ciclo de lembretes de eventos:", err.message);
+    }
+  });
+
+  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora.");
 }
 
 /**

@@ -172,6 +172,32 @@ export default function Conteudo() {
     }
   }, [localUser, navigate]);
 
+  // Pré-preencher modal a partir de parâmetros de URL (ex: vindo da Agenda de Rua)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("prefill") === "1") {
+      const title = params.get("title") || "";
+      const date = params.get("date") || formatDateForInput(new Date());
+      const description = params.get("description") || "";
+      const type = (params.get("type") as any) || "imagem";
+      const mediaUrl = params.get("mediaUrl") || "";
+      setEditingPost(null);
+      setForm({
+        ...defaultForm,
+        title,
+        scheduledDate: date,
+        description,
+        type,
+        mediaUrls: mediaUrl ? JSON.stringify([mediaUrl]) : "",
+      });
+      if (mediaUrl) setMediaPreviewUrls([mediaUrl]);
+      setModalOpen(true);
+      // Limpar params da URL sem recarregar
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [viewMode, setViewMode] = useState<ViewMode>("semanal");
   const [currentWeekRef, setCurrentWeekRef] = useState(() => new Date());
   const [monthRef, setMonthRef] = useState(() => new Date());

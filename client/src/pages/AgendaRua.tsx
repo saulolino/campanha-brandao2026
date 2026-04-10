@@ -17,7 +17,7 @@ import {
   Plus, Calendar, MapPin, Users, Clock, ChevronLeft, ChevronRight,
   Edit3, Trash2, Upload, X, Image, FileVideo, FileText, Loader2,
   Eye, CheckCircle2, XCircle, AlertCircle, Footprints, Megaphone,
-  Handshake, Mic, Star, LayoutGrid, Download,
+  Handshake, Mic, Star, LayoutGrid, Download, Share2,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -269,6 +269,30 @@ export default function AgendaRua() {
       mediaUrls: ev.mediaUrls || "",
     });
     setModalOpen(true);
+  }
+
+  function createPostFromEvent(ev: any) {
+    // Monta os query params para pré-preencher a agenda de conteúdo
+    const eventDate = new Date(ev.eventDate);
+    const dateStr = eventDate.toISOString().split("T")[0];
+    const title = encodeURIComponent(`Evento: ${ev.title}`);
+    const location = encodeURIComponent(ev.location || "");
+    const neighborhood = encodeURIComponent(ev.neighborhood || "");
+    const time = encodeURIComponent(ev.eventTime || "");
+    const description = encodeURIComponent(
+      `Evento de rua: ${ev.title}\nLocal: ${ev.location}${ev.neighborhood ? `, ${ev.neighborhood}` : ""}\nHorário: ${ev.eventTime || ""}\n${ev.description || ""}`
+    );
+    // Pega a primeira mídia do evento se houver
+    let mediaUrl = "";
+    if (ev.mediaUrls) {
+      try {
+        const urls = JSON.parse(ev.mediaUrls);
+        if (Array.isArray(urls) && urls.length > 0) mediaUrl = encodeURIComponent(urls[0]);
+      } catch { /* ignore */ }
+    }
+    const params = `?prefill=1&title=${title}&date=${dateStr}&description=${description}&type=imagem${mediaUrl ? `&mediaUrl=${mediaUrl}` : ""}`;
+    navigate(`/conteudo${params}`);
+    toast.success("Redirecionando para a agenda de conteúdo com os dados do evento pré-preenchidos!");
   }
 
   function handleSave() {
@@ -702,19 +726,27 @@ export default function AgendaRua() {
                           )}
                         </div>
                       </div>
-                      {canEdit && (
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => openEdit(ev)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                            <Edit3 className="w-3.5 h-3.5" />
+                      <div className="flex gap-1 shrink-0">
+                          <button
+                            title="Criar post a partir deste evento"
+                            onClick={() => createPostFromEvent(ev)}
+                            className="p-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300 transition-colors">
+                            <Share2 className="w-3.5 h-3.5" />
                           </button>
-                          {canDelete && (
-                            <button onClick={() => { if (confirm("Remover este evento?")) deleteEvent.mutate({ id: ev.id }); }}
-                              className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                          {canEdit && (
+                            <>
+                              <button onClick={() => openEdit(ev)} className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              {canDelete && (
+                                <button onClick={() => { if (confirm("Remover este evento?")) deleteEvent.mutate({ id: ev.id }); }}
+                                  className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors">
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
-                      )}
                     </div>
                   </div>
                 );
