@@ -607,3 +607,4 @@
 - [x] Renovar token do Instagram Graph API
 - [x] Corrigir inconsistências na página /metricas
 - [x] Corrigir dados inconsistentes na página /projecoes
+- [x] Ocultar card "Equipe da Pré campanha" na página /projecoes

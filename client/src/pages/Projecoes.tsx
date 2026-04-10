@@ -412,34 +412,7 @@ export default function Projecoes() {
           </CardContent>
         </Card>
 
-        {/* Equipe */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              Equipe da Pré campanha
-            </CardTitle>
-            <CardDescription>Funções, carga horária e responsabilidades</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {TEAM.map((member) => (
-                <div key={member.role} className="flex items-start gap-3 p-3 rounded-lg border border-border/40 bg-muted/10">
-                  <div className="p-2 rounded-md bg-primary/10 flex-shrink-0">
-                    <Users className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-sm">{member.role}</p>
-                      <Badge variant="outline" className="text-xs flex-shrink-0">{member.hours}h/sem</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{member.responsibilities}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Equipe — oculto a pedido */}
 
         {/* Regras */}
         <Card className="mb-6">
