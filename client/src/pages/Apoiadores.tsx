@@ -4,10 +4,11 @@
 // ============================================================
 
 import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Eye, Heart, MessageCircle, Share2, Bookmark,
   Shield, Hash, HelpCircle, Copy, Check,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, Instagram,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -279,6 +280,46 @@ export default function Apoiadores() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* QR Code */}
+        <section className="text-center">
+          <div className="inline-flex flex-col items-center gap-5 bg-[#161b22] border border-green-900/30 rounded-2xl px-10 py-8">
+            <div className="flex items-center gap-2 text-green-400 font-semibold text-lg">
+              <Instagram className="w-5 h-5" />
+              <span>Acesse o perfil no Instagram</span>
+            </div>
+            <div className="bg-white p-3 rounded-xl shadow-lg shadow-green-900/20">
+              <QRCodeSVG
+                value="https://www.instagram.com/eduardobrandaopv"
+                size={180}
+                bgColor="#ffffff"
+                fgColor="#0d1117"
+                level="H"
+                imageSettings={{
+                  src: LOGO_COLORIDA,
+                  x: undefined,
+                  y: undefined,
+                  height: 36,
+                  width: 36,
+                  excavate: true,
+                }}
+              />
+            </div>
+            <div>
+              <p className="text-white font-bold text-xl">@eduardobrandaopv</p>
+              <p className="text-gray-400 text-sm mt-1">Aponte a câmera do celular para seguir</p>
+            </div>
+            <a
+              href="https://www.instagram.com/eduardobrandaopv"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] text-white font-semibold px-6 py-2.5 rounded-full text-sm hover:opacity-90 transition-opacity"
+            >
+              <Instagram className="w-4 h-4" />
+              Seguir no Instagram
+            </a>
           </div>
         </section>
 

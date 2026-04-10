@@ -596,3 +596,5 @@
 - [x] Simplificar página /apoiadores com 6 seções: Protocolo de Engajamento, Ações Rápidas, Regras de Ouro, Hashtags Estratégicas, Inspiração para Comentários, Perguntas Frequentes
 
 - [x] Tornar /apoiadores rota pública (sem necessidade de login)
+
+- [x] QR Code na página /apoiadores apontando para @eduardobrandaopv no Instagram
