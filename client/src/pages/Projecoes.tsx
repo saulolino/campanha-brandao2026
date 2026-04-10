@@ -30,12 +30,16 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
 const totalBudgetMin = BUDGET.reduce((s, b) => s + b.min, 0);
 const totalBudgetMax = BUDGET.reduce((s, b) => s + b.max, 0);
 
-const growthChartData = MONTHLY_PROJECTION.map((m) => ({
-  month: m.month,
-  seguidores: m.total,
-  crescimento: m.growth,
-  investimento: m.investment,
-}));
+// Adicionar ponto inicial (situação atual) para o gráfico ficar completo
+const growthChartData = [
+  { month: "Hoje", seguidores: CAMPAIGN.currentFollowers, crescimento: 0, investimento: 0 },
+  ...MONTHLY_PROJECTION.map((m) => ({
+    month: m.month,
+    seguidores: m.total,
+    crescimento: m.growth,
+    investimento: m.investment,
+  })),
+];
 
 const investmentData = MONTHLY_PROJECTION.map((m) => ({
   month: m.month,
@@ -119,8 +123,8 @@ export default function Projecoes() {
               <AreaChart data={growthChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorSeg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2d6a4f" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#2d6a4f" stopOpacity={0.1} />
+                    <stop offset="5%" stopColor="#40916c" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#40916c" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -132,7 +136,7 @@ export default function Projecoes() {
                   formatter={(value: number, name: string) => [value.toLocaleString(), name === "seguidores" ? "Seguidores" : name]}
                 />
                 <ReferenceLine y={20000} stroke="#c9a84c" strokeDasharray="6 3" label={{ value: "Meta 20k", fill: "#c9a84c", fontSize: 11 }} />
-                <Area type="monotone" dataKey="seguidores" stroke="#2d6a4f" fill="url(#colorSeg)" strokeWidth={2} name="seguidores" />
+                <Area type="monotone" dataKey="seguidores" stroke="#52b788" fill="url(#colorSeg)" strokeWidth={2.5} dot={{ fill: '#52b788', r: 4 }} name="Seguidores" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>

@@ -606,3 +606,4 @@
 - [x] Corrigir erro de autenticação na plataforma
 - [x] Renovar token do Instagram Graph API
 - [x] Corrigir inconsistências na página /metricas
+- [x] Corrigir dados inconsistentes na página /projecoes

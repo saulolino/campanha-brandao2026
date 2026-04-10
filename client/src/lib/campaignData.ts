@@ -8,8 +8,8 @@ export const CAMPAIGN = {
   candidate: "Eduardo Brandão",
   handle: "@eduardobrandaopv",
   slogan: "Brasília Cidade Parque",
-  role: "Deputado Distrital",
-  currentFollowers: 1518,
+  role: "Pré candidato",
+  currentFollowers: 1538,
   targetFollowers: 20000,
   startDate: "2026-04-25",
   endDate: "2026-10-31",
@@ -223,13 +223,13 @@ export const POSTS_2026 = [
 
 // Dados reais da conta Instagram - Atualizado em 05/04/2026
 export const INSTAGRAM_REAL = {
-  lastUpdated: "2026-04-05T19:30:00Z",
+  lastUpdated: "2026-04-10T15:57:52Z",
   account: {
     username: "@eduardobrandaopv",
     name: "Eduardo Brandão",
-    followers: 1518,
-    following: 2587,
-    totalPosts: 260,
+    followers: 1538,
+    following: 2602,
+    totalPosts: 262,
     bio: "Presidente do Partido Verde DF | Ex-Secretário do Meio Ambiente | Engenheiro e apaixonado por Brasília",
   },
   recentMetrics: {
