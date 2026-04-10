@@ -25,7 +25,7 @@ import autoTable from "jspdf-autotable";
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type EventType = "caminhada" | "reuniao" | "panfletagem" | "visita" | "debate" | "entrevista" | "show" | "outro";
 type EventStatus = "planejado" | "confirmado" | "realizado" | "cancelado";
-type ViewMode = "semanal" | "mensal" | "lista";
+type ViewMode = "semanal" | "mensal" | "lista" | "mapa";
 
 interface EventForm {
   title: string;
@@ -82,6 +82,17 @@ const STATUS_CONFIG: Record<EventStatus, { label: string; color: string; icon: a
 
 const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+// Regiões administrativas do DF
+const REGIOES_DF = [
+  "Asa Norte", "Asa Sul", "Lago Norte", "Lago Sul", "Sudoeste", "Octogonal",
+  "Noroeste", "Cruzeiro", "Guará I", "Guará II", "Águas Claras", "Taguatinga",
+  "Ceilândia", "Samambaia", "Recanto das Emas", "Riacho Fundo", "Riacho Fundo II",
+  "Candangolândia", "Núcleo Bandeirante", "Park Way", "SCIA/Estrutural",
+  "SIA", "Vicente Pires", "Sobradinho", "Sobradinho II", "Planaltina",
+  "Paranoá", "São Sebastião", "Itapoã", "Jardim Botânico", "Brazlândia",
+  "Gama", "Santa Maria", "Outro",
+];
 
 function getWeekDays(ref: Date): Date[] {
   const day = ref.getDay();
@@ -141,6 +152,9 @@ export default function AgendaRua() {
   const [monthRef, setMonthRef] = useState(() => new Date());
   const weekDays = useMemo(() => getWeekDays(weekRef), [weekRef]);
   const monthGrid = useMemo(() => getMonthGrid(monthRef.getFullYear(), monthRef.getMonth()), [monthRef]);
+  const [filterBairro, setFilterBairro] = useState<string>("todos");
+  const mapViewRef = useRef<google.maps.Map | null>(null);
+  const mapMarkersRef = useRef<any[]>([]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
@@ -225,6 +239,17 @@ export default function AgendaRua() {
     { enabled: !!localUser }
   );
   const events: any[] = eventsData || [];
+
+  // Eventos filtrados por bairro/região
+  const filteredEvents = useMemo(() => {
+    if (filterBairro === "todos") return events;
+    return events.filter(ev => {
+      const nb = (ev.neighborhood || "").toLowerCase();
+      const loc = (ev.location || "").toLowerCase();
+      const filter = filterBairro.toLowerCase();
+      return nb.includes(filter) || loc.includes(filter);
+    });
+  }, [events, filterBairro]);
 
   const createEvent = trpc.streetEvents.create.useMutation({
     onSuccess: () => {
@@ -497,7 +522,7 @@ export default function AgendaRua() {
   }
 
   function getEventsForDay(day: Date): any[] {
-    return events.filter(ev => {
+    return filteredEvents.filter(ev => {
       const d = new Date(ev.eventDate);
       return isSameDay(d, day);
     });
@@ -529,16 +554,26 @@ export default function AgendaRua() {
               <p className="text-xs text-gray-400">Eventos presenciais do candidato</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Filtro por região/bairro */}
+            <select
+              value={filterBairro}
+              onChange={e => setFilterBairro(e.target.value)}
+              className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer"
+            >
+              <option value="todos">Todas as regiões</option>
+              {REGIOES_DF.map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
             {/* View mode */}
             <div className="flex bg-white/5 rounded-lg p-1 gap-1">
-              {(["semanal", "mensal", "lista"] as ViewMode[]).map(v => (
+              {(["semanal", "mensal", "lista", "mapa"] as ViewMode[]).map(v => (
                 <button
                   key={v}
                   onClick={() => setViewMode(v)}
-                  className={`px-3 py-1 rounded text-xs font-medium transition-all ${viewMode === v ? "bg-green-600 text-white" : "text-gray-400 hover:text-white"}`}
-                >
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                  className={`px-3 py-1 rounded text-xs font-medium transition-all ${viewMode === v ? "bg-green-600 text-white" : "text-gray-400 hover:text-white"}`}>
+                  {v === "mapa" ? "Mapa" : v.charAt(0).toUpperCase() + v.slice(1)}
                 </button>
               ))}
             </div>
@@ -792,6 +827,85 @@ export default function AgendaRua() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* ── VISTA MAPA ── */}
+          {viewMode === "mapa" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs text-gray-400">
+                  {filterBairro === "todos" ? `${filteredEvents.length} eventos no total` : `${filteredEvents.length} eventos em ${filterBairro}`}
+                  {" — clique em um pin para ver detalhes"}
+                </p>
+              </div>
+              <div className="relative rounded-xl overflow-hidden border border-white/10" style={{ height: 520 }}>
+                <MapView
+                  className="w-full h-full"
+                  initialCenter={{ lat: -15.7801, lng: -47.9292 }}
+                  initialZoom={11}
+                  onMapReady={(map) => {
+                    mapViewRef.current = map;
+                    // Limpar marcadores anteriores
+                    mapMarkersRef.current.forEach(m => m.setMap(null));
+                    mapMarkersRef.current = [];
+                    // Adicionar pin para cada evento com coordenadas
+                    filteredEvents.forEach(ev => {
+                      if (!ev.latitude || !ev.longitude) return;
+                      const cfg = TYPE_CONFIG[ev.type as EventType] || TYPE_CONFIG.outro;
+                      const sCfg = STATUS_CONFIG[ev.status as EventStatus] || STATUS_CONFIG.planejado;
+                      const marker = new google.maps.Marker({
+                        position: { lat: Number(ev.latitude), lng: Number(ev.longitude) },
+                        map,
+                        title: ev.title,
+                        icon: {
+                          path: google.maps.SymbolPath.CIRCLE,
+                          scale: 10,
+                          fillColor: ev.status === "realizado" ? "#34d399" : ev.status === "confirmado" ? "#60a5fa" : ev.status === "cancelado" ? "#f87171" : "#9ca3af",
+                          fillOpacity: 0.9,
+                          strokeColor: "#ffffff",
+                          strokeWeight: 2,
+                        },
+                      });
+                      const infoWindow = new google.maps.InfoWindow({
+                        content: `<div style="background:#161b22;color:#fff;padding:10px 14px;border-radius:8px;min-width:180px;font-family:sans-serif">
+                          <div style="font-weight:700;font-size:13px;margin-bottom:4px">${ev.title}</div>
+                          <div style="font-size:11px;color:#9ca3af;margin-bottom:2px">${cfg.label} • ${sCfg.label}</div>
+                          <div style="font-size:11px;color:#d1d5db">${ev.eventDate ? new Date(ev.eventDate).toLocaleDateString("pt-BR") : ""} ${ev.eventTime || ""}</div>
+                          ${ev.location ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">${ev.location}</div>` : ""}
+                          ${ev.neighborhood ? `<div style="font-size:11px;color:#6ee7b7">${ev.neighborhood}</div>` : ""}
+                        </div>`,
+                      });
+                      marker.addListener("click", () => {
+                        infoWindow.open(map, marker);
+                      });
+                      mapMarkersRef.current.push(marker);
+                    });
+                    // Ajustar bounds se houver marcadores
+                    if (mapMarkersRef.current.length > 0) {
+                      const bounds = new google.maps.LatLngBounds();
+                      mapMarkersRef.current.forEach(m => bounds.extend(m.getPosition()!));
+                      map.fitBounds(bounds);
+                    }
+                  }}
+                />
+                {filteredEvents.filter(ev => ev.latitude && ev.longitude).length === 0 && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 pointer-events-none">
+                    <MapPin className="w-10 h-10 text-gray-500 mb-3" />
+                    <p className="text-gray-400 text-sm">Nenhum evento com localização definida.</p>
+                    <p className="text-gray-500 text-xs mt-1">Adicione eventos com endereço para visualizá-los no mapa.</p>
+                  </div>
+                )}
+              </div>
+              {/* Legenda */}
+              <div className="flex items-center gap-4 mt-3 flex-wrap">
+                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                  <div key={key} className="flex items-center gap-1.5">
+                    <div className={`w-3 h-3 rounded-full border-2 border-white/30 ${key === "realizado" ? "bg-emerald-400" : key === "confirmado" ? "bg-blue-400" : key === "cancelado" ? "bg-red-400" : "bg-gray-400"}`} />
+                    <span className="text-xs text-gray-400">{cfg.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

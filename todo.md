@@ -616,3 +616,5 @@
 - [x] Botão "Criar post" nos cards da Agenda de Rua com pré-preenchimento na agenda de conteúdo
 - [x] Permitir múltiplos eventos no mesmo dia na Agenda de Rua (vistas semanal e mensal)
 - [x] Seleção de endereço clicando no mapa (marcador arrastável e clique para posicionar)
+- [x] Filtro por região/bairro no header da Agenda de Rua
+- [x] Vista "Mapa" na Agenda de Rua com pins de todos os eventos do mês
