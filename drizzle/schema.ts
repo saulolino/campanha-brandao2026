@@ -159,3 +159,38 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+// Agenda de Rua — eventos presenciais do candidato
+export const streetEvents = mysqlTable("street_events", {
+  id: int("id").autoincrement().primaryKey(),
+  // Identificação
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  // Tipo de evento
+  type: mysqlEnum("type", ["caminhada", "reuniao", "panfletagem", "visita", "debate", "entrevista", "show", "outro"]).default("outro").notNull(),
+  // Status
+  status: mysqlEnum("status", ["planejado", "confirmado", "realizado", "cancelado"]).default("planejado").notNull(),
+  // Data e hora
+  eventDate: timestamp("eventDate").notNull(),
+  eventTime: varchar("eventTime", { length: 5 }).default("09:00"),
+  endTime: varchar("endTime", { length: 5 }),
+  // Local
+  location: varchar("location", { length: 500 }).notNull(),
+  neighborhood: varchar("neighborhood", { length: 255 }),
+  city: varchar("city", { length: 255 }).default("Brasília"),
+  // Público esperado
+  expectedAttendees: int("expectedAttendees").default(0),
+  actualAttendees: int("actualAttendees"),
+  // Materiais gráficos e mídia (JSON array de URLs)
+  mediaUrls: text("mediaUrls"),
+  // Observações e notas
+  notes: text("notes"),
+  // Responsável
+  responsibleId: int("responsibleId"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StreetEvent = typeof streetEvents.$inferSelect;
+export type InsertStreetEvent = typeof streetEvents.$inferInsert;

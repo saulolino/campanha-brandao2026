@@ -1,0 +1,21 @@
+CREATE TABLE `street_events` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`title` varchar(255) NOT NULL,
+	`description` text,
+	`type` enum('caminhada','reuniao','panfletagem','visita','debate','entrevista','show','outro') NOT NULL DEFAULT 'outro',
+	`status` enum('planejado','confirmado','realizado','cancelado') NOT NULL DEFAULT 'planejado',
+	`eventDate` timestamp NOT NULL,
+	`eventTime` varchar(5) DEFAULT '09:00',
+	`endTime` varchar(5),
+	`location` varchar(500) NOT NULL,
+	`neighborhood` varchar(255),
+	`city` varchar(255) DEFAULT 'Brasília',
+	`expectedAttendees` int DEFAULT 0,
+	`actualAttendees` int,
+	`mediaUrls` text,
+	`notes` text,
+	`responsibleId` int,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `street_events_id` PRIMARY KEY(`id`)
+);

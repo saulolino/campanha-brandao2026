@@ -24,6 +24,7 @@ import PostPerformance from "./pages/PostPerformance";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
+import AgendaRua from "./pages/AgendaRua";
 
 // Páginas exclusivas do Superadmin
 import SettingsPage from "./pages/SettingsPage";
@@ -102,6 +103,17 @@ function Router() {
             rotaTentada="/relatorios"
           >
             <Relatorios />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/agenda-rua">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/agenda-rua"
+          >
+            <AgendaRua />
           </ProtectedRoute>
         )}
       </Route>

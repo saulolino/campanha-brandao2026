@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText } from "lucide-react";
+import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
@@ -62,6 +62,13 @@ const NAV_ITEMS: Array<{
     label: "Relatórios",
     icon: FileText,
     route: "/relatorios",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "agenda-rua",
+    label: "Agenda de Rua",
+    icon: MapPin,
+    route: "/agenda-rua",
     allowedRoles: ["team", "coordinator", "superadmin"],
   },
   {
