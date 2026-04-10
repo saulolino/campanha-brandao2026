@@ -591,3 +591,6 @@
 - [x] Bug: número de seguidores não atualizava na Home (sincronização era apenas cache local, agora busca direto da Graph API)
 
 - [x] Bug: métricas de engajamento zeradas após sincronização (token sem permissão instagram_basic; syncFromAPI agora preserva posts/métricas existentes; JSON restaurado com 20 posts e 56 avg engagement)
+
+- [x] Upload das logos para CDN e inclusão em toda a plataforma (login, sidebar, acesso negado, apoiadores)
+- [x] Simplificar página /apoiadores com 6 seções: Protocolo de Engajamento, Ações Rápidas, Regras de Ouro, Hashtags Estratégicas, Inspiração para Comentários, Perguntas Frequentes

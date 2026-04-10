@@ -22,6 +22,15 @@ export default function AcessoNegado({ rotaTentada }: AcessoNegadoProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <img
+            src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
+            alt="Brasília Cidade Parque"
+            className="h-20 object-contain opacity-80"
+          />
+        </div>
+
         {/* Ícone */}
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full bg-red-900/30 border border-red-700/40 flex items-center justify-center">

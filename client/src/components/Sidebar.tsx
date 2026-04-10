@@ -471,7 +471,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
               alt="Brasília Cidade Parque"
               className="w-11 h-11 object-contain"
             />
@@ -535,9 +535,9 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
           <LogoutButton />
           <div className="flex flex-col items-center gap-2">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp_185f8543.png"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
               alt="Brasília Cidade Parque"
-              className="w-16 h-16 object-contain opacity-40"
+              className="w-16 h-16 object-contain opacity-70"
             />
             <div className="text-[10px] text-muted-foreground text-center">
               <p>Painel Interno da Campanha</p>

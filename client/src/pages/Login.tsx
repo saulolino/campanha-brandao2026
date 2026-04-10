@@ -68,13 +68,15 @@ export default function Login() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600/20 rounded-lg mb-4">
-            <div className="text-3xl font-bold text-green-500">🌳</div>
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Brasília Cidade Parque
+          <img
+            src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
+            alt="Brasília Cidade Parque"
+            className="h-28 mx-auto mb-4 object-contain drop-shadow-lg"
+          />
+          <h1 className="text-2xl font-bold text-white mb-1">
+            Painel de Campanha
           </h1>
-          <p className="text-slate-400">Painel de Campanha — Eduardo Brandão</p>
+          <p className="text-slate-400">Eduardo Brandão · DF 2026</p>
         </div>
 
         {/* Card de Login */}
