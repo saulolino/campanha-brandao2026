@@ -600,3 +600,4 @@
 - [x] QR Code na página /apoiadores apontando para @eduardobrandaopv no Instagram
 
 - [x] Substituir "campanha" por "pré campanha" em toda a plataforma
+- [x] Remover palavras e referências a "vereador" da página /apoiadores

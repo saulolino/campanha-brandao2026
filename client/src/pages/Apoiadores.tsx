@@ -48,7 +48,7 @@ const REGRAS_OURO = [
 
 const HASHTAGS = {
   principais:  ["#BrasíliaCidadeParque", "#EduardoBrandão", "#BrasíliaVerde", "#DF2026"],
-  localizacao: ["#BrasíliaDF", "#DistritoFederal", "#Brasília", "#PoliticaDF", "#VereadorDF"],
+  localizacao: ["#BrasíliaDF", "#DistritoFederal", "#Brasília", "#PoliticaDF", "#DF2026"],
   tematicas:   ["#MeioAmbiente", "#Sustentabilidade", "#QualidadeDeVida", "#ParquesUrbanos", "#CidadeInteligente"],
 };
 
