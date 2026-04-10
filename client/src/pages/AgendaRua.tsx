@@ -162,6 +162,35 @@ export default function AgendaRua() {
 
   const handleMapReady = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
+
+    // Listener de clique no mapa para posicionar marcador
+    map.addListener("click", (e: google.maps.MapMouseEvent) => {
+      if (!e.latLng) return;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      // Atualizar marcador
+      if (markerRef.current) markerRef.current.map = null;
+      markerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat, lng },
+        title: "Local do evento",
+      });
+      // Geocodificar para obter endereço
+      if (window.google?.maps?.Geocoder) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+          if (status === "OK" && results && results[0]) {
+            const address = results[0].formatted_address || "";
+            setForm(f => ({ ...f, location: address }));
+            // Atualizar o input de autocomplete
+            if (autocompleteInputRef.current) {
+              autocompleteInputRef.current.value = address;
+            }
+          }
+        });
+      }
+    });
+
     // Inicializar autocomplete no input de endereço
     if (autocompleteInputRef.current && window.google) {
       const autocomplete = new window.google.maps.places.Autocomplete(
@@ -615,15 +644,23 @@ export default function AgendaRua() {
                   const dayEvents = getEventsForDay(day);
                   const isToday = isSameDay(day, new Date());
                   return (
-                    <div key={i} className={`min-h-[90px] rounded-xl border p-1.5 cursor-pointer hover:border-white/20 transition-colors ${isToday ? "border-green-500/50 bg-green-500/5" : "border-white/5 bg-white/2"}`}
-                      onClick={() => canEdit && openNew(day)}>
-                      <div className={`text-xs font-bold mb-1 ${isToday ? "text-green-400" : "text-gray-400"}`}>{day.getDate()}</div>
+                    <div key={i} className={`min-h-[90px] rounded-xl border p-1.5 transition-colors ${isToday ? "border-green-500/50 bg-green-500/5" : "border-white/5 bg-white/2 hover:border-white/15"}`}>
+                      {/* Header do dia com botão + */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-bold ${isToday ? "text-green-400" : "text-gray-400"}`}>{day.getDate()}</span>
+                        {canEdit && (
+                          <button onClick={() => openNew(day)}
+                            className="w-4 h-4 rounded flex items-center justify-center text-gray-600 hover:text-green-400 hover:bg-green-500/10 transition-colors">
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-0.5">
                         {dayEvents.slice(0, 3).map(ev => {
                           const cfg = TYPE_CONFIG[ev.type as EventType] || TYPE_CONFIG.outro;
                           const Icon = cfg.icon;
                           return (
-                            <button key={ev.id} onClick={e => { e.stopPropagation(); openEdit(ev); }}
+                            <button key={ev.id} onClick={() => openEdit(ev)}
                               className={`w-full text-left px-1.5 py-0.5 rounded border text-xs ${cfg.bg} hover:opacity-80 transition-opacity flex items-center gap-1`}>
                               <Icon className={`w-2.5 h-2.5 ${cfg.color} shrink-0`} />
                               <span className="truncate text-white">{ev.title}</span>
@@ -631,7 +668,11 @@ export default function AgendaRua() {
                           );
                         })}
                         {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500 pl-1">+{dayEvents.length - 3} mais</div>
+                          <button
+                            onClick={() => { setViewMode("lista"); }}
+                            className="w-full text-xs text-green-400 hover:text-green-300 pl-1 text-left transition-colors">
+                            +{dayEvents.length - 3} mais →
+                          </button>
                         )}
                       </div>
                     </div>
@@ -861,13 +902,19 @@ export default function AgendaRua() {
               </div>
 
               {/* Mapa interativo */}
-              <div className="rounded-xl overflow-hidden border border-white/10">
-                <MapView
-                  initialCenter={mapCenter}
-                  initialZoom={12}
-                  className="h-[220px]"
-                  onMapReady={handleMapReady}
-                />
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-xs text-gray-400">Clique no mapa para posicionar o marcador e preencher o endereço automaticamente</span>
+                </div>
+                <div className="rounded-xl overflow-hidden border border-white/10">
+                  <MapView
+                    initialCenter={mapCenter}
+                    initialZoom={12}
+                    className="h-[240px]"
+                    onMapReady={handleMapReady}
+                  />
+                </div>
               </div>
 
               {/* Campo de endereço manual */}

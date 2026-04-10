@@ -614,3 +614,5 @@
 - [x] Botão de exportação da agenda mensal em PDF
 - [x] Notificação automática no WhatsApp 24h antes de eventos confirmados
 - [x] Botão "Criar post" nos cards da Agenda de Rua com pré-preenchimento na agenda de conteúdo
+- [x] Permitir múltiplos eventos no mesmo dia na Agenda de Rua (vistas semanal e mensal)
+- [x] Seleção de endereço clicando no mapa (marcador arrastável e clique para posicionar)
