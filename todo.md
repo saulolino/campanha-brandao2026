@@ -618,3 +618,4 @@
 - [x] Seleção de endereço clicando no mapa (marcador arrastável e clique para posicionar)
 - [x] Filtro por região/bairro no header da Agenda de Rua
 - [x] Vista "Mapa" na Agenda de Rua com pins de todos os eventos do mês
+- [x] Permitir Visitante visualizar Agenda de Conteúdo e Agenda de Rua (somente leitura, sem edição)

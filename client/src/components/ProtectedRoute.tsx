@@ -49,8 +49,11 @@ export function ProtectedRoute({
   const isAllowed = (() => {
     // Ainda carregando — não decidir ainda
     if (loading) return null;
-    // Visitante não tem acesso a nenhuma rota protegida
-    if (isVisitor) return false;
+    // Visitante: só tem acesso se o role "visitor" estiver explicitamente na lista requiredRole
+    if (isVisitor) {
+      if (requiredRole && requiredRole.includes("visitor")) return true;
+      return false;
+    }
     // Verificar role obrigatório
     if (requiredRole && !requiredRole.includes(role)) return false;
     // Verificar permissão específica

@@ -55,7 +55,7 @@ function Router() {
       <Route path="/conteudo">
         {() => (
           <ProtectedRoute
-            requiredRole={["team", "coordinator", "superadmin"]}
+            requiredRole={["visitor", "team", "coordinator", "superadmin"]}
             rotaTentada="/conteudo"
           >
             <Conteudo />
@@ -110,7 +110,7 @@ function Router() {
       <Route path="/agenda-rua">
         {() => (
           <ProtectedRoute
-            requiredRole={["team", "coordinator", "superadmin"]}
+            requiredRole={["visitor", "team", "coordinator", "superadmin"]}
             rotaTentada="/agenda-rua"
           >
             <AgendaRua />

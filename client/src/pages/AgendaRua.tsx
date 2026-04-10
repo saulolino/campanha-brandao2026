@@ -144,8 +144,8 @@ export default function AgendaRua() {
     if (!localUser) navigate("/login");
   }, [localUser, navigate]);
 
-  const canEdit = ["equipe", "coordenador", "superadmin"].includes(localUser?.role ?? "");
-  const canDelete = ["coordenador", "superadmin"].includes(localUser?.role ?? "");
+  const canEdit = ["team", "coordinator", "superadmin"].includes(localUser?.role ?? "");
+  const canDelete = ["coordinator", "superadmin"].includes(localUser?.role ?? "");
 
   const [viewMode, setViewMode] = useState<ViewMode>("mensal");
   const [weekRef, setWeekRef] = useState(() => new Date());

@@ -164,6 +164,8 @@ export default function Conteudo() {
 
   // Permissões do usuário
   const { permissions, user: authUser } = usePermissions();
+  // Visitante pode visualizar mas não editar
+  const canEditContent = permissions.canEditPost;
 
   // Redirecionar para login se não autenticado
   useEffect(() => {
@@ -507,12 +509,14 @@ export default function Conteudo() {
                   <CalendarDays className="w-3.5 h-3.5" /> Mensal
                 </button>
               </div>
-              <Button
-                onClick={() => openNewPost()}
-                className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-semibold gap-2"
-              >
-                <Plus className="w-4 h-4" /> Novo Post
-              </Button>
+              {canEditContent && (
+                <Button
+                  onClick={() => openNewPost()}
+                  className="bg-[#4ade80] hover:bg-[#22c55e] text-black font-semibold gap-2"
+                >
+                  <Plus className="w-4 h-4" /> Novo Post
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -543,12 +547,14 @@ export default function Conteudo() {
                             <span className="text-[10px] text-yellow-400/70">
                               {DAYS_PT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1} às {p.scheduledTime || "12:00"}
                             </span>
-                            <button
-                              onClick={() => openEditPost(p)}
-                              className="text-[10px] text-yellow-300 hover:underline"
-                            >
-                              Editar
-                            </button>
+                            {canEditContent && (
+                              <button
+                                onClick={() => openEditPost(p)}
+                                className="text-[10px] text-yellow-300 hover:underline"
+                              >
+                                Editar
+                              </button>
+                            )}
                             <button
                               onClick={() => setDismissedAlerts(prev => [...prev, p.id])}
                               className="p-0.5 hover:bg-yellow-500/20 rounded"
@@ -625,13 +631,15 @@ export default function Conteudo() {
                             <p className="text-xs text-white/50 uppercase tracking-wide">{DAYS_PT[day.getDay()]}</p>
                             <p className={`text-lg font-bold ${isToday ? "text-[#4ade80]" : "text-white"}`}>{day.getDate()}</p>
                           </div>
-                          <button
-                            onClick={() => openNewPost(day)}
-                            className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors"
-                            title="Adicionar post"
-                          >
-                            <Plus className="w-3 h-3 text-white/60" />
-                          </button>
+                          {canEditContent && (
+                            <button
+                              onClick={() => openNewPost(day)}
+                              className="w-6 h-6 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors"
+                              title="Adicionar post"
+                            >
+                              <Plus className="w-3 h-3 text-white/60" />
+                            </button>
+                          )}
                         </div>
                         <div className="flex flex-col gap-1.5 flex-1">
                           {dayPosts.length === 0 ? (
@@ -679,14 +687,16 @@ export default function Conteudo() {
                     <div className="text-center py-8">
                       <Calendar className="w-10 h-10 text-white/20 mx-auto mb-3" />
                       <p className="text-white/40 text-sm">Nenhum post agendado esta semana</p>
-                      <Button
-                        onClick={() => openNewPost()}
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 border-white/20 text-white/70 hover:bg-white/10"
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Criar primeiro post
-                      </Button>
+                      {canEditContent && (
+                        <Button
+                          onClick={() => openNewPost()}
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 border-white/20 text-white/70 hover:bg-white/10"
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> Criar primeiro post
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     weekPosts.map((post: any) => {
@@ -748,20 +758,26 @@ export default function Conteudo() {
                                 <ExternalLink className="w-3.5 h-3.5 text-blue-400/70" />
                               </a>
                             )}
-                            <button
-                              onClick={() => openEditPost(post)}
-                              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                              title="Editar"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 text-white/50" />
-                            </button>
-                            <button
-                              onClick={() => { if (confirm("Remover este post?")) deletePost.mutate({ id: post.id }); }}
-                              className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
-                              title="Remover"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
-                            </button>
+                            {canEditContent && (
+                              <>
+                                <button
+                                  onClick={() => openEditPost(post)}
+                                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5 text-white/50" />
+                                </button>
+                                {permissions.canDeletePost && (
+                                  <button
+                                    onClick={() => { if (confirm("Remover este post?")) deletePost.mutate({ id: post.id }); }}
+                                    className="p-1.5 rounded-lg hover:bg-red-500/20 transition-colors"
+                                    title="Remover"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-red-400/60" />
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -826,27 +842,29 @@ export default function Conteudo() {
                           }`}>
                             {day.getDate()}
                           </span>
-                          <button
-                            onClick={() => openNewPost(day)}
-                            className="w-5 h-5 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors opacity-0 hover:opacity-100 group-hover:opacity-100"
-                            title="Adicionar post"
-                          >
-                            <Plus className="w-2.5 h-2.5 text-white/60" />
-                          </button>
+                          {canEditContent && (
+                            <button
+                              onClick={() => openNewPost(day)}
+                              className="w-5 h-5 rounded-full bg-white/10 hover:bg-[#4ade80]/20 flex items-center justify-center transition-colors opacity-0 hover:opacity-100 group-hover:opacity-100"
+                              title="Adicionar post"
+                            >
+                              <Plus className="w-2.5 h-2.5 text-white/60" />
+                            </button>
+                          )}
                         </div>
                         <div className="flex flex-col gap-0.5 flex-1">
                           {dayPosts.slice(0, 3).map((post: any) => {
                             const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
                             const statusCfg = STATUS_CONFIG[(post.status as PostStatus) || "draft"];
                             return (
-                              <button
+                              <div
                                 key={post.id}
-                                onClick={() => openEditPost(post)}
-                                className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate border ${typeCfg.bg} hover:brightness-110 transition-all`}
+                                onClick={() => canEditContent ? openEditPost(post) : undefined}
+                                className={`w-full text-left rounded px-1.5 py-0.5 text-[10px] font-medium truncate border ${typeCfg.bg} ${canEditContent ? 'hover:brightness-110 cursor-pointer' : 'cursor-default'} transition-all`}
                                 title={`${post.title} — ${statusCfg.label}`}
                               >
                                 <span className={typeCfg.color}>●</span> {post.title}
-                              </button>
+                              </div>
                             );
                           })}
                           {dayPosts.length > 3 && (

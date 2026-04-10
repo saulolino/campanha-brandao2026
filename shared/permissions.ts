@@ -10,6 +10,7 @@ export interface Permission {
   canViewPublicationManager: boolean;
   canViewPerformance: boolean;
   canViewSupporters: boolean;
+  canViewAgendas: boolean;
   canEditPost: boolean;
   canPublishPost: boolean;
   canDeletePost: boolean;
@@ -28,6 +29,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canViewPublicationManager: false,
     canViewPerformance: false,
     canViewSupporters: false,
+    canViewAgendas: true, // Visitante pode ver as agendas (somente leitura)
     canEditPost: false,
     canPublishPost: false,
     canDeletePost: false,
@@ -41,6 +43,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canViewPublicationManager: true,
     canViewPerformance: true,
     canViewSupporters: true,
+    canViewAgendas: true,
     canEditPost: true,
     canPublishPost: false, // Team não pode publicar
     canDeletePost: false,
@@ -54,6 +57,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canViewPublicationManager: true,
     canViewPerformance: true,
     canViewSupporters: true,
+    canViewAgendas: true,
     canEditPost: true,
     canPublishPost: true, // Coordenador pode publicar
     canDeletePost: false,
@@ -67,6 +71,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission> = {
     canViewPublicationManager: true,
     canViewPerformance: true,
     canViewSupporters: true,
+    canViewAgendas: true,
     canEditPost: true,
     canPublishPost: true,
     canDeletePost: true,
@@ -96,7 +101,7 @@ export function hasPermission(role: UserRole, permission: keyof Permission): boo
 export const ROLE_DESCRIPTIONS: Record<UserRole, { label: string; description: string }> = {
   visitor: {
     label: "Visitante",
-    description: "Sem acesso a informações estratégicas",
+    description: "Pode visualizar as agendas de conteúdo e de rua",
   },
   team: {
     label: "Equipe",
