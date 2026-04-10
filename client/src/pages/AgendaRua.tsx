@@ -129,6 +129,118 @@ function formatDateForInput(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// ─── Componente MapaVista ────────────────────────────────────────────────────
+function MapaVista({ filteredEvents, filterBairro }: { filteredEvents: any[]; filterBairro: string }) {
+  const mapViewRef = useRef<google.maps.Map | null>(null);
+  const mapMarkersRef = useRef<any[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Recriar pins sempre que os eventos ou o mapa mudar
+  useEffect(() => {
+    if (!mapReady || !mapViewRef.current) return;
+    const map = mapViewRef.current;
+
+    // Fechar infowindow aberta
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+      infoWindowRef.current = null;
+    }
+
+    // Remover marcadores anteriores
+    mapMarkersRef.current.forEach(m => { m.map = null; });
+    mapMarkersRef.current = [];
+
+    const eventsWithCoords = filteredEvents.filter(ev => ev.latitude && ev.longitude);
+    if (eventsWithCoords.length === 0) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+
+    eventsWithCoords.forEach(ev => {
+      const cfg = TYPE_CONFIG[ev.type as EventType] || TYPE_CONFIG.outro;
+      const sCfg = STATUS_CONFIG[ev.status as EventStatus] || STATUS_CONFIG.planejado;
+      const pinColor = ev.status === "realizado" ? "#34d399" : ev.status === "confirmado" ? "#60a5fa" : ev.status === "cancelado" ? "#f87171" : "#9ca3af";
+
+      // Criar elemento visual do pin
+      const pinEl = document.createElement("div");
+      pinEl.style.cssText = `width:22px;height:22px;border-radius:50%;background:${pinColor};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:pointer;`;
+
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
+        position: { lat: Number(ev.latitude), lng: Number(ev.longitude) },
+        map,
+        title: ev.title,
+        content: pinEl,
+      });
+
+      const infoContent = `<div style="background:#161b22;color:#fff;padding:10px 14px;border-radius:8px;min-width:190px;font-family:sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.5)">
+        <div style="font-weight:700;font-size:13px;margin-bottom:5px">${ev.title}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-bottom:3px">${cfg.label} • <span style="color:${pinColor}">${sCfg.label}</span></div>
+        <div style="font-size:11px;color:#d1d5db">${ev.eventDate ? new Date(ev.eventDate).toLocaleDateString("pt-BR") : ""} ${ev.eventTime ? "\u00e0s " + ev.eventTime : ""}</div>
+        ${ev.location ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">📍 ${ev.location}</div>` : ""}
+        ${ev.neighborhood ? `<div style="font-size:11px;color:#6ee7b7">${ev.neighborhood}</div>` : ""}
+        ${ev.expectedAttendees ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">👥 ${ev.expectedAttendees} pessoas esperadas</div>` : ""}
+      </div>`;
+
+      marker.addListener("click", () => {
+        if (infoWindowRef.current) infoWindowRef.current.close();
+        const iw = new window.google.maps.InfoWindow({ content: infoContent });
+        infoWindowRef.current = iw;
+        iw.open({ map, anchor: marker });
+      });
+
+      mapMarkersRef.current.push(marker);
+      bounds.extend({ lat: Number(ev.latitude), lng: Number(ev.longitude) });
+    });
+
+    if (mapMarkersRef.current.length === 1) {
+      map.setCenter({ lat: Number(eventsWithCoords[0].latitude), lng: Number(eventsWithCoords[0].longitude) });
+      map.setZoom(14);
+    } else {
+      map.fitBounds(bounds);
+    }
+  }, [filteredEvents, mapReady]);
+
+  const eventsWithCoords = filteredEvents.filter(ev => ev.latitude && ev.longitude);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs text-gray-400">
+          {filterBairro === "todos" ? `${filteredEvents.length} eventos no total` : `${filteredEvents.length} eventos em ${filterBairro}`}
+          {" — clique em um pin para ver detalhes"}
+        </p>
+      </div>
+      <div className="relative rounded-xl overflow-hidden border border-white/10" style={{ height: 520 }}>
+        <MapView
+          className="w-full h-full"
+          initialCenter={{ lat: -15.7801, lng: -47.9292 }}
+          initialZoom={11}
+          onMapReady={(map) => {
+            mapViewRef.current = map;
+            setMapReady(true);
+          }}
+        />
+        {eventsWithCoords.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 pointer-events-none">
+            <MapPin className="w-10 h-10 text-gray-500 mb-3" />
+            <p className="text-gray-400 text-sm">Nenhum evento com localização definida.</p>
+            <p className="text-gray-500 text-xs mt-1">Adicione eventos com endereço para visualizá-los no mapa.</p>
+          </div>
+        )}
+      </div>
+      {/* Legenda */}
+      <div className="flex items-center gap-4 mt-3 flex-wrap">
+        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+          <div key={key} className="flex items-center gap-1.5">
+            <div className={`w-3 h-3 rounded-full border-2 border-white/30 ${key === "realizado" ? "bg-emerald-400" : key === "confirmado" ? "bg-blue-400" : key === "cancelado" ? "bg-red-400" : "bg-gray-400"}`} />
+            <span className="text-xs text-gray-400">{cfg.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function AgendaRua() {
   const [, navigate] = useLocation();
@@ -832,81 +944,10 @@ export default function AgendaRua() {
 
           {/* ── VISTA MAPA ── */}
           {viewMode === "mapa" && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs text-gray-400">
-                  {filterBairro === "todos" ? `${filteredEvents.length} eventos no total` : `${filteredEvents.length} eventos em ${filterBairro}`}
-                  {" — clique em um pin para ver detalhes"}
-                </p>
-              </div>
-              <div className="relative rounded-xl overflow-hidden border border-white/10" style={{ height: 520 }}>
-                <MapView
-                  className="w-full h-full"
-                  initialCenter={{ lat: -15.7801, lng: -47.9292 }}
-                  initialZoom={11}
-                  onMapReady={(map) => {
-                    mapViewRef.current = map;
-                    // Limpar marcadores anteriores
-                    mapMarkersRef.current.forEach(m => m.setMap(null));
-                    mapMarkersRef.current = [];
-                    // Adicionar pin para cada evento com coordenadas
-                    filteredEvents.forEach(ev => {
-                      if (!ev.latitude || !ev.longitude) return;
-                      const cfg = TYPE_CONFIG[ev.type as EventType] || TYPE_CONFIG.outro;
-                      const sCfg = STATUS_CONFIG[ev.status as EventStatus] || STATUS_CONFIG.planejado;
-                      const marker = new google.maps.Marker({
-                        position: { lat: Number(ev.latitude), lng: Number(ev.longitude) },
-                        map,
-                        title: ev.title,
-                        icon: {
-                          path: google.maps.SymbolPath.CIRCLE,
-                          scale: 10,
-                          fillColor: ev.status === "realizado" ? "#34d399" : ev.status === "confirmado" ? "#60a5fa" : ev.status === "cancelado" ? "#f87171" : "#9ca3af",
-                          fillOpacity: 0.9,
-                          strokeColor: "#ffffff",
-                          strokeWeight: 2,
-                        },
-                      });
-                      const infoWindow = new google.maps.InfoWindow({
-                        content: `<div style="background:#161b22;color:#fff;padding:10px 14px;border-radius:8px;min-width:180px;font-family:sans-serif">
-                          <div style="font-weight:700;font-size:13px;margin-bottom:4px">${ev.title}</div>
-                          <div style="font-size:11px;color:#9ca3af;margin-bottom:2px">${cfg.label} • ${sCfg.label}</div>
-                          <div style="font-size:11px;color:#d1d5db">${ev.eventDate ? new Date(ev.eventDate).toLocaleDateString("pt-BR") : ""} ${ev.eventTime || ""}</div>
-                          ${ev.location ? `<div style="font-size:11px;color:#9ca3af;margin-top:4px">${ev.location}</div>` : ""}
-                          ${ev.neighborhood ? `<div style="font-size:11px;color:#6ee7b7">${ev.neighborhood}</div>` : ""}
-                        </div>`,
-                      });
-                      marker.addListener("click", () => {
-                        infoWindow.open(map, marker);
-                      });
-                      mapMarkersRef.current.push(marker);
-                    });
-                    // Ajustar bounds se houver marcadores
-                    if (mapMarkersRef.current.length > 0) {
-                      const bounds = new google.maps.LatLngBounds();
-                      mapMarkersRef.current.forEach(m => bounds.extend(m.getPosition()!));
-                      map.fitBounds(bounds);
-                    }
-                  }}
-                />
-                {filteredEvents.filter(ev => ev.latitude && ev.longitude).length === 0 && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 pointer-events-none">
-                    <MapPin className="w-10 h-10 text-gray-500 mb-3" />
-                    <p className="text-gray-400 text-sm">Nenhum evento com localização definida.</p>
-                    <p className="text-gray-500 text-xs mt-1">Adicione eventos com endereço para visualizá-los no mapa.</p>
-                  </div>
-                )}
-              </div>
-              {/* Legenda */}
-              <div className="flex items-center gap-4 mt-3 flex-wrap">
-                {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
-                  <div key={key} className="flex items-center gap-1.5">
-                    <div className={`w-3 h-3 rounded-full border-2 border-white/30 ${key === "realizado" ? "bg-emerald-400" : key === "confirmado" ? "bg-blue-400" : key === "cancelado" ? "bg-red-400" : "bg-gray-400"}`} />
-                    <span className="text-xs text-gray-400">{cfg.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <MapaVista
+              filteredEvents={filteredEvents}
+              filterBairro={filterBairro}
+            />
           )}
         </div>
       </main>
