@@ -116,7 +116,7 @@ export default function SupportersPage() {
             GUIA DO APOIADOR
           </h2>
           <p className="text-emerald-300/60 mt-2 max-w-2xl text-sm lg:text-base">
-            Estratégias e ações práticas para amplificar a campanha Brasília Cidade Parque.
+            Estratégias e ações práticas para amplificar a pré campanha Brasília Cidade Parque.
             Cada interação sua faz diferença no alcance e no crescimento do movimento.
           </p>
 

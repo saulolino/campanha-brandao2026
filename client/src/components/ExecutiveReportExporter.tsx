@@ -322,7 +322,7 @@ export function ExecutiveReportExporter({
             doc.setTextColor(150, 160, 180);
             const pageHeight = doc.internal.pageSize.getHeight();
             doc.text(
-              `Página ${currentPage} de ${pageCount} | Brasília Cidade Parque - Campanha Eduardo Brandão`,
+              `Página ${currentPage} de ${pageCount} | Brasília Cidade Parque - Pré campanha Eduardo Brandão`,
               margin,
               pageHeight - 10
             );

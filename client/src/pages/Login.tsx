@@ -74,7 +74,7 @@ export default function Login() {
             className="h-28 mx-auto mb-4 object-contain drop-shadow-lg"
           />
           <h1 className="text-2xl font-bold text-white mb-1">
-            Painel de Campanha
+            Painel de Pré campanha
           </h1>
           <p className="text-slate-400">Eduardo Brandão · DF 2026</p>
         </div>
@@ -144,7 +144,7 @@ export default function Login() {
         {/* Rodapé */}
         <div className="mt-6 text-center">
           <p className="text-xs text-slate-500">
-            © 2026 Campanha Eduardo Brandão. Todos os direitos reservados.
+            © 2026 Pré campanha Eduardo Brandão. Todos os direitos reservados.
           </p>
         </div>
       </div>

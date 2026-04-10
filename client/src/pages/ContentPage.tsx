@@ -49,7 +49,7 @@ export default function ContentPage() {
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">Conteúdo</h1>
-            <p className="text-muted-foreground">Crie e organize materiais de campanha</p>
+            <p className="text-muted-foreground">Crie e organize materiais de pré campanha</p>
           </div>
 
           {/* Tabs */}

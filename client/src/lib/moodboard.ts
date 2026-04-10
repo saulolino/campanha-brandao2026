@@ -1,6 +1,6 @@
 // ============================================================
 // DESIGN: Command Center Militar Verde
-// Moodboard — Referências Visuais de Campanhas de Sucesso
+// Moodboard — Referências Visuais de Pré campanhas de Sucesso
 // ============================================================
 
 export interface MoodboardItem {
@@ -44,7 +44,7 @@ export const MOODBOARD_CATEGORIES: MoodboardCategory[] = [
           "Apelo emocional + racional"
         ],
         metrics: "45K views, 3.2K curtidas, 890 compartilhamentos",
-        source: "Referência: Campanha de prefeito em Curitiba",
+        source: "Referência: Pré campanha de prefeito em Curitiba",
         tags: ["antes-depois", "transformação", "dados"],
         format: "Reels (30s)",
         color: "#2d6a4f",
@@ -80,7 +80,7 @@ export const MOODBOARD_CATEGORIES: MoodboardCategory[] = [
           "Compartilhamento orgânico alto"
         ],
         metrics: "52K views, 4.8K curtidas, 2.1K compartilhamentos",
-        source: "Referência: Campanhas de impacto social",
+        source: "Referência: Pré campanhas de impacto social",
         tags: ["depoimento", "emoção", "autenticidade"],
         format: "Vídeo (60s)",
         color: "#40916c",

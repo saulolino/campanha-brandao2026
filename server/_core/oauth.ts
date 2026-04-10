@@ -43,7 +43,7 @@ function getQueryParam(req: Request, key: string): string | undefined {
 }
 
 function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(`campanha2026:${password}`).digest("hex");
+  return crypto.createHash("sha256").update(`pré campanha2026:${password}`).digest("hex");
 }
 
 // Personas de login local padrão (fallback quando não há passwordHash no banco)

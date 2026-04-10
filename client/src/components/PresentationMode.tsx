@@ -83,7 +83,7 @@ export default function PresentationMode({ isOpen, onClose }: PresentationModePr
             <div className="w-24 h-24 rounded-2xl bg-[#2d6a4f]/20 flex items-center justify-center mb-8">
               <TreePine size={48} className="text-[#2d6a4f]" />
             </div>
-            <p className="text-[#c9a84c] text-sm uppercase tracking-[0.3em] mb-3 font-medium">CAMPANHA 2026</p>
+            <p className="text-[#c9a84c] text-sm uppercase tracking-[0.3em] mb-3 font-medium">PRÉ CAMPANHA 2026</p>
             <h1 className="text-5xl lg:text-7xl font-bold text-white mb-4 tracking-tight">
               Brasília<br />Cidade Parque
             </h1>
@@ -310,7 +310,7 @@ export default function PresentationMode({ isOpen, onClose }: PresentationModePr
                 </p>
                 <div className="space-y-3">
                   {[
-                    "Iniciar campanha de ads com R$ 2.500/mês focando em Brasília",
+                    "Iniciar pré campanha de ads com R$ 2.500/mês focando em Brasília",
                     "Fechar 3 parcerias com influenciadores locais esta semana",
                     "Publicar 3 posts esta semana conforme calendário",
                     "Configurar TikTok e YouTube Shorts para multi-plataforma",

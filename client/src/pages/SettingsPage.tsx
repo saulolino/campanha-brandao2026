@@ -518,7 +518,7 @@ export default function SettingsPage() {
                             <UserCog className="w-5 h-5" />
                             Gerenciamento de Usuários
                           </CardTitle>
-                          <CardDescription>Visualize, edite roles e remova membros da equipe da campanha.</CardDescription>
+                          <CardDescription>Visualize, edite roles e remova membros da equipe da pré campanha.</CardDescription>
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge variant="secondary">{usersQuery.data?.length ?? 0} usuários</Badge>

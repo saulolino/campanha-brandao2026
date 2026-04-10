@@ -42,7 +42,7 @@ export interface WeekPlan {
   followersTarget: number;
 }
 
-// Semana 1 de Abril (06-12 Abr) - Lançamento da Campanha Digital
+// Semana 1 de Abril (06-12 Abr) - Lançamento da Pré campanha Digital
 export const APRIL_WEEKS: WeekPlan[] = [
   {
     id: "abr-s1",
@@ -51,7 +51,7 @@ export const APRIL_WEEKS: WeekPlan[] = [
     dateRange: "06 - 12 Abril",
     month: "Abril",
     theme: "Lançamento: Brasília Merece Mais Verde",
-    themeDescription: "Semana de abertura da campanha digital. Foco em apresentar a visão 'Brasília Cidade Parque' e estabelecer a narrativa central com conteúdo de alto impacto.",
+    themeDescription: "Semana de abertura da pré campanha digital. Foco em apresentar a visão 'Brasília Cidade Parque' e estabelecer a narrativa central com conteúdo de alto impacto.",
     weeklyGoal: "Estabelecer a narrativa central e gerar curiosidade sobre o projeto Brasília Cidade Parque",
     followersTarget: 1650,
     posts: [
@@ -197,7 +197,7 @@ export const APRIL_WEEKS: WeekPlan[] = [
         format: "VIDEO",
         formatLabel: "Vídeo (60s)",
         title: "Mutirão Verde: Vamos limpar o Parque Águas Claras juntos!",
-        caption: "Chega de reclamar. É hora de AGIR! 💪🌿\n\nEstou organizando o primeiro Mutirão Verde da campanha Brasília Cidade Parque!\n\n📅 Sábado, 25 de Abril\n📍 Parque Águas Claras\n⏰ 8h às 12h\n\nVamos juntos limpar, plantar e cuidar desse espaço que é de todos nós.\n\nTraga luvas, disposição e um amigo! Materiais de plantio por nossa conta.\n\nBrasília Cidade Parque começa com cada um de nós.",
+        caption: "Chega de reclamar. É hora de AGIR! 💪🌿\n\nEstou organizando o primeiro Mutirão Verde da pré campanha Brasília Cidade Parque!\n\n📅 Sábado, 25 de Abril\n📍 Parque Águas Claras\n⏰ 8h às 12h\n\nVamos juntos limpar, plantar e cuidar desse espaço que é de todos nós.\n\nTraga luvas, disposição e um amigo! Materiais de plantio por nossa conta.\n\nBrasília Cidade Parque começa com cada um de nós.",
         hashtags: ["#MutirãoVerde", "#BrasíliaCidadeParque", "#AçãoComunitária", "#ÁguasClaras", "#EduardoBrandão"],
         visualDescription: "Vídeo de Eduardo convidando para o mutirão. Começa em frente ao parque, mostra problemas, depois mostra como ficaria com melhorias (mockup). Energia alta, música motivacional. Texto com data/local em destaque.",
         cta: "Comente 'EU VOU' se quer participar! 🙋‍♂️",
@@ -238,7 +238,7 @@ export const APRIL_WEEKS: WeekPlan[] = [
         hashtags: ["#Tiradentes", "#21DeAbril", "#BrasíliaCidadeParque", "#LegadoVerde", "#EduardoBrandão"],
         visualDescription: "Reel contemplativo. Imagens de Brasília ao amanhecer — Congresso, Esplanada, parques. Narração em off de Eduardo com tom inspirador. Transição para imagens de parques e natureza. Final com convite para o Mutirão.",
         cta: "Compartilhe se você também acredita numa Brasília melhor 💚",
-        objective: "Conectar feriado nacional com narrativa da campanha",
+        objective: "Conectar feriado nacional com narrativa da pré campanha",
         targetReach: 2500,
         targetLikes: 85,
         targetComments: 12,
@@ -281,7 +281,7 @@ export const APRIL_WEEKS: WeekPlan[] = [
         format: "REEL",
         formatLabel: "Reels (90s)",
         title: "Mutirão Verde: O Antes e Depois que Brasília precisava ver",
-        caption: "ISSO ACONTECEU HOJE! 🌿💚\n\nMais de 50 pessoas se juntaram no Parque Águas Claras para o primeiro Mutirão Verde da campanha Brasília Cidade Parque.\n\nEm 4 horas:\n✅ 200 metros de trilha limpos\n✅ 30 mudas de árvores nativas plantadas\n✅ 15 bancos restaurados\n✅ 1 comunidade mais unida\n\nIsso é Brasília Cidade Parque na prática. Não é promessa. É ação.\n\nO próximo Mutirão já tem data. Quer saber? Segue o perfil e ativa as notificações! 🔔",
+        caption: "ISSO ACONTECEU HOJE! 🌿💚\n\nMais de 50 pessoas se juntaram no Parque Águas Claras para o primeiro Mutirão Verde da pré campanha Brasília Cidade Parque.\n\nEm 4 horas:\n✅ 200 metros de trilha limpos\n✅ 30 mudas de árvores nativas plantadas\n✅ 15 bancos restaurados\n✅ 1 comunidade mais unida\n\nIsso é Brasília Cidade Parque na prática. Não é promessa. É ação.\n\nO próximo Mutirão já tem data. Quer saber? Segue o perfil e ativa as notificações! 🔔",
         hashtags: ["#MutirãoVerde", "#BrasíliaCidadeParque", "#AntesEDepois", "#AçãoReal", "#EduardoBrandão", "#ÁguasClaras"],
         visualDescription: "Reel épico do Mutirão. Timelapse da transformação do parque. Rostos felizes, mãos sujas de terra, crianças plantando. Split screen antes/depois. Música emotiva crescendo. Eduardo trabalhando junto com todos. Drone no final mostrando resultado.",
         cta: "Compartilhe para inspirar mais pessoas a agir! 🔄",

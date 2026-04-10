@@ -41,7 +41,7 @@ export default function Dashboard() {
           {/* Header */}
           <div className="mb-12">
             <h1 className="text-4xl font-bold text-foreground mb-2">Painel Principal</h1>
-            <p className="text-muted-foreground">Acompanhe o desempenho geral da campanha Eduardo Brandão</p>
+            <p className="text-muted-foreground">Acompanhe o desempenho geral da pré campanha Eduardo Brandão</p>
           </div>
 
           {/* KPI Cards Grid */}
@@ -70,7 +70,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-accent">{kpis.targetFollowers.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground mt-1">Objetivo da campanha</p>
+                <p className="text-xs text-muted-foreground mt-1">Objetivo da pré campanha</p>
               </CardContent>
             </Card>
 
@@ -106,7 +106,7 @@ export default function Dashboard() {
           {/* Progress Bar */}
           <Card className="mb-8 border-border/50">
             <CardHeader>
-              <CardTitle>Progresso da Campanha</CardTitle>
+              <CardTitle>Progresso da Pré campanha</CardTitle>
               <CardDescription>
                 {kpis.currentFollowers.toLocaleString()} de {kpis.targetFollowers.toLocaleString()} seguidores ({progressPercentage.toFixed(1)}%)
               </CardDescription>

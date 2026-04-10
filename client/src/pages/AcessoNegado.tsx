@@ -69,7 +69,7 @@ export default function AcessoNegado({ rotaTentada }: AcessoNegadoProps) {
           <ul className="text-sm text-slate-400 space-y-1.5">
             <li className="flex items-start gap-2">
               <span className="text-green-400 mt-0.5">•</span>
-              Solicite ao administrador da campanha que eleve seu nível de acesso.
+              Solicite ao administrador da pré campanha que eleve seu nível de acesso.
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-400 mt-0.5">•</span>

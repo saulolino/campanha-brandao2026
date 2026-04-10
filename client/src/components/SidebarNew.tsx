@@ -32,7 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
       {
         id: "dashboard",
         label: "Painel Principal",
-        tooltip: "KPIs e progresso da campanha",
+        tooltip: "KPIs e progresso da pré campanha",
         icon: LayoutDashboard,
       },
       {

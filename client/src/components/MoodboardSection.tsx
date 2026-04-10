@@ -1,6 +1,6 @@
 // ============================================================
 // DESIGN: Command Center Militar Verde
-// Moodboard — Referências Visuais de Campanhas de Sucesso
+// Moodboard — Referências Visuais de Pré campanhas de Sucesso
 // ============================================================
 import { useState } from "react";
 import { MOODBOARD_CATEGORIES, type MoodboardItem } from "@/lib/moodboard";
@@ -100,7 +100,7 @@ function MoodboardCard({ item }: { item: MoodboardItem }) {
           <div className="p-4 bg-accent/5">
             <div className="flex items-center gap-1.5 mb-2">
               <Lightbulb size={12} className="text-accent" />
-              <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Lição para a campanha</span>
+              <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Lição para a pré campanha</span>
             </div>
             <p className="text-xs text-foreground/80 leading-relaxed">{item.lesson}</p>
           </div>
@@ -135,7 +135,7 @@ export default function MoodboardSection() {
         <Sparkles size={16} className="text-accent shrink-0 mt-0.5" />
         <div>
           <p className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">Inspiração Estratégica</p>
-          <p className="text-xs text-foreground/80">Referências de campanhas políticas e perfis de sucesso que atingiram alto engajamento. Cada exemplo inclui análise de por que funcionou e lições aplicáveis à campanha Brasília Cidade Parque. Use como guia para produção de conteúdo.</p>
+          <p className="text-xs text-foreground/80">Referências de pré campanhas políticas e perfis de sucesso que atingiram alto engajamento. Cada exemplo inclui análise de por que funcionou e lições aplicáveis à pré campanha Brasília Cidade Parque. Use como guia para produção de conteúdo.</p>
         </div>
       </div>
 

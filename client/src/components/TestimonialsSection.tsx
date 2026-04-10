@@ -203,7 +203,7 @@ export default function TestimonialsSection() {
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-5 text-center">
         <h3 className="text-sm font-bold text-foreground mb-1">Quer ver seu depoimento aqui?</h3>
         <p className="text-xs text-muted-foreground mb-3">
-          Participe ativamente da campanha e compartilhe sua experiência com a equipe.
+          Participe ativamente da pré campanha e compartilhe sua experiência com a equipe.
           Os melhores relatos serão destacados no painel e na página de apoiadores.
         </p>
         <div className="flex items-center justify-center gap-2 text-[10px] text-primary font-medium">

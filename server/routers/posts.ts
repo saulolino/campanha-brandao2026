@@ -137,7 +137,7 @@ export const postsRouter = router({
       };
 
       const systemPrompt = `Você é um especialista em marketing político digital para Instagram.
-Você cria legendas impactantes para a campanha do candidato Eduardo Brandão, em Brasília Cidade Parque.
+Você cria legendas impactantes para a pré campanha do candidato Eduardo Brandão, em Brasília Cidade Parque.
 A meta é atingir 20.000 seguidores. O estilo é próximo, autêntico e mobilizador.
 Sempre use linguagem brasileira informal mas respeitosa. Inclua call-to-action.`;
 
@@ -213,11 +213,11 @@ Retorne SOMENTE um JSON com os campos:
         story: "Story", imagem: "post de Imagem",
       };
 
-      const prompt = `Crie uma imagem profissional para ${typeLabels[input.type] || "post"} do Instagram de campanha política.
+      const prompt = `Crie uma imagem profissional para ${typeLabels[input.type] || "post"} do Instagram de pré campanha política.
 Candidato: Eduardo Brandão. Cidade: Brasília Cidade Parque, Brasil.
 Tema: ${input.title}.
 ${input.description ? `Contexto: ${input.description}.` : ""}
-Estilo: fotorrealista, cores vibrantes verde e branco (cores da campanha), moderno e impactante.
+Estilo: fotorrealista, cores vibrantes verde e branco (cores da pré campanha), moderno e impactante.
 Não inclua texto na imagem.`;
 
       const result = await generateImage({ prompt });
@@ -237,7 +237,7 @@ Não inclua texto na imagem.`;
       const styleGuide = `Estilo visual consistente para todos os slides:
 - Paleta de cores: verde vibrante (#4ade80) e branco sobre fundo escuro azul-marinho
 - Estilo: fotorrealista com elementos gráficos modernos, clean e profissional
-- Campanha política de Eduardo Brandão, Brasília Cidade Parque, Brasil
+- Pré campanha política de Eduardo Brandão, Brasília Cidade Parque, Brasil
 - Sem texto na imagem
 - Proporção quadrada (1:1) ideal para Instagram`;
 
@@ -253,7 +253,7 @@ Não inclua texto na imagem.`;
         messages: [
           {
             role: "system" as const,
-            content: `Você é um diretor de arte especializado em carrosséis do Instagram para campanhas políticas.
+            content: `Você é um diretor de arte especializado em carrosséis do Instagram para pré campanhas políticas.
 Crie ${input.slideCount} prompts de imagem para um carrossél coeso e narrativo.
 Cada slide deve ter uma cena diferente mas manter a mesma identidade visual.
 O carrossél deve contar uma história progressiva: introdução → desenvolvimento → conclusão/call-to-action.`,

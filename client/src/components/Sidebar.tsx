@@ -53,12 +53,12 @@ interface NavGroup {
 const NAV_GROUPS: NavGroup[] = [
   {
     label: "VISÃO GERAL",
-    description: "Métricas e progresso da campanha",
+    description: "Métricas e progresso da pré campanha",
     items: [
       {
         id: "dashboard",
         label: "Painel Principal",
-        tooltip: "Métricas em tempo real, progresso da campanha e indicadores principais",
+        tooltip: "Métricas em tempo real, progresso da pré campanha e indicadores principais",
         icon: LayoutDashboard,
       },
       {
@@ -159,7 +159,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       {
         id: "pillars",
-        label: "Pilares da Campanha",
+        label: "Pilares da Pré campanha",
         tooltip: "Objetivos principais e temas que devem guiar todos os posts",
         icon: Target,
       },
@@ -540,7 +540,7 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
               className="w-16 h-16 object-contain opacity-70"
             />
             <div className="text-[10px] text-muted-foreground text-center">
-              <p>Painel Interno da Campanha</p>
+              <p>Painel Interno da Pré campanha</p>
               <p className="mt-0.5">Abr - Out 2026</p>
             </div>
           </div>

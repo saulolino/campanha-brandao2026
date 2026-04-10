@@ -129,7 +129,7 @@ export function MonthlyReportExporter({ posts, year, month, monthName }: Monthly
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(
-        `Página 1 de 1 | Brasília Cidade Parque - Campanha Eduardo Brandão`,
+        `Página 1 de 1 | Brasília Cidade Parque - Pré campanha Eduardo Brandão`,
         margin,
         pageHeight - 10
       );

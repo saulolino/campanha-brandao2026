@@ -18,7 +18,7 @@ export default function Estrategia() {
               <Lightbulb className="w-8 h-8 text-primary" />
               <h1 className="text-3xl font-bold text-foreground">Estratégia</h1>
             </div>
-            <p className="text-muted-foreground">Direção estratégica, narrativa e objetivos da campanha</p>
+            <p className="text-muted-foreground">Direção estratégica, narrativa e objetivos da pré campanha</p>
           </div>
 
           <Tabs defaultValue="tema" className="w-full">
@@ -85,7 +85,7 @@ export default function Estrategia() {
             <TabsContent value="narrativa" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Narrativa da Campanha</CardTitle>
+                  <CardTitle>Narrativa da Pré campanha</CardTitle>
                   <CardDescription>Mensagem central e tom de comunicação</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -140,7 +140,7 @@ export default function Estrategia() {
                       </div>
                       <div>
                         <h4 className="font-semibold">Crescimento de Seguidores</h4>
-                        <p className="text-sm text-muted-foreground">Atingir 20.000 seguidores até o final da campanha</p>
+                        <p className="text-sm text-muted-foreground">Atingir 20.000 seguidores até o final da pré campanha</p>
                       </div>
                     </div>
 

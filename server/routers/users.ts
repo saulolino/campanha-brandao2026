@@ -8,7 +8,7 @@ import crypto from "crypto";
 
 // Utilitário simples de hash de senha (SHA-256 com salt fixo)
 function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(`campanha2026:${password}`).digest("hex");
+  return crypto.createHash("sha256").update(`pré campanha2026:${password}`).digest("hex");
 }
 
 // Middleware de SuperAdmin reutilizável

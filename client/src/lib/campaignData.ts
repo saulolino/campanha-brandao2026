@@ -1,6 +1,6 @@
 // ============================================================
 // DESIGN: Command Center Militar Verde
-// Dados centralizados da campanha Eduardo Brandão
+// Dados centralizados da pré campanha Eduardo Brandão
 // Brasília Cidade Parque - Meta: 20.000 seguidores
 // ============================================================
 
@@ -143,7 +143,7 @@ export const KPIS = [
 ];
 
 export const TEAM = [
-  { role: "Gerente de Campanha", hours: 30, responsibilities: "Estratégia geral, coordenação, relatórios" },
+  { role: "Gerente de Pré campanha", hours: 30, responsibilities: "Estratégia geral, coordenação, relatórios" },
   { role: "Produtor de Conteúdo", hours: 30, responsibilities: "Gravação, edição, produção de vídeos" },
   { role: "Community Manager", hours: 25, responsibilities: "Engajamento, respostas, stories, lives" },
   { role: "Especialista em Ads", hours: 20, responsibilities: "Gestão de publicidade, otimização" },

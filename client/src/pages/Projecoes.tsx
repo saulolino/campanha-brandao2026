@@ -1,6 +1,6 @@
 // ============================================================
 // DESIGN: Command Center Militar Verde
-// Página de Projeções - Campanha Eduardo Brandão
+// Página de Projeções - Pré campanha Eduardo Brandão
 // Brasília Cidade Parque - Meta: 20.000 seguidores
 // ============================================================
 
@@ -61,7 +61,7 @@ export default function Projecoes() {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <TrendingUp className="w-7 h-7 text-primary" />
-            <h1 className="text-2xl font-bold">Projeções da Campanha</h1>
+            <h1 className="text-2xl font-bold">Projeções da Pré campanha</h1>
           </div>
           <p className="text-muted-foreground">
             Plano de crescimento de {CAMPAIGN.currentFollowers.toLocaleString()} para{" "}
@@ -236,7 +236,7 @@ export default function Projecoes() {
               <Star className="w-5 h-5 text-yellow-400" />
               KPIs — Indicadores de Performance
             </CardTitle>
-            <CardDescription>Metas mensais para cada métrica da campanha</CardDescription>
+            <CardDescription>Metas mensais para cada métrica da pré campanha</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -359,7 +359,7 @@ export default function Projecoes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-yellow-400" />
-              Orçamento da Campanha
+              Orçamento da Pré campanha
             </CardTitle>
             <CardDescription>
               Total estimado: R$ {totalBudgetMin.toLocaleString()} – R$ {totalBudgetMax.toLocaleString()} / mês
@@ -413,7 +413,7 @@ export default function Projecoes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Equipe da Campanha
+              Equipe da Pré campanha
             </CardTitle>
             <CardDescription>Funções, carga horária e responsabilidades</CardDescription>
           </CardHeader>
@@ -444,7 +444,7 @@ export default function Projecoes() {
               <AlertTriangle className="w-5 h-5 text-red-400" />
               Regras — O Que NÃO Fazer
             </CardTitle>
-            <CardDescription>Ações que comprometem o crescimento e a imagem da campanha</CardDescription>
+            <CardDescription>Ações que comprometem o crescimento e a imagem da pré campanha</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -422,7 +422,7 @@ export default function ContentBankSection() {
       <div className="flex items-center gap-2 mb-4">
         <div className="w-1 h-5 bg-primary rounded-full" />
         <h2 className="text-lg font-bold text-foreground">BANCO DE CONTEÚDO</h2>
-        <span className="text-xs font-mono text-muted-foreground ml-2">Repositório da Campanha</span>
+        <span className="text-xs font-mono text-muted-foreground ml-2">Repositório da Pré campanha</span>
       </div>
 
       {/* Description */}
@@ -435,7 +435,7 @@ export default function ContentBankSection() {
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
             Todos os materiais, templates, legendas prontas, hashtags, guias visuais, modelos de stories e CTAs organizados em um só lugar.
-            Use os botões de copiar para agilizar a produção de conteúdo. Cada material está alinhado com os pilares da campanha Brasília Cidade Parque.
+            Use os botões de copiar para agilizar a produção de conteúdo. Cada material está alinhado com os pilares da pré campanha Brasília Cidade Parque.
           </p>
         </div>
       </div>

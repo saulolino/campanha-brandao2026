@@ -1,6 +1,6 @@
 // ============================================================
 // GUIA DE APOIADORES - BRASÍLIA CIDADE PARQUE
-// Estratégias de ações para voluntários amplificarem a campanha
+// Estratégias de ações para voluntários amplificarem a pré campanha
 // ============================================================
 
 export interface ActionStep {
@@ -238,7 +238,7 @@ export const MISSIONS: MissionCard[] = [
     id: "d3",
     title: "Explorador de Hashtags",
     category: "diária",
-    description: "Navegue pelas hashtags da campanha e engaje com posts relacionados.",
+    description: "Navegue pelas hashtags da pré campanha e engaje com posts relacionados.",
     steps: [
       "Pesquise #BrasíliaCidadeParque no Instagram",
       "Curta 5 posts recentes com a hashtag",
@@ -272,12 +272,12 @@ export const MISSIONS: MissionCard[] = [
     id: "s2",
     title: "Recrutador Verde",
     category: "semanal",
-    description: "Traga novos seguidores para o perfil da campanha.",
+    description: "Traga novos seguidores para o perfil da pré campanha.",
     steps: [
       "Convide 5 amigos para seguir @eduardobrandaopv",
       "Compartilhe o perfil nos seus Stories com recomendação pessoal",
       "Envie o link do perfil para 3 grupos de WhatsApp",
-      "Peça para 2 pessoas repostarem um conteúdo da campanha",
+      "Peça para 2 pessoas repostarem um conteúdo da pré campanha",
     ],
     impactLevel: "muito alto",
     timeRequired: "20 minutos",
@@ -288,7 +288,7 @@ export const MISSIONS: MissionCard[] = [
     id: "s3",
     title: "Criador de Conteúdo",
     category: "semanal",
-    description: "Crie conteúdo original relacionado à campanha Brasília Cidade Parque.",
+    description: "Crie conteúdo original relacionado à pré campanha Brasília Cidade Parque.",
     steps: [
       "Tire uma foto de um parque ou área verde de Brasília",
       "Poste no seu perfil com a hashtag #BrasíliaCidadeParque",
@@ -308,7 +308,7 @@ export const MISSIONS: MissionCard[] = [
     steps: [
       "Identifique 1 problema ambiental na sua comunidade",
       "Fotografe ou filme o problema",
-      "Envie o material para a equipe da campanha via DM",
+      "Envie o material para a equipe da pré campanha via DM",
       "Sugira uma solução baseada no projeto Brasília Cidade Parque",
     ],
     impactLevel: "alto",
@@ -327,8 +327,8 @@ export const MISSIONS: MissionCard[] = [
       "Convide pelo menos 10 pessoas da sua comunidade",
       "Apresente o projeto Brasília Cidade Parque",
       "Registre o encontro com fotos e vídeos",
-      "Compartilhe nas redes sociais com as hashtags da campanha",
-      "Envie relatório para a equipe da campanha",
+      "Compartilhe nas redes sociais com as hashtags da pré campanha",
+      "Envie relatório para a equipe da pré campanha",
     ],
     impactLevel: "muito alto",
     timeRequired: "3 horas",
@@ -339,7 +339,7 @@ export const MISSIONS: MissionCard[] = [
     id: "m2",
     title: "Influenciador Local",
     category: "mensal",
-    description: "Conecte a campanha com influenciadores ou líderes da sua região.",
+    description: "Conecte a pré campanha com influenciadores ou líderes da sua região.",
     steps: [
       "Identifique 3 influenciadores locais (micro ou nano)",
       "Entre em contato apresentando o projeto",
@@ -356,13 +356,13 @@ export const MISSIONS: MissionCard[] = [
     id: "e1",
     title: "Defensor Digital",
     category: "especial",
-    description: "Quando surgir desinformação ou ataques, atue como defensor da campanha.",
+    description: "Quando surgir desinformação ou ataques, atue como defensor da pré campanha.",
     steps: [
       "Identifique o conteúdo falso ou ataque",
       "NÃO responda com agressividade — mantenha o tom respeitoso",
       "Apresente fatos e dados que contradigam a desinformação",
       "Reporte o conteúdo se violar as regras da plataforma",
-      "Informe a equipe da campanha imediatamente",
+      "Informe a equipe da pré campanha imediatamente",
     ],
     impactLevel: "muito alto",
     timeRequired: "15 minutos",
@@ -373,10 +373,10 @@ export const MISSIONS: MissionCard[] = [
     id: "e2",
     title: "Mutirão Verde",
     category: "especial",
-    description: "Participe de um mutirão de plantio ou limpeza organizado pela campanha.",
+    description: "Participe de um mutirão de plantio ou limpeza organizado pela pré campanha.",
     steps: [
       "Confirme presença no evento",
-      "Leve pelo menos 1 amigo que não conhece a campanha",
+      "Leve pelo menos 1 amigo que não conhece a pré campanha",
       "Registre sua participação com fotos e vídeos",
       "Poste nos Stories durante o evento em tempo real",
       "Faça um post no feed após o evento com sua experiência",
@@ -422,7 +422,7 @@ export const SUPPORTER_LEVELS: SupporterLevel[] = [
     minXP: 1000,
     badge: "🌳",
     color: "#228B22",
-    perks: ["Acesso direto à equipe de campanha", "Participa de reuniões estratégicas"],
+    perks: ["Acesso direto à equipe de pré campanha", "Participa de reuniões estratégicas"],
   },
   {
     level: 5,
@@ -430,7 +430,7 @@ export const SUPPORTER_LEVELS: SupporterLevel[] = [
     minXP: 2000,
     badge: "🏞️",
     color: "#006400",
-    perks: ["Líder regional reconhecido", "Voz ativa nas decisões da campanha", "Destaque no site oficial"],
+    perks: ["Líder regional reconhecido", "Voz ativa nas decisões da pré campanha", "Destaque no site oficial"],
   },
 ];
 
@@ -466,7 +466,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     title: "Missão Recrutamento",
-    description: "Traga novos seguidores para o perfil da campanha.",
+    description: "Traga novos seguidores para o perfil da pré campanha.",
     totalTime: "10 minutos",
     expectedImpact: "3-5 novos seguidores por missão completada",
     steps: [
@@ -534,12 +534,12 @@ export const COMMENT_INSPIRATION = [
 ];
 
 // ============================================================
-// HASHTAGS OFICIAIS DA CAMPANHA
+// HASHTAGS OFICIAIS DA PRÉ CAMPANHA
 // ============================================================
 export const CAMPAIGN_HASHTAGS = {
   obrigatorias: ["#BrasíliaCidadeParque", "#EduardoBrandão", "#Brasília2026"],
   recomendadas: ["#BrasíliaVerde", "#ParquesParaTodos", "#FuturoDeBrasília", "#MeioAmbienteBSB", "#CidadeSustentável"],
-  proibidas: ["Hashtags de outros candidatos", "Hashtags polêmicas ou divisivas", "Hashtags sem relação com a campanha"],
+  proibidas: ["Hashtags de outros candidatos", "Hashtags polêmicas ou divisivas", "Hashtags sem relação com a pré campanha"],
 };
 
 // ============================================================
@@ -555,15 +555,15 @@ export const SUPPORTER_FAQ = [
     answer: "USE SUA CONTA PESSOAL. Contas novas ou falsas prejudicam o algoritmo e podem ser detectadas como spam. Sua conta real tem mais peso e credibilidade.",
   },
   {
-    question: "E se alguém atacar a campanha nos comentários?",
-    answer: "Não responda com agressividade. Apresente fatos calmamente e reporte à equipe da campanha. Se for ofensivo, denuncie o comentário. Nunca entre em briga online.",
+    question: "E se alguém atacar a pré campanha nos comentários?",
+    answer: "Não responda com agressividade. Apresente fatos calmamente e reporte à equipe da pré campanha. Se for ofensivo, denuncie o comentário. Nunca entre em briga online.",
   },
   {
     question: "Quanto tempo por dia preciso dedicar?",
     answer: "A Blitz de 2 Minutos já faz diferença enorme. Se puder dedicar 15 minutos por dia de publicação (terça, quinta e sábado), o impacto é transformador.",
   },
   {
-    question: "Posso criar meu próprio conteúdo sobre a campanha?",
+    question: "Posso criar meu próprio conteúdo sobre a pré campanha?",
     answer: "SIM! Conteúdo orgânico de apoiadores é extremamente valioso. Use as hashtags oficiais, marque @eduardobrandaopv e mantenha o tom positivo e propositivo.",
   },
   {
@@ -571,7 +571,7 @@ export const SUPPORTER_FAQ = [
     answer: "A equipe compartilha relatórios semanais no grupo de apoiadores. Você verá o crescimento de seguidores, alcance e engajamento — e saberá que faz parte disso.",
   },
   {
-    question: "Posso compartilhar conteúdo da campanha no Facebook e Twitter?",
+    question: "Posso compartilhar conteúdo da pré campanha no Facebook e Twitter?",
     answer: "Com certeza! Adapte o formato para cada plataforma. No Facebook, adicione um texto mais longo. No Twitter, seja conciso. No LinkedIn, foque no aspecto profissional/institucional.",
   },
   {

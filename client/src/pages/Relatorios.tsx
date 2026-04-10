@@ -76,7 +76,7 @@ function generatePDF(posts: any[], title: string, period: string) {
   doc.text("Brasilia Cidade Parque", 14, 14);
   doc.setFontSize(11);
   doc.setFont("helvetica","normal");
-  doc.text("Campanha Eduardo Brandao  @eduardobrandaopv", 14, 22);
+  doc.text("Pré campanha Eduardo Brandao  @eduardobrandaopv", 14, 22);
   doc.setFontSize(14);
   doc.setFont("helvetica","bold");
   doc.text(title, 14, 32);
@@ -160,7 +160,7 @@ function generatePDF(posts: any[], title: string, period: string) {
     doc.rect(0, 285, 210, 12, "F");
     doc.setTextColor(255,255,255);
     doc.setFontSize(7);
-    doc.text("Campanha Eduardo Brandao  Brasilia Cidade Parque  Documento Confidencial", 14, 292);
+    doc.text("Pré campanha Eduardo Brandao  Brasilia Cidade Parque  Documento Confidencial", 14, 292);
     doc.text("Pagina " + i + " de " + pageCount, 196, 292, { align:"right" });
   }
 
@@ -447,7 +447,7 @@ export default function Relatorios() {
             <div>
               <h1 className="text-2xl font-bold">Relatórios</h1>
               <p className="text-sm text-muted-foreground">
-                Agenda de postagens semanal e mensal — Campanha Eduardo Brandão
+                Agenda de postagens semanal e mensal — Pré campanha Eduardo Brandão
               </p>
             </div>
           </div>

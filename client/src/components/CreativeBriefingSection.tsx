@@ -113,7 +113,7 @@ ORÇAMENTO ADS: ${post.adBudget}
 OBSERVAÇÕES:
 ${post.notes}
 ═══════════════════════════════════════
-Campanha Eduardo Brandão — Brasília Cidade Parque 2026`;
+Pré campanha Eduardo Brandão — Brasília Cidade Parque 2026`;
   };
 
   const handleDownload = (post: PostBriefing) => {

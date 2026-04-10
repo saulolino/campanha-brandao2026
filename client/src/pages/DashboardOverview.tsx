@@ -47,7 +47,7 @@ export default function DashboardOverview() {
         <div className="p-8 max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-foreground mb-2">Visão Geral</h1>
-            <p className="text-muted-foreground">Acompanhe o desempenho geral da campanha</p>
+            <p className="text-muted-foreground">Acompanhe o desempenho geral da pré campanha</p>
           </div>
 
           {/* KPI Cards */}

@@ -1,6 +1,6 @@
 // ============================================================
 // PÁGINA DE APOIADORES — Protocolo de Engajamento
-// Simplificada com 6 seções essenciais + logos da campanha
+// Simplificada com 6 seções essenciais + logos da pré campanha
 // ============================================================
 
 import { useState } from "react";
@@ -129,7 +129,7 @@ export default function Apoiadores() {
           />
           <h1 className="text-3xl font-bold text-white mb-3">Protocolo de Engajamento</h1>
           <p className="text-green-300/80 text-lg max-w-2xl mx-auto">
-            Guia prático para apoiadores da campanha{" "}
+            Guia prático para apoiadores da pré campanha{" "}
             <strong className="text-green-400">@eduardobrandaopv</strong>.
             Cada interação conta para alcançar a meta de{" "}
             <strong className="text-green-400">20.000 seguidores</strong>.
@@ -330,7 +330,7 @@ export default function Apoiadores() {
             alt="Brasília Cidade Parque"
             className="h-20 mx-auto mb-4 opacity-80 object-contain"
           />
-          <p className="text-sm text-gray-500">Campanha Eduardo Brandão · Brasília Cidade Parque · DF 2026</p>
+          <p className="text-sm text-gray-500">Pré campanha Eduardo Brandão · Brasília Cidade Parque · DF 2026</p>
         </div>
       </div>
     </div>

@@ -351,7 +351,7 @@ describe("PublicationManager - localStorage operations", () => {
     const posts = [
       {
         id: 1,
-        title: "Campanha de Primavera",
+        title: "Pré campanha de Primavera",
         caption: "Descrição",
         status: "draft",
         scheduledDate: "2026-04-10T10:00:00",
@@ -381,7 +381,7 @@ describe("PublicationManager - localStorage operations", () => {
     );
 
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].title).toBe("Campanha de Primavera");
+    expect(filtered[0].title).toBe("Pré campanha de Primavera");
   });
 
   it("should filter posts by search term (caption)", () => {

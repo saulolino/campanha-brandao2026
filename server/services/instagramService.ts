@@ -90,7 +90,7 @@ interface InstagramData {
   fetchedAt: string;
 }
 
-// Dados de fallback baseados nos dados reais conhecidos da campanha
+// Dados de fallback baseados nos dados reais conhecidos da pré campanha
 // Usados quando o arquivo JSON não está disponível (ex: primeiro deploy)
 const FALLBACK_DATA: InstagramData = {
   account: {

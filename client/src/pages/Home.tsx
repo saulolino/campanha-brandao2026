@@ -84,7 +84,7 @@ export default function Home() {
                   <span className="text-primary font-medium">@{metrics.username}</span> — {metrics.name || 'Eduardo Brandão'}
                 </p>
               ) : (
-                <p className="text-muted-foreground">Visão executiva da campanha Eduardo Brandão — Brasília Cidade Parque</p>
+                <p className="text-muted-foreground">Visão executiva da pré campanha Eduardo Brandão — Brasília Cidade Parque</p>
               )}
             </div>
             <Button variant="outline" size="sm" onClick={handleRefresh} disabled={syncMutation.isPending || metricsLoading}>
@@ -222,7 +222,7 @@ export default function Home() {
           {/* Progress Bar */}
           <Card className="mb-8 border border-border/50">
             <CardHeader>
-              <CardTitle>Progresso da Campanha</CardTitle>
+              <CardTitle>Progresso da Pré campanha</CardTitle>
               <CardDescription>
                 {currentFollowers.toLocaleString('pt-BR')} de {targetFollowers.toLocaleString('pt-BR')} seguidores ({progressPercentage.toFixed(1)}%)
               </CardDescription>
@@ -267,7 +267,7 @@ export default function Home() {
                     <Lightbulb className="w-5 h-5" />
                     Estratégia
                   </CardTitle>
-                  <CardDescription>Direção e narrativa da campanha</CardDescription>
+                  <CardDescription>Direção e narrativa da pré campanha</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Button variant="outline" size="sm" className="w-full">

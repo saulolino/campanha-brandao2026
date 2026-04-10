@@ -21,7 +21,7 @@ interface PostMetric {
 const MOCK_METRICS: PostMetric[] = [
   {
     id: 1,
-    title: "Lançamento da Campanha",
+    title: "Lançamento da Pré campanha",
     date: "2026-04-05",
     platform: "instagram",
     likes: 1250,
@@ -54,7 +54,7 @@ const MOCK_METRICS: PostMetric[] = [
   },
   {
     id: 4,
-    title: "Vídeo de Campanha",
+    title: "Vídeo de Pré campanha",
     date: "2026-04-02",
     platform: "tiktok",
     likes: 5600,

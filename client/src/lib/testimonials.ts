@@ -1,4 +1,4 @@
-// Depoimentos de voluntários/apoiadores da campanha
+// Depoimentos de voluntários/apoiadores da pré campanha
 // Relatos reais do impacto das ações de engajamento
 
 export interface Testimonial {
@@ -56,7 +56,7 @@ export const TESTIMONIALS: Testimonial[] = [
     levelEmoji: "🌳",
     xp: 1820,
     daysActive: 12,
-    quote: "Uso a estratégia de compartilhamento no WhatsApp Business e já trouxe mais de 40 novos seguidores para o perfil. O segredo é contextualizar o post antes de enviar nos grupos — as pessoas se interessam muito mais quando entendem o porquê. A campanha Cidade Parque faz sentido para quem vive em Brasília.",
+    quote: "Uso a estratégia de compartilhamento no WhatsApp Business e já trouxe mais de 40 novos seguidores para o perfil. O segredo é contextualizar o post antes de enviar nos grupos — as pessoas se interessam muito mais quando entendem o porquê. A pré campanha Cidade Parque faz sentido para quem vive em Brasília.",
     highlight: "40+ novos seguidores via WhatsApp Business",
     impact: { label: "Seguidores recrutados", value: "47 pessoas" },
     date: "30 Mar 2026",
@@ -104,7 +104,7 @@ export const TESTIMONIALS: Testimonial[] = [
     levelEmoji: "🌿",
     xp: 780,
     daysActive: 7,
-    quote: "Sou estudante de biologia na UnB e o tema ambiental me atraiu para a campanha. Comecei compartilhando os posts nos grupos da faculdade e a resposta foi surpreendente. Muitos colegas não conheciam o Eduardo e agora acompanham. O sistema de missões me motiva — quero chegar ao nível Árvore até maio!",
+    quote: "Sou estudante de biologia na UnB e o tema ambiental me atraiu para a pré campanha. Comecei compartilhando os posts nos grupos da faculdade e a resposta foi surpreendente. Muitos colegas não conheciam o Eduardo e agora acompanham. O sistema de missões me motiva — quero chegar ao nível Árvore até maio!",
     highlight: "Mobilizou grupos universitários da UnB",
     impact: { label: "Universitários alcançados", value: "85 pessoas" },
     date: "22 Mar 2026",
@@ -120,7 +120,7 @@ export const TESTIMONIALS: Testimonial[] = [
     levelEmoji: "🌿",
     xp: 720,
     daysActive: 6,
-    quote: "Como jornalista, sei o poder de uma boa narrativa. Os posts da campanha Brasília Cidade Parque contam histórias reais e isso facilita muito o compartilhamento. Quando comento nos posts, trago dados e contexto que enriquecem a discussão. Já recebi mensagens de pessoas que começaram a seguir o Eduardo por causa dos meus comentários.",
+    quote: "Como jornalista, sei o poder de uma boa narrativa. Os posts da pré campanha Brasília Cidade Parque contam histórias reais e isso facilita muito o compartilhamento. Quando comento nos posts, trago dados e contexto que enriquecem a discussão. Já recebi mensagens de pessoas que começaram a seguir o Eduardo por causa dos meus comentários.",
     highlight: "Comentários com contexto jornalístico geram conversas",
     impact: { label: "Conversas geradas", value: "34 threads" },
     date: "20 Mar 2026",
@@ -136,7 +136,7 @@ export const TESTIMONIALS: Testimonial[] = [
     levelEmoji: "🌱",
     xp: 450,
     daysActive: 5,
-    quote: "Tenho pouco tempo livre, mas a Blitz de 2 Minutos é perfeita para mim. Faço enquanto espero meus filhos na escola. Mesmo com pouco tempo, sinto que contribuo. O mais legal é que outras mães do grupo da escola também começaram a seguir a campanha depois que compartilhei alguns posts sobre os parques infantis.",
+    quote: "Tenho pouco tempo livre, mas a Blitz de 2 Minutos é perfeita para mim. Faço enquanto espero meus filhos na escola. Mesmo com pouco tempo, sinto que contribuo. O mais legal é que outras mães do grupo da escola também começaram a seguir a pré campanha depois que compartilhei alguns posts sobre os parques infantis.",
     highlight: "Blitz de 2 Minutos ideal para rotina corrida",
     impact: { label: "Mães engajadas", value: "12 pessoas" },
     date: "18 Mar 2026",
@@ -153,7 +153,7 @@ export const TESTIMONIALS: Testimonial[] = [
     xp: 380,
     daysActive: 4,
     quote: "Comecei a criar conteúdo visual complementar para os posts — infográficos simples sobre os dados de áreas verdes em Brasília. Compartilho nos meus Stories marcando o perfil do Eduardo e a resposta tem sido muito positiva. O guia de referências visuais me ajudou a manter a identidade visual consistente.",
-    highlight: "Criou infográficos complementares para a campanha",
+    highlight: "Criou infográficos complementares para a pré campanha",
     impact: { label: "Conteúdo criado", value: "8 infográficos" },
     date: "15 Mar 2026",
     category: "criacao",

@@ -68,7 +68,7 @@ export default function RedefinirSenha() {
           <h1 className="text-3xl font-bold text-white mb-2">
             Redefinir Senha
           </h1>
-          <p className="text-slate-400">Brasília Cidade Parque — Painel de Campanha</p>
+          <p className="text-slate-400">Brasília Cidade Parque — Painel de Pré campanha</p>
         </div>
 
         <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm p-6">
@@ -159,7 +159,7 @@ export default function RedefinirSenha() {
 
         <div className="mt-6 text-center">
           <p className="text-xs text-slate-500">
-            © 2026 Campanha Eduardo Brandão. Todos os direitos reservados.
+            © 2026 Pré campanha Eduardo Brandão. Todos os direitos reservados.
           </p>
         </div>
       </div>

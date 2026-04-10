@@ -114,7 +114,7 @@ export default function WeeklyReportSection() {
   const generateTextReport = () => {
     const lines = [
       `═══════════════════════════════════════`,
-      `RELATÓRIO SEMANAL — CAMPANHA BRASÍLIA CIDADE PARQUE`,
+      `RELATÓRIO SEMANAL — PRÉ CAMPANHA BRASÍLIA CIDADE PARQUE`,
       `═══════════════════════════════════════`,
       ``,
       `📅 Período: ${weekGoals.weekLabel} (${weekGoals.dateRange})`,
@@ -161,7 +161,7 @@ export default function WeeklyReportSection() {
       ``,
       `═══════════════════════════════════════`,
       `Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`,
-      `Campanha Eduardo Brandão — Brasília Cidade Parque`,
+      `Pré campanha Eduardo Brandão — Brasília Cidade Parque`,
       `═══════════════════════════════════════`,
     ].filter(Boolean);
 
@@ -198,7 +198,7 @@ export default function WeeklyReportSection() {
         <FileText size={16} className="text-accent shrink-0 mt-0.5" />
         <div>
           <p className="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">Relatório para Liderança</p>
-          <p className="text-xs text-foreground/80">Gere relatórios semanais automaticamente comparando metas planejadas vs. resultados reais. Copie o texto ou baixe o arquivo para enviar à liderança da campanha. Os dados simulados servem como exemplo — atualize com dados reais após cada semana.</p>
+          <p className="text-xs text-foreground/80">Gere relatórios semanais automaticamente comparando metas planejadas vs. resultados reais. Copie o texto ou baixe o arquivo para enviar à liderança da pré campanha. Os dados simulados servem como exemplo — atualize com dados reais após cada semana.</p>
         </div>
       </div>
 
@@ -420,7 +420,7 @@ export default function WeeklyReportSection() {
       <div className="mt-4 bg-muted/15 rounded-lg border border-border p-4 flex items-start gap-3">
         <Clock size={14} className="text-muted-foreground shrink-0 mt-0.5" />
         <p className="text-[10px] text-muted-foreground leading-relaxed">
-          <span className="font-bold text-foreground">Nota:</span> Os dados exibidos são simulados para demonstração. Atualize com os dados reais do Instagram após cada semana para gerar relatórios precisos. O relatório pode ser copiado e enviado via WhatsApp ou e-mail para a liderança da campanha.
+          <span className="font-bold text-foreground">Nota:</span> Os dados exibidos são simulados para demonstração. Atualize com os dados reais do Instagram após cada semana para gerar relatórios precisos. O relatório pode ser copiado e enviado via WhatsApp ou e-mail para a liderança da pré campanha.
         </p>
       </div>
     </div>

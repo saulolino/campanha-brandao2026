@@ -1,5 +1,5 @@
 /**
- * Templates de prompts pré-definidos para Brasília e campanha
+ * Templates de prompts pré-definidos para Brasília e pré campanha
  * Usuários podem usar como base ou customizar
  */
 
@@ -16,7 +16,7 @@ export const PROMPT_TEMPLATES = [
     ],
   },
   {
-    category: "Campanha - Eduardo Brandão",
+    category: "Pré campanha - Eduardo Brandão",
     templates: [
       "Brasília Cidade Parque - verde, sustentável e moderno",
       "Comunidade unida por Brasília Cidade Parque",

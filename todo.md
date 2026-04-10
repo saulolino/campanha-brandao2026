@@ -598,3 +598,5 @@
 - [x] Tornar /apoiadores rota pública (sem necessidade de login)
 
 - [x] QR Code na página /apoiadores apontando para @eduardobrandaopv no Instagram
+
+- [x] Substituir "campanha" por "pré campanha" em toda a plataforma

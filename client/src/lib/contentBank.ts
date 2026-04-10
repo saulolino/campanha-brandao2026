@@ -1,6 +1,6 @@
 // ============================================================
 // DESIGN: Command Center Militar Verde
-// Banco de Conteúdo - Repositório de materiais da campanha
+// Banco de Conteúdo - Repositório de materiais da pré campanha
 // Brasília Cidade Parque - Templates, legendas e diretrizes
 // ============================================================
 
@@ -179,7 +179,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
       "Slide 6: Próximos passos + CTA",
     ],
     captionTemplate: "Nosso [período] em números! 📊\n\n[Lista de métricas com emojis]\n\nCada número representa uma pessoa que acredita numa Brasília melhor.\n\n[Prévia do próximo período] 🚀\n\n[CTA de notificação]",
-    visualGuide: "Infográfico elegante. Números grandes em destaque. Ícones e gráficos simples. Fotos reais das ações. Design consistente com identidade da campanha.",
+    visualGuide: "Infográfico elegante. Números grandes em destaque. Ícones e gráficos simples. Fotos reais das ações. Design consistente com identidade da pré campanha.",
     bestPractices: [
       "Usar números reais e verificáveis",
       "Comparar com período anterior quando possível",
@@ -392,7 +392,7 @@ export const STORY_TEMPLATES: StoryTemplate[] = [
   },
   {
     id: "st-bastidores",
-    name: "Bastidores da Campanha",
+    name: "Bastidores da Pré campanha",
     type: "bastidores",
     description: "Mostrar o dia a dia da equipe e produção de conteúdo",
     structure: "Vídeo casual filmado com celular, sem edição pesada",
