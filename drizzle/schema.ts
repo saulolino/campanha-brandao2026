@@ -197,3 +197,37 @@ export const streetEvents = mysqlTable("street_events", {
 
 export type StreetEvent = typeof streetEvents.$inferSelect;
 export type InsertStreetEvent = typeof streetEvents.$inferInsert;
+
+// ─── Notificações ─────────────────────────────────────────────────────────────
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  // Tipo da notificação
+  type: mysqlEnum("type", [
+    "novo_cadastro",
+    "novo_post",
+    "evento_criado",
+    "evento_confirmado",
+    "evento_realizado",
+    "instagram_sync",
+    "token_expirando",
+    "sistema",
+    "outro",
+  ]).default("outro").notNull(),
+  // Conteúdo
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  // Dados extras (JSON)
+  metadata: text("metadata"),
+  // Status
+  isRead: tinyint("isRead").default(0).notNull(),
+  // Destinatário (null = todos os coordenadores/superadmin)
+  targetUserId: int("targetUserId"),
+  // Quem gerou (null = sistema)
+  triggeredByUserId: int("triggeredByUserId"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

@@ -5,6 +5,7 @@ import { users, accessLogs, passwordResetTokens } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { notifyOwner } from "../_core/notification";
+import { createNotification } from "./notifications";
 import crypto from "crypto";
 
 // Utilitário simples de hash de senha (SHA-256 com salt fixo)
@@ -338,6 +339,14 @@ export const usersRouter = router({
           `Acesse o painel em **Usuários → Gerenciar** para promover o acesso.`,
         ].join("\n"),
       }).catch(() => {}); // não bloquear o cadastro se a notificação falhar
+
+      // Criar notificação interna no painel
+      createNotification({
+        type: "novo_cadastro",
+        title: `Novo cadastro: ${input.name}`,
+        message: `${input.name} (${input.email}) se cadastrou e aguarda aprovação. WhatsApp: ${input.whatsapp}`,
+        metadata: { name: input.name, email: input.email, whatsapp: input.whatsapp },
+      }).catch(() => {});
 
       return { success: true, message: "Cadastro realizado! Aguarde a aprovação do administrador para acessar o painel." };
     }),

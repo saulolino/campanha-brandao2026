@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key } from "lucide-react";
+import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key, Bell, BellOff, Trash2 as Trash2Icon, CheckCheck, Filter, Loader2, UserPlus as UserPlusIcon, CalendarPlus, Instagram, RefreshCcw, Info, X } from "lucide-react";
 
 export default function SettingsPage() {
   const [, navigate] = useLocation();
@@ -279,27 +279,30 @@ export default function SettingsPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-5 mb-8">
               <TabsTrigger value="instagram" className="flex items-center gap-2">
                 <Key className="w-4 h-4" />
-                <span className="hidden sm:inline">Credenciais Instagram</span>
-                <span className="sm:hidden">Instagram</span>
+                <span className="hidden sm:inline">Instagram</span>
               </TabsTrigger>
               <TabsTrigger value="sync" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <span className="hidden sm:inline">Sincronização</span>
-                <span className="sm:hidden">Sync</span>
+                <span className="hidden sm:inline">Sync</span>
               </TabsTrigger>
               <TabsTrigger value="reports" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Relatórios</span>
-                <span className="sm:hidden">Reports</span>
               </TabsTrigger>
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Usuários</span>
-                <span className="sm:hidden">Users</span>
               </TabsTrigger>
+              {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+                <TabsTrigger value="notifications" className="flex items-center gap-2 relative">
+                  <Bell className="w-4 h-4" />
+                  <span className="hidden sm:inline">Notificações</span>
+                  <NotifBadge />
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Instagram Credentials Tab */}
@@ -931,9 +934,266 @@ export default function SettingsPage() {
               </Dialog>
             </TabsContent>
 
+            {/* ─── Aba Notificações ─────────────────────────────────────────── */}
+            {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+              <TabsContent value="notifications">
+                <NotificationsTab isSuperAdmin={isSuperAdmin} />
+              </TabsContent>
+            )}
+
           </Tabs>
         </div>
       </main>
     </div>
+  );
+}
+
+// ─── Tipos de notificação ─────────────────────────────────────────────────────
+type NotifType =
+  | "novo_cadastro" | "novo_post" | "evento_criado" | "evento_confirmado"
+  | "evento_realizado" | "instagram_sync" | "token_expirando" | "sistema" | "outro" | "all";
+
+const NOTIF_TYPE_LABELS: Record<string, string> = {
+  novo_cadastro: "Novo Cadastro",
+  novo_post: "Novo Post",
+  evento_criado: "Evento Criado",
+  evento_confirmado: "Evento Confirmado",
+  evento_realizado: "Evento Realizado",
+  instagram_sync: "Sync Instagram",
+  token_expirando: "Token Expirando",
+  sistema: "Sistema",
+  outro: "Outro",
+};
+
+const NOTIF_TYPE_ICONS: Record<string, React.ReactNode> = {
+  novo_cadastro: <UserPlusIcon className="w-4 h-4 text-blue-400" />,
+  novo_post: <Instagram className="w-4 h-4 text-pink-400" />,
+  evento_criado: <CalendarPlus className="w-4 h-4 text-green-400" />,
+  evento_confirmado: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
+  evento_realizado: <CheckCheck className="w-4 h-4 text-teal-400" />,
+  instagram_sync: <RefreshCcw className="w-4 h-4 text-purple-400" />,
+  token_expirando: <AlertCircle className="w-4 h-4 text-yellow-400" />,
+  sistema: <Info className="w-4 h-4 text-gray-400" />,
+  outro: <Bell className="w-4 h-4 text-gray-400" />,
+};
+
+// ─── Badge de não lidas (usado no TabsTrigger) ────────────────────────────────
+function NotifBadge() {
+  const { data } = trpc.notifications.countUnread.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
+  const count = data?.count ?? 0;
+  if (count === 0) return null;
+  return (
+    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 leading-none">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
+// ─── Aba completa de Notificações ─────────────────────────────────────────────
+function NotificationsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  const utils = trpc.useUtils();
+  const [filterType, setFilterType] = useState<NotifType>("all");
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const { data: notifs, isLoading } = trpc.notifications.list.useQuery(
+    { limit: 100, offset: 0, onlyUnread, type: filterType },
+    { refetchInterval: 30_000 }
+  );
+
+  const markRead = trpc.notifications.markRead.useMutation({
+    onSuccess: () => utils.notifications.list.invalidate(),
+  });
+
+  const markAllRead = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.countUnread.invalidate();
+      toast.success("Todas as notificações marcadas como lidas");
+    },
+  });
+
+  const deleteNotif = trpc.notifications.delete.useMutation({
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.countUnread.invalidate();
+      setDeletingId(null);
+      toast.success("Notificação excluída");
+    },
+  });
+
+  const unreadCount = notifs?.filter(n => !n.isRead).length ?? 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-green-400" />
+              Notificações
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="text-xs">{unreadCount} não lidas</Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Alertas do sistema, novos cadastros, eventos e sincronizações do Instagram
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOnlyUnread(v => !v)}
+              className={onlyUnread ? "border-green-500 text-green-400" : ""}
+            >
+              {onlyUnread ? <BellOff className="w-4 h-4 mr-1" /> : <Bell className="w-4 h-4 mr-1" />}
+              {onlyUnread ? "Mostrar todas" : "Só não lidas"}
+            </Button>
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => markAllRead.mutate()}
+                disabled={markAllRead.isPending}
+              >
+                <CheckCheck className="w-4 h-4 mr-1" />
+                Marcar todas como lidas
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Filtro por tipo */}
+        <div className="flex items-center gap-2 flex-wrap mt-4">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Filtrar:</span>
+          {(["all", "novo_cadastro", "novo_post", "evento_criado", "evento_confirmado", "evento_realizado", "instagram_sync", "token_expirando", "sistema"] as NotifType[]).map(t => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                filterType === t
+                  ? "bg-green-600 text-white"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+              }`}
+            >
+              {t === "all" ? "Todos" : NOTIF_TYPE_LABELS[t]}
+            </button>
+          ))}
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-green-400" />
+            <span className="ml-2 text-muted-foreground">Carregando notificações...</span>
+          </div>
+        ) : !notifs || notifs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <BellOff className="w-12 h-12 text-gray-600 mb-3" />
+            <p className="text-muted-foreground font-medium">Nenhuma notificação encontrada</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {onlyUnread ? "Você está em dia! Nenhuma notificação não lida." : "Não há notificações para os filtros selecionados."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {notifs.map(notif => (
+              <div
+                key={notif.id}
+                className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                  notif.isRead
+                    ? "border-white/5 bg-white/2 opacity-70"
+                    : "border-green-500/20 bg-green-500/5"
+                }`}
+              >
+                {/* Ícone do tipo */}
+                <div className="mt-0.5 shrink-0">
+                  {NOTIF_TYPE_ICONS[notif.type] ?? <Bell className="w-4 h-4 text-gray-400" />}
+                </div>
+
+                {/* Conteúdo */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-semibold text-sm ${notif.isRead ? "text-muted-foreground" : "text-foreground"}`}>
+                      {notif.title}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      {NOTIF_TYPE_LABELS[notif.type] ?? notif.type}
+                    </Badge>
+                    {!notif.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" title="Não lida" />
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-0.5 break-words">{notif.message}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Date(notif.createdAt).toLocaleString("pt-BR")}
+                    {notif.isRead && notif.readAt && (
+                      <span className="ml-2 text-gray-600">
+                        · Lida em {new Date(notif.readAt).toLocaleString("pt-BR")}
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Ações */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {!notif.isRead && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-7 h-7 text-green-400 hover:text-green-300"
+                      title="Marcar como lida"
+                      onClick={() => markRead.mutate({ id: notif.id })}
+                      disabled={markRead.isPending}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {isSuperAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-7 h-7 text-red-400 hover:text-red-300"
+                      title="Excluir notificação"
+                      onClick={() => setDeletingId(notif.id)}
+                    >
+                      <Trash2Icon className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Confirm de exclusão */}
+      <AlertDialog open={deletingId !== null} onOpenChange={open => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir notificação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A notificação será removida permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deletingId !== null && deleteNotif.mutate({ id: deletingId })}
+              disabled={deleteNotif.isPending}
+            >
+              {deleteNotif.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }

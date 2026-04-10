@@ -3,6 +3,7 @@ import { getDb } from "./db";
 import { instagramPosts, streetEvents } from "../drizzle/schema";
 import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
+import { createNotification } from "./routers/notifications";
 import { syncInstagramProfile } from "./instagramSync";
 
 let schedulerInitialized = false;
@@ -260,8 +261,18 @@ export function initializeScheduler(): void {
           title: `📸 Instagram sincronizado`,
           content: `Métricas do Instagram foram atualizadas automaticamente às 08h.\n\nAcesse **Métricas** e **Projeções** para ver os dados mais recentes.`,
         }).catch(() => {});
+        createNotification({
+          type: "instagram_sync",
+          title: "Instagram sincronizado — 08h",
+          message: "Métricas do Instagram foram atualizadas automaticamente. Acesse Métricas e Projeções para ver os dados mais recentes.",
+        }).catch(() => {});
         console.log("[Scheduler] Sincronização do Instagram concluída com sucesso.");
       } else {
+        createNotification({
+          type: "instagram_sync",
+          title: "Falha na sincronização do Instagram",
+          message: "A sincronização automática das 08h não retornou dados. Verifique o token do Instagram em Configurações.",
+        }).catch(() => {});
         console.warn("[Scheduler] Sincronização do Instagram falhou ou retornou sem dados.");
       }
     } catch (err: any) {

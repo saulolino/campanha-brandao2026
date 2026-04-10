@@ -626,3 +626,4 @@
 - [x] Badge de pendentes no menu Usuários (contador vermelho de visitantes aguardando classificação)
 - [x] Exportar agenda de rua em PDF (vista Lista com eventos do mês filtrado) — já estava implementado
 - [x] Bug: Vista Mapa da Agenda de Rua — pins não aparecem (geocodificação automática implementada, campos lat/lng adicionados ao schema)
+- [x] Tela de Notificações na aba Configurações (acessível para coordenadores e superadmin)
