@@ -587,3 +587,5 @@
 - [x] Seletor de role inline na tabela de usuários (/configuracoes)
 - [x] Toast de boas-vindas com role após login
 - [x] Página de acesso negado com mensagem amigável
+
+- [x] Bug: número de seguidores não atualizava na Home (sincronização era apenas cache local, agora busca direto da Graph API)

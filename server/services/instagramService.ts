@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ENV } from '../_core/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -281,6 +282,113 @@ export class InstagramService {
       avgEngagement: item.avgEngagement,
       totalReach: 0,
     }));
+  }
+
+  /**
+   * Sincronizar dados diretamente da Instagram Graph API
+   * Busca followers, posts e métricas em tempo real
+   */
+  async syncFromAPI(): Promise<{ success: boolean; followers: number; posts: number; fetchedAt: string; error?: string }> {
+    const token = ENV.instagramToken;
+    const accountId = ENV.instagramAccountId;
+
+    if (!token || !accountId) {
+      return { success: false, followers: 0, posts: 0, fetchedAt: new Date().toISOString(), error: 'Credenciais do Instagram não configuradas' };
+    }
+
+    try {
+      // 1. Buscar dados da conta
+      const accountUrl = `https://graph.facebook.com/v21.0/${accountId}?fields=username,name,biography,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`;
+      const accountRes = await fetch(accountUrl);
+      if (!accountRes.ok) {
+        const errBody = await accountRes.text();
+        throw new Error(`Erro ao buscar conta: ${accountRes.status} - ${errBody}`);
+      }
+      const accountData = await accountRes.json() as {
+        username: string; name: string; biography: string;
+        followers_count: number; follows_count: number; media_count: number;
+        profile_picture_url: string;
+      };
+
+      // 2. Buscar posts recentes com métricas
+      const postsUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,thumbnail_url,media_url&limit=25&access_token=${token}`;
+      const postsRes = await fetch(postsUrl);
+      const postsData = postsRes.ok ? (await postsRes.json() as { data: Array<{
+        id: string; caption?: string; media_type: string; media_product_type: string;
+        permalink: string; timestamp: string; like_count: number; comments_count: number;
+        thumbnail_url?: string; media_url?: string;
+      }> }) : { data: [] };
+
+      const posts = (postsData.data || []).map(p => ({
+        id: p.id,
+        caption: p.caption || '',
+        mediaType: p.media_type,
+        mediaProductType: p.media_product_type,
+        permalink: p.permalink,
+        timestamp: p.timestamp,
+        likes: p.like_count || 0,
+        comments: p.comments_count || 0,
+        thumbnailUrl: p.thumbnail_url || p.media_url || '',
+      }));
+
+      const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
+      const totalComments = posts.reduce((s, p) => s + p.comments, 0);
+      const avgEngagement = posts.length > 0 ? Math.round((totalLikes + totalComments) / posts.length) : 0;
+      const engagementRate = accountData.followers_count > 0 ? parseFloat(((avgEngagement / accountData.followers_count) * 100).toFixed(2)) : 0;
+
+      // Calcular engajamento por tipo
+      const byType: Record<string, { posts: number; totalLikes: number; totalComments: number }> = {};
+      posts.forEach(p => {
+        if (!byType[p.mediaType]) byType[p.mediaType] = { posts: 0, totalLikes: 0, totalComments: 0 };
+        byType[p.mediaType].posts++;
+        byType[p.mediaType].totalLikes += p.likes;
+        byType[p.mediaType].totalComments += p.comments;
+      });
+      const engagementByType = Object.entries(byType).map(([type, d]) => ({
+        type,
+        posts: d.posts,
+        totalLikes: d.totalLikes,
+        totalComments: d.totalComments,
+        avgEngagement: d.posts > 0 ? Math.round((d.totalLikes + d.totalComments) / d.posts) : 0,
+      }));
+
+      const fetchedAt = new Date().toISOString();
+
+      const newData: InstagramData = {
+        account: {
+          username: accountData.username,
+          name: accountData.name,
+          bio: accountData.biography || '',
+          followers: accountData.followers_count,
+          following: accountData.follows_count,
+          posts: accountData.media_count,
+          profilePicture: accountData.profile_picture_url || '',
+        },
+        posts,
+        metrics: { totalLikes, totalComments, avgEngagement, engagementRate, engagementByType },
+        fetchedAt,
+      };
+
+      // Salvar no arquivo JSON para persistir entre reinicializações
+      try {
+        const dir = path.dirname(this.dataPath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(this.dataPath, JSON.stringify(newData, null, 2), 'utf-8');
+      } catch (writeErr) {
+        console.warn('[Instagram] Não foi possível salvar JSON (apenas em memória):', writeErr);
+      }
+
+      // Atualizar dados em memória imediatamente
+      this.data = newData;
+
+      console.log(`[Instagram] Sincronizado: ${accountData.followers_count} seguidores, ${posts.length} posts`);
+      return { success: true, followers: accountData.followers_count, posts: posts.length, fetchedAt };
+
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[Instagram] Erro na sincronização:', msg);
+      return { success: false, followers: 0, posts: 0, fetchedAt: new Date().toISOString(), error: msg };
+    }
   }
 
   /**

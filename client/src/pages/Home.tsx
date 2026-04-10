@@ -10,16 +10,41 @@ import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
 export default function Home() {
   const [, navigate] = useLocation();
   const [lastSync, setLastSync] = useState<string>('');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const utils = trpc.useUtils();
   
   // Buscar métricas reais do Instagram
-  const { data: metrics, isLoading: metricsLoading, error: metricsError, refetch } = trpc.instagram.getMetrics.useQuery();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
+
+  // Mutation para sincronizar dados diretamente da API do Instagram
+  const syncMutation = trpc.instagram.syncFromAPI.useMutation({
+    onSuccess: async (result) => {
+      if (result.success) {
+        // Invalidar todas as queries do Instagram para buscar dados frescos
+        await utils.instagram.getMetrics.invalidate();
+        await utils.instagram.getPosts.invalidate();
+        await utils.instagram.getGrowth.invalidate();
+        await utils.instagram.getEngagementByType.invalidate();
+        await utils.instagram.getTopPosts.invalidate();
+        const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        setLastSync(now);
+        setSyncError(null);
+      } else {
+        setSyncError(result.error || 'Erro desconhecido na sincronização');
+      }
+    },
+    onError: (err) => {
+      setSyncError(err.message);
+    },
+  });
   
   const handleNavigate = (route: string) => {
     navigate(route);
   };
 
   const handleRefresh = () => {
-    refetch();
+    setSyncError(null);
+    syncMutation.mutate();
   };
 
   // Calcular KPIs baseado em dados reais
@@ -62,17 +87,23 @@ export default function Home() {
                 <p className="text-muted-foreground">Visão executiva da campanha Eduardo Brandão — Brasília Cidade Parque</p>
               )}
             </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={metricsLoading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${metricsLoading ? 'animate-spin' : ''}`} />
-              Sincronizar
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={syncMutation.isPending || metricsLoading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}
             </Button>
           </div>
 
           {/* Status de Sincronização */}
-          {lastSync && !metricsError && (
+          {syncError && (
+            <div className="flex items-center gap-2 mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-sm text-red-400">Erro na sincronização: {syncError}</span>
+            </div>
+          )}
+          {lastSync && !syncError && (
             <div className="flex items-center gap-2 mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-green-600">Dados sincronizados do Instagram às {lastSync}</span>
+              <span className="text-sm text-green-600">Dados sincronizados diretamente do Instagram às {lastSync}</span>
             </div>
           )}
           

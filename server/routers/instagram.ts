@@ -116,4 +116,12 @@ export const instagramRouter = router({
       isConfigured: instagramService.isConfigured(),
     };
   }),
+
+  /**
+   * Sincronizar dados diretamente da Instagram Graph API
+   * Busca followers, posts e métricas em tempo real
+   */
+  syncFromAPI: publicProcedure.mutation(async () => {
+    return await instagramService.syncFromAPI();
+  }),
 });
