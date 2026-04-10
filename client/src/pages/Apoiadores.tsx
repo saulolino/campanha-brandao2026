@@ -20,6 +20,9 @@ const LOGO_COLORIDA =
 const LOGO_BRANCA =
   "https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-branca-nova_3287b1c2.png";
 
+const LOGO_ATIVO1 =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/Ativo1_7906de7f.png";
+
 const PROTOCOLO_STEPS = [
   { icon: Eye,           label: "Assistir",     desc: "Assista ao vídeo ou visualize a imagem por pelo menos 3 segundos antes de interagir." },
   { icon: Heart,         label: "Curtir",       desc: "Curta o post imediatamente. Cada curtida aumenta o alcance orgânico." },
@@ -323,13 +326,20 @@ export default function Apoiadores() {
           </div>
         </section>
 
-        {/* Rodapé */}
+          {/* Rodé */}
         <div className="text-center pt-4 pb-8 border-t border-gray-800/50">
-          <img
-            src={LOGO_COLORIDA}
-            alt="Brasília Cidade Parque"
-            className="h-20 mx-auto mb-4 opacity-80 object-contain"
-          />
+          <div className="flex items-center justify-center gap-8 mb-4">
+            <img
+              src={LOGO_COLORIDA}
+              alt="Brasília Cidade Parque"
+              className="h-20 opacity-80 object-contain"
+            />
+            <img
+              src={LOGO_ATIVO1}
+              alt="Eduardo Brandão"
+              className="h-20 opacity-80 object-contain"
+            />
+          </div>
           <p className="text-sm text-gray-500">Pré campanha Eduardo Brandão · Brasília Cidade Parque · DF 2026</p>
         </div>
       </div>
