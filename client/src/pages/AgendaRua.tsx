@@ -1,6 +1,7 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import SidebarNav from "@/components/SidebarNav";
+import { MapView } from "@/components/Map";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,10 @@ import {
   Plus, Calendar, MapPin, Users, Clock, ChevronLeft, ChevronRight,
   Edit3, Trash2, Upload, X, Image, FileVideo, FileText, Loader2,
   Eye, CheckCircle2, XCircle, AlertCircle, Footprints, Megaphone,
-  Handshake, Mic, Star, LayoutGrid,
+  Handshake, Mic, Star, LayoutGrid, Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type EventType = "caminhada" | "reuniao" | "panfletagem" | "visita" | "debate" | "entrevista" | "show" | "outro";
@@ -149,6 +152,42 @@ export default function AgendaRua() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  // Google Maps
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<any>(null);
+  const autocompleteInputRef = useRef<HTMLInputElement>(null);
+  const [mapCenter, setMapCenter] = useState<google.maps.LatLngLiteral>({ lat: -15.7801, lng: -47.9292 }); // Brasília
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleMapReady = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    // Inicializar autocomplete no input de endereço
+    if (autocompleteInputRef.current && window.google) {
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        autocompleteInputRef.current,
+        { componentRestrictions: { country: "br" }, fields: ["geometry", "formatted_address", "name"] }
+      );
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry?.location) return;
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        map.setCenter({ lat, lng });
+        map.setZoom(16);
+        // Atualizar marcador
+        if (markerRef.current) markerRef.current.map = null;
+        markerRef.current = new window.google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: { lat, lng },
+          title: place.name || place.formatted_address,
+        });
+        // Preencher campo de endereço
+        const address = place.formatted_address || place.name || "";
+        setForm(f => ({ ...f, location: address }));
+      });
+    }
+  }, []);
 
   const utils = trpc.useUtils();
 
@@ -295,6 +334,115 @@ export default function AgendaRua() {
     setForm(f => ({ ...f, mediaUrls: updated.length ? JSON.stringify(updated) : "" }));
   }
 
+  // ─── Exportar PDF da agenda do mês ────────────────────────────────────────
+  function exportPdf() {
+    setIsExportingPdf(true);
+    try {
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const year = monthRef.getFullYear();
+      const month = monthRef.getMonth();
+      const monthName = MONTHS_PT[month];
+
+      // Filtrar eventos do mês
+      const monthEvents = events.filter(ev => {
+        const d = new Date(ev.eventDate);
+        return d.getFullYear() === year && d.getMonth() === month;
+      }).sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+
+      // Cabeçalho
+      doc.setFillColor(13, 17, 23);
+      doc.rect(0, 0, 210, 40, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Agenda de Rua", 14, 18);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(160, 160, 160);
+      doc.text(`Pré campanha Eduardo Brandão · ${monthName} ${year}`, 14, 27);
+      doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 33);
+
+      // KPIs
+      const total = monthEvents.length;
+      const realizados = monthEvents.filter(e => e.status === "realizado").length;
+      const confirmados = monthEvents.filter(e => e.status === "confirmado").length;
+      const totalPublico = monthEvents.reduce((s, e) => s + (e.actualAttendees || e.expectedAttendees || 0), 0);
+
+      doc.setFillColor(22, 27, 34);
+      doc.roundedRect(14, 46, 42, 22, 3, 3, "F");
+      doc.roundedRect(60, 46, 42, 22, 3, 3, "F");
+      doc.roundedRect(106, 46, 42, 22, 3, 3, "F");
+      doc.roundedRect(152, 46, 42, 22, 3, 3, "F");
+
+      const kpis = [
+        { label: "Total de Eventos", value: String(total), x: 14 },
+        { label: "Realizados", value: String(realizados), x: 60 },
+        { label: "Confirmados", value: String(confirmados), x: 106 },
+        { label: "Público Total", value: String(totalPublico), x: 152 },
+      ];
+      kpis.forEach(k => {
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(52, 211, 153); // verde
+        doc.text(k.value, k.x + 21, 60, { align: "center" });
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(140, 140, 140);
+        doc.text(k.label, k.x + 21, 65, { align: "center" });
+      });
+
+      // Tabela de eventos
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text("Eventos do Mês", 14, 80);
+
+      const rows = monthEvents.map(ev => [
+        new Date(ev.eventDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+        ev.eventTime || "",
+        ev.title || "",
+        TYPE_CONFIG[ev.type as EventType]?.label || ev.type,
+        STATUS_CONFIG[ev.status as EventStatus]?.label || ev.status,
+        ev.location || "",
+        ev.neighborhood || "",
+        ev.expectedAttendees ? String(ev.expectedAttendees) : "",
+        ev.actualAttendees ? String(ev.actualAttendees) : "",
+      ]);
+
+      autoTable(doc, {
+        startY: 84,
+        head: [["Data", "Hora", "Título", "Tipo", "Status", "Local", "Bairro", "Esperado", "Presente"]],
+        body: rows,
+        styles: { fontSize: 7, cellPadding: 2, textColor: [220, 220, 220], fillColor: [22, 27, 34] },
+        headStyles: { fillColor: [30, 80, 50], textColor: [255, 255, 255], fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [18, 22, 28] },
+        columnStyles: {
+          0: { cellWidth: 12 }, 1: { cellWidth: 10 }, 2: { cellWidth: 40 },
+          3: { cellWidth: 20 }, 4: { cellWidth: 20 }, 5: { cellWidth: 35 },
+          6: { cellWidth: 22 }, 7: { cellWidth: 12 }, 8: { cellWidth: 12 },
+        },
+        theme: "plain",
+      });
+
+      // Rodapé
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`Agenda de Rua · ${monthName} ${year} · Pág. ${i}/${pageCount}`, 105, 290, { align: "center" });
+      }
+
+      doc.save(`agenda-rua-${monthName.toLowerCase()}-${year}.pdf`);
+      toast.success("PDF exportado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar PDF.");
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }
+
   function getEventsForDay(day: Date): any[] {
     return events.filter(ev => {
       const d = new Date(ev.eventDate);
@@ -341,6 +489,19 @@ export default function AgendaRua() {
                 </button>
               ))}
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={exportPdf}
+              disabled={isExportingPdf}
+              className="border-white/10 text-gray-300 hover:text-white hover:bg-white/10 gap-1"
+            >
+              {isExportingPdf
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Download className="w-4 h-4" />
+              }
+              Exportar PDF
+            </Button>
             {canEdit && (
               <Button size="sm" onClick={() => openNew()} className="bg-green-600 hover:bg-green-700 text-white gap-1">
                 <Plus className="w-4 h-4" /> Novo Evento
@@ -654,16 +815,40 @@ export default function AgendaRua() {
           {/* ── Tab: Local & Público ── */}
           {modalTab === "local" && (
             <div className="space-y-4">
+              {/* Campo com autocomplete do Google Maps */}
+              <div>
+                <Label className="text-gray-300 text-xs mb-1 block">Buscar endereço (autocomplete)</Label>
+                <input
+                  ref={autocompleteInputRef}
+                  type="text"
+                  defaultValue={form.location}
+                  placeholder="Digite o endereço para buscar no mapa..."
+                  className="w-full px-3 py-2 rounded-md bg-white/5 border border-white/10 text-white placeholder:text-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Selecione um resultado para preencher o endereço e posicionar o pin no mapa.</p>
+              </div>
+
+              {/* Mapa interativo */}
+              <div className="rounded-xl overflow-hidden border border-white/10">
+                <MapView
+                  initialCenter={mapCenter}
+                  initialZoom={12}
+                  className="h-[220px]"
+                  onMapReady={handleMapReady}
+                />
+              </div>
+
+              {/* Campo de endereço manual */}
               <div>
                 <Label className="text-gray-300 text-xs mb-1 block">Local / Endereço *</Label>
                 <Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
-                  placeholder="Ex: Praça do Guará, Quadra 1" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
+                  placeholder="Ex: Praça do Guárá, Quadra 1" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-gray-300 text-xs mb-1 block">Bairro / Região</Label>
                   <Input value={form.neighborhood} onChange={e => setForm(f => ({ ...f, neighborhood: e.target.value }))}
-                    placeholder="Ex: Guará I" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
+                    placeholder="Ex: Guárá I" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
                 </div>
                 <div>
                   <Label className="text-gray-300 text-xs mb-1 block">Cidade</Label>

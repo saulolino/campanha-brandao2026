@@ -610,3 +610,5 @@
 - [x] Ocultar card "Equipe da Pré campanha" na página /projecoes
 - [x] Criar página de cadastro público para equipe (email + WhatsApp + senha), usuário criado como visitante + gestão de pendentes no admin
 - [x] Criar módulo Agenda de Rua (schema DB, backend, página, modal, upload de materiais)
+- [x] Integrar Google Maps com autocomplete de endereço no modal da Agenda de Rua
+- [x] Botão de exportação da agenda mensal em PDF
