@@ -104,16 +104,8 @@ function Router() {
         )}
       </Route>
 
-      <Route path="/apoiadores">
-        {() => (
-          <ProtectedRoute
-            requiredRole={["team", "coordinator", "superadmin"]}
-            rotaTentada="/apoiadores"
-          >
-            <Apoiadores />
-          </ProtectedRoute>
-        )}
-      </Route>
+      {/* /apoiadores — página pública, sem necessidade de login */}
+      <Route path="/apoiadores" component={Apoiadores} />
 
       <Route path="/publicacoes">
         {() => (

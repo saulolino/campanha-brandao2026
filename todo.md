@@ -594,3 +594,5 @@
 
 - [x] Upload das logos para CDN e inclusão em toda a plataforma (login, sidebar, acesso negado, apoiadores)
 - [x] Simplificar página /apoiadores com 6 seções: Protocolo de Engajamento, Ações Rápidas, Regras de Ouro, Hashtags Estratégicas, Inspiração para Comentários, Perguntas Frequentes
+
+- [x] Tornar /apoiadores rota pública (sem necessidade de login)
