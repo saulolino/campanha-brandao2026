@@ -311,25 +311,47 @@ export class InstagramService {
       };
 
       // 2. Buscar posts recentes com métricas
+      // Nota: like_count e comments_count requerem permissão instagram_basic
+      // Se não disponível, preservamos os dados de engajamento do JSON existente
       const postsUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,thumbnail_url,media_url&limit=25&access_token=${token}`;
       const postsRes = await fetch(postsUrl);
-      const postsData = postsRes.ok ? (await postsRes.json() as { data: Array<{
-        id: string; caption?: string; media_type: string; media_product_type: string;
-        permalink: string; timestamp: string; like_count: number; comments_count: number;
-        thumbnail_url?: string; media_url?: string;
-      }> }) : { data: [] };
+      const postsJson = postsRes.ok ? (await postsRes.json() as {
+        data?: Array<{
+          id: string; caption?: string; media_type: string; media_product_type: string;
+          permalink: string; timestamp: string; like_count?: number; comments_count?: number;
+          thumbnail_url?: string; media_url?: string;
+        }>;
+        error?: { message: string };
+      }) : { data: [] };
 
-      const posts = (postsData.data || []).map(p => ({
-        id: p.id,
-        caption: p.caption || '',
-        mediaType: p.media_type,
-        mediaProductType: p.media_product_type,
-        permalink: p.permalink,
-        timestamp: p.timestamp,
-        likes: p.like_count || 0,
-        comments: p.comments_count || 0,
-        thumbnailUrl: p.thumbnail_url || p.media_url || '',
-      }));
+      // Mapa de posts existentes para preservar likes/comments quando a API não retorna
+      const existingPostsMap = new Map((this.data?.posts || []).map(p => [p.id, p]));
+
+      const hasMediaPermission = !postsJson.error && Array.isArray(postsJson.data) && postsJson.data.length > 0;
+
+      let posts: Array<{ id: string; caption: string; mediaType: string; mediaProductType: string; permalink: string; timestamp: string; likes: number; comments: number; thumbnailUrl: string; }>;
+
+      if (hasMediaPermission) {
+        posts = postsJson.data!.map(p => {
+          const existing = existingPostsMap.get(p.id);
+          return {
+            id: p.id,
+            caption: p.caption || '',
+            mediaType: p.media_type,
+            mediaProductType: p.media_product_type,
+            permalink: p.permalink,
+            timestamp: p.timestamp,
+            // Usar likes/comments da API se disponíveis, senão preservar do JSON existente
+            likes: (p.like_count != null && p.like_count > 0) ? p.like_count : (existing?.likes || 0),
+            comments: (p.comments_count != null && p.comments_count > 0) ? p.comments_count : (existing?.comments || 0),
+            thumbnailUrl: p.thumbnail_url || p.media_url || existing?.thumbnailUrl || '',
+          };
+        });
+      } else {
+        // Sem permissão para listar mídia: preservar posts existentes e atualizar apenas conta
+        console.warn('[Instagram] Sem permissão para listar mídia. Preservando posts e métricas existentes.');
+        posts = this.data?.posts || [];
+      }
 
       const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
       const totalComments = posts.reduce((s, p) => s + p.comments, 0);
@@ -344,13 +366,16 @@ export class InstagramService {
         byType[p.mediaType].totalLikes += p.likes;
         byType[p.mediaType].totalComments += p.comments;
       });
-      const engagementByType = Object.entries(byType).map(([type, d]) => ({
-        type,
-        posts: d.posts,
-        totalLikes: d.totalLikes,
-        totalComments: d.totalComments,
-        avgEngagement: d.posts > 0 ? Math.round((d.totalLikes + d.totalComments) / d.posts) : 0,
-      }));
+      // Preservar engagementByType existente se não houver posts novos
+      const engagementByType = Object.keys(byType).length > 0
+        ? Object.entries(byType).map(([type, d]) => ({
+            type,
+            posts: d.posts,
+            totalLikes: d.totalLikes,
+            totalComments: d.totalComments,
+            avgEngagement: d.posts > 0 ? Math.round((d.totalLikes + d.totalComments) / d.posts) : 0,
+          }))
+        : (this.data?.metrics.engagementByType || []);
 
       const fetchedAt = new Date().toISOString();
 

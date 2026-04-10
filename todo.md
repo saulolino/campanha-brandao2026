@@ -589,3 +589,5 @@
 - [x] Página de acesso negado com mensagem amigável
 
 - [x] Bug: número de seguidores não atualizava na Home (sincronização era apenas cache local, agora busca direto da Graph API)
+
+- [x] Bug: métricas de engajamento zeradas após sincronização (token sem permissão instagram_basic; syncFromAPI agora preserva posts/métricas existentes; JSON restaurado com 20 posts e 56 avg engagement)
