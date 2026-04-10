@@ -620,3 +620,6 @@
 - [x] Vista "Mapa" na Agenda de Rua com pins de todos os eventos do mês
 - [x] Permitir Visitante visualizar Agenda de Conteúdo e Agenda de Rua (somente leitura, sem edição)
 - [x] Bug: Vista Mapa da Agenda de Rua — pins aparecem mas infowindow não abre ao clicar
+- [x] Botão "Novo Evento" nas vistas Semanal e Mensal da Agenda de Rua
+- [x] Notificação ao admin (in-app) quando novo cadastro é criado
+- [x] Sincronização automática diária do Instagram às 08h (job agendado no servidor)

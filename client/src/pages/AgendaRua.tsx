@@ -715,15 +715,22 @@ export default function AgendaRua() {
           {viewMode === "semanal" && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <button onClick={() => { const d = new Date(weekRef); d.setDate(d.getDate() - 7); setWeekRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-sm font-medium text-gray-300">
-                  {weekDays[0].toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – {weekDays[6].toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
-                </span>
-                <button onClick={() => { const d = new Date(weekRef); d.setDate(d.getDate() + 7); setWeekRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { const d = new Date(weekRef); d.setDate(d.getDate() - 7); setWeekRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm font-medium text-gray-300">
+                    {weekDays[0].toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} – {weekDays[6].toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                  </span>
+                  <button onClick={() => { const d = new Date(weekRef); d.setDate(d.getDate() + 7); setWeekRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+                {canEdit && (
+                  <Button size="sm" onClick={() => openNew()} className="bg-green-600 hover:bg-green-700 text-white gap-1">
+                    <Plus className="w-4 h-4" /> Novo Evento
+                  </Button>
+                )}
               </div>
               <div className="grid grid-cols-7 gap-2">
                 {weekDays.map((day, i) => {
@@ -768,15 +775,22 @@ export default function AgendaRua() {
           {viewMode === "mensal" && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <button onClick={() => { const d = new Date(monthRef); d.setMonth(d.getMonth() - 1); setMonthRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-base font-semibold text-white">
-                  {MONTHS_PT[monthRef.getMonth()]} {monthRef.getFullYear()}
-                </span>
-                <button onClick={() => { const d = new Date(monthRef); d.setMonth(d.getMonth() + 1); setMonthRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { const d = new Date(monthRef); d.setMonth(d.getMonth() - 1); setMonthRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-base font-semibold text-white">
+                    {MONTHS_PT[monthRef.getMonth()]} {monthRef.getFullYear()}
+                  </span>
+                  <button onClick={() => { const d = new Date(monthRef); d.setMonth(d.getMonth() + 1); setMonthRef(d); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+                {canEdit && (
+                  <Button size="sm" onClick={() => openNew()} className="bg-green-600 hover:bg-green-700 text-white gap-1">
+                    <Plus className="w-4 h-4" /> Novo Evento
+                  </Button>
+                )}
               </div>
               {/* Header dias */}
               <div className="grid grid-cols-7 gap-1 mb-1">

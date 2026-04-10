@@ -3,6 +3,7 @@ import { getDb } from "./db";
 import { instagramPosts, streetEvents } from "../drizzle/schema";
 import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
+import { syncInstagramProfile } from "./instagramSync";
 
 let schedulerInitialized = false;
 
@@ -249,7 +250,26 @@ export function initializeScheduler(): void {
     }
   });
 
-  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora.");
+  // Sincronizar métricas do Instagram às 08h todos os dias
+  cron.schedule("0 8 * * *", async () => {
+    try {
+      console.log("[Scheduler] Iniciando sincronização diária do Instagram (08h)...");
+      const success = await syncInstagramProfile();
+      if (success) {
+        await notifyOwner({
+          title: `📸 Instagram sincronizado`,
+          content: `Métricas do Instagram foram atualizadas automaticamente às 08h.\n\nAcesse **Métricas** e **Projeções** para ver os dados mais recentes.`,
+        }).catch(() => {});
+        console.log("[Scheduler] Sincronização do Instagram concluída com sucesso.");
+      } else {
+        console.warn("[Scheduler] Sincronização do Instagram falhou ou retornou sem dados.");
+      }
+    } catch (err: any) {
+      console.error("[Scheduler] Erro na sincronização do Instagram:", err.message);
+    }
+  });
+
+  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora, sync do Instagram às 08h.");
 }
 
 /**

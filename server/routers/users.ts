@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { users, accessLogs, passwordResetTokens } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { notifyOwner } from "../_core/notification";
 import crypto from "crypto";
 
 // Utilitário simples de hash de senha (SHA-256 com salt fixo)
@@ -323,6 +324,20 @@ export const usersRouter = router({
         passwordHash,
         lastSignedIn: new Date(),
       });
+
+      // Notificar admin sobre novo cadastro
+      notifyOwner({
+        title: `🆕 Novo cadastro: ${input.name}`,
+        content: [
+          `**${input.name}** acabou de se cadastrar no painel e aguarda aprovação.`,
+          ``,
+          `📧 **E-mail:** ${input.email}`,
+          `📱 **WhatsApp:** ${input.whatsapp}`,
+          `🔑 **Role atual:** Visitante (pendente de classificação)`,
+          ``,
+          `Acesse o painel em **Usuários → Gerenciar** para promover o acesso.`,
+        ].join("\n"),
+      }).catch(() => {}); // não bloquear o cadastro se a notificação falhar
 
       return { success: true, message: "Cadastro realizado! Aguarde a aprovação do administrador para acessar o painel." };
     }),
