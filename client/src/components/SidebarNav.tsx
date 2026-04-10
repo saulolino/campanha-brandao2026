@@ -196,8 +196,8 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
           )}
         </nav>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-slate-800">
+        {/* Logout + Logos */}
+        <div className="p-4 border-t border-slate-800 space-y-4">
           <button
             onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-900/30 hover:bg-red-900/50 border border-red-700/30 rounded-lg transition-colors text-red-400 hover:text-red-300 text-sm font-medium"
@@ -205,6 +205,19 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
             <LogOut size={16} />
             Sair
           </button>
+          <div className="flex items-center justify-center gap-3 pt-1">
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
+              alt="Brasília Cidade Parque"
+              className="w-10 h-10 object-contain opacity-60"
+            />
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/Ativo1_7906de7f.png"
+              alt="Eduardo Brandão"
+              className="h-8 object-contain opacity-60"
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 text-center">Pré campanha Eduardo Brandão · DF 2026</p>
         </div>
       </aside>
 

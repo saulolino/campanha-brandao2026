@@ -534,11 +534,18 @@ export default function Sidebar({ activeSection, onNavigate }: SidebarProps) {
         <div className="p-4 border-t border-sidebar-border space-y-4">
           <LogoutButton />
           <div className="flex flex-col items-center gap-2">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
-              alt="Brasília Cidade Parque"
-              className="w-16 h-16 object-contain opacity-70"
-            />
+            <div className="flex items-center justify-center gap-3">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
+                alt="Brasília Cidade Parque"
+                className="w-12 h-12 object-contain opacity-70"
+              />
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/Ativo1_7906de7f.png"
+                alt="Eduardo Brandão"
+                className="h-10 object-contain opacity-70"
+              />
+            </div>
             <div className="text-[10px] text-muted-foreground text-center">
               <p>Painel Interno da Pré campanha</p>
               <p className="mt-0.5">Abr - Out 2026</p>

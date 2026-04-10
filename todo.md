@@ -602,3 +602,4 @@
 - [x] Substituir "campanha" por "pré campanha" em toda a plataforma
 - [x] Remover palavras e referências a "vereador" da página /apoiadores
 - - [x] Incluir logo Ativo1.png no rodé da página /apoiadores
+- [x] Incluir logo Ativo1 no painel interno (sidebar) e no rodapé global de todas as páginas

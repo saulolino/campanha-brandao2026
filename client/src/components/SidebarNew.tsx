@@ -150,12 +150,24 @@ export default function SidebarNew({ activeSection, onNavigate }: SidebarProps) 
           ))}
         </nav>
 
-        {/* Logout Button */}
-        <div className="absolute bottom-4 left-4 right-4">
+        {/* Logout Button + Logos */}
+        <div className="absolute bottom-4 left-4 right-4 space-y-3">
           <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/30 rounded-lg transition-colors text-red-400 hover:text-red-300 text-sm font-medium">
             <LogOut size={16} />
             Sair
           </button>
+          <div className="flex items-center justify-center gap-3">
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/logo-bcp-colorida_de2594b3.png"
+              alt="Brasília Cidade Parque"
+              className="w-10 h-10 object-contain opacity-60"
+            />
+            <img
+              src="https://d2xsxph8kpxj0f.cloudfront.net/310419663030106586/ev4E5UN3WPLGa6X4YsWXwc/Ativo1_7906de7f.png"
+              alt="Eduardo Brandão"
+              className="h-8 object-contain opacity-60"
+            />
+          </div>
         </div>
       </aside>
 
