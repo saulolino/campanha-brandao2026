@@ -21,6 +21,8 @@ import {
   CAMPAIGN, MONTHLY_PROJECTION, PILLARS, KPIS, BUDGET,
   CONTENT_PILLARS, VIRAL_TYPES, DONT_DO_RULES, TEAM,
 } from "@/lib/campaignData";
+import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   UserPlus, Heart, MessageCircle, TrendingUp, Eye, Zap, Bookmark, Share2,
@@ -29,33 +31,41 @@ const iconMap: Record<string, React.ComponentType<{ className?: string; style?: 
 
 const totalBudgetMin = BUDGET.reduce((s, b) => s + b.min, 0);
 const totalBudgetMax = BUDGET.reduce((s, b) => s + b.max, 0);
-
-// Adicionar ponto inicial (situação atual) para o gráfico ficar completo
-const growthChartData = [
-  { month: "Hoje", seguidores: CAMPAIGN.currentFollowers, crescimento: 0, investimento: 0 },
-  ...MONTHLY_PROJECTION.map((m) => ({
-    month: m.month,
-    seguidores: m.total,
-    crescimento: m.growth,
-    investimento: m.investment,
-  })),
-];
-
-const investmentData = MONTHLY_PROJECTION.map((m) => ({
-  month: m.month,
-  investimento: m.investment,
-}));
-
-const progressPct = Math.round((CAMPAIGN.currentFollowers / CAMPAIGN.targetFollowers) * 100);
-const remainingFollowers = CAMPAIGN.targetFollowers - CAMPAIGN.currentFollowers;
-const daysLeft = Math.max(1, Math.ceil(
-  (new Date(CAMPAIGN.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-));
-const requiredDailyGrowth = Math.ceil(remainingFollowers / daysLeft);
 const CONTENT_COLORS = ["#2d6a4f", "#40916c", "#c9a84c", "#e76f51"];
 
 export default function Projecoes() {
   const { animationClass } = usePageTransition();
+
+  // Busca dados reais do Instagram — atualiza automaticamente após cada sync
+  const { data: metricsData } = trpc.instagram.getMetrics.useQuery(undefined, {
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
+
+  // Usa seguidores reais do banco; fallback para campaignData se ainda não carregou
+  const currentFollowers = metricsData?.followers ?? CAMPAIGN.currentFollowers;
+
+  const progressPct = Math.round((currentFollowers / CAMPAIGN.targetFollowers) * 100);
+  const remainingFollowers = CAMPAIGN.targetFollowers - currentFollowers;
+  const daysLeft = Math.max(1, Math.ceil(
+    (new Date(CAMPAIGN.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+  ));
+  const requiredDailyGrowth = Math.ceil(remainingFollowers / daysLeft);
+
+  const growthChartData = useMemo(() => [
+    { month: "Hoje", seguidores: currentFollowers, crescimento: 0, investimento: 0 },
+    ...MONTHLY_PROJECTION.map((m) => ({
+      month: m.month,
+      seguidores: m.total,
+      crescimento: m.growth,
+      investimento: m.investment,
+    })),
+  ], [currentFollowers]);
+
+  const investmentData = useMemo(() => MONTHLY_PROJECTION.map((m) => ({
+    month: m.month,
+    investimento: m.investment,
+  })), []);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -68,7 +78,7 @@ export default function Projecoes() {
             <h1 className="text-2xl font-bold">Projeções da Pré campanha</h1>
           </div>
           <p className="text-muted-foreground">
-            Plano de crescimento de {CAMPAIGN.currentFollowers.toLocaleString()} para{" "}
+            Plano de crescimento de {currentFollowers.toLocaleString()} para{" "}
             {CAMPAIGN.targetFollowers.toLocaleString()} seguidores até outubro de 2026
           </p>
         </div>
@@ -78,7 +88,7 @@ export default function Projecoes() {
           <Card className="border-primary/30 bg-primary/5">
             <CardContent className="pt-5">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Seguidores Atuais</p>
-              <p className="text-3xl font-bold text-primary">{CAMPAIGN.currentFollowers.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-primary">{currentFollowers.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">de {CAMPAIGN.targetFollowers.toLocaleString()} meta</p>
             </CardContent>
           </Card>
@@ -115,7 +125,7 @@ export default function Projecoes() {
               Projeção de Crescimento Acumulado
             </CardTitle>
             <CardDescription>
-              Evolução mês a mês de {CAMPAIGN.currentFollowers.toLocaleString()} até 20.000 seguidores
+              Evolução mês a mês de {currentFollowers.toLocaleString()} até 20.000 seguidores
             </CardDescription>
           </CardHeader>
           <CardContent>

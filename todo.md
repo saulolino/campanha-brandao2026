@@ -631,3 +631,4 @@
 - [x] Notificação interna ao criar/confirmar evento na Agenda de Rua (evento_criado e evento_confirmado)
 - [x] Redirecionamento ao clicar em notificação novo_cadastro → aba Usuários + marcar como lida
 - [x] Módulo de Planejamento Semanal: chat guiado com IA que pesquisa fatos, gera posts e ações de rua e cadastra automaticamente nas agendas
+- [x] Bug: Projeções — KPIs não atualizam após sincronização do Instagram (corrigido: dados agora vêm do banco via tRPC)
