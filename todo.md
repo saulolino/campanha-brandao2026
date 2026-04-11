@@ -632,3 +632,5 @@
 - [x] Redirecionamento ao clicar em notificação novo_cadastro → aba Usuários + marcar como lida
 - [x] Módulo de Planejamento Semanal: chat guiado com IA que pesquisa fatos, gera posts e ações de rua e cadastra automaticamente nas agendas
 - [x] Bug: Projeções — KPIs não atualizam após sincronização do Instagram (corrigido: dados agora vêm do banco via tRPC)
+- [ ] Bug: Badge vermelho "1" no item Configurações aparece incorretamente (lógica de contagem de pendentes precisa excluir usuários já classificados)
+- [x] Badge de pendentes no menu: tornar clicável com link direto para /usuarios (página de aprovação)

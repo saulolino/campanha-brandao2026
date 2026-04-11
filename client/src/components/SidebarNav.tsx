@@ -212,7 +212,15 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
                 <Icon size={18} />
                 <span className="flex-1 text-left">{item.label}</span>
                 {showBadge && (
-                  <span className="min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                  <span
+                    title={`${pendingCount} visitante${pendingCount > 1 ? 's' : ''} aguardando aprovação — clique para gerenciar`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate("/usuarios");
+                      setIsOpen(false);
+                    }}
+                    className="min-w-[20px] h-5 px-1.5 bg-red-500 hover:bg-red-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none cursor-pointer transition-colors ring-2 ring-red-500/30 hover:ring-red-400/50"
+                  >
                     {pendingCount > 99 ? "99+" : pendingCount}
                   </span>
                 )}
