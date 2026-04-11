@@ -5,6 +5,7 @@ import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { type UserRole } from "@shared/permissions";
 import LogoutConfirmDialog from "./LogoutConfirmDialog";
+import QuickApprovalModal from "./QuickApprovalModal";
 import { trpc } from "@/lib/trpc";
 
 /**
@@ -98,6 +99,7 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
   const [, navigate] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const { user } = useLocalAuth();
   const { role, isSuperAdmin, isCoordinator, isTeam, isVisitor } = usePermissions();
 
@@ -216,7 +218,7 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
                     title={`${pendingCount} visitante${pendingCount > 1 ? 's' : ''} aguardando aprovação — clique para gerenciar`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate("/usuarios");
+                      setShowApprovalModal(true);
                       setIsOpen(false);
                     }}
                     className="min-w-[20px] h-5 px-1.5 bg-red-500 hover:bg-red-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none cursor-pointer transition-colors ring-2 ring-red-500/30 hover:ring-red-400/50"
@@ -268,6 +270,12 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
           onClick={() => setIsOpen(false)}
         />
       )}
+
+      {/* Quick Approval Modal */}
+      <QuickApprovalModal
+        open={showApprovalModal}
+        onOpenChange={setShowApprovalModal}
+      />
 
       {/* Logout Confirm Dialog */}
       <LogoutConfirmDialog

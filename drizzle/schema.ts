@@ -110,6 +110,23 @@ export const instagramMetrics = mysqlTable("instagram_metrics", {
 export type InstagramMetrics = typeof instagramMetrics.$inferSelect;
 export type InsertInstagramMetrics = typeof instagramMetrics.$inferInsert;
 
+// Histórico diário de seguidores do Instagram (snapshot por dia)
+export const instagramFollowersHistory = mysqlTable("instagram_followers_history", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 255 }).notNull(),
+  followers: int("followers").notNull(),
+  following: int("following").default(0).notNull(),
+  postsCount: int("postsCount").default(0).notNull(),
+  totalLikes: int("totalLikes").default(0).notNull(),
+  totalComments: int("totalComments").default(0).notNull(),
+  totalShares: int("totalShares").default(0).notNull(),
+  totalSaves: int("totalSaves").default(0).notNull(),
+  snapshotDate: varchar("snapshotDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type InstagramFollowersHistory = typeof instagramFollowersHistory.$inferSelect;
+export type InsertInstagramFollowersHistory = typeof instagramFollowersHistory.$inferInsert;
+
 // Configurações da campanha
 export const campaignSettings = mysqlTable("campaign_settings", {
   id: int("id").autoincrement().primaryKey(),

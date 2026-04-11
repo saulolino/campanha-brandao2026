@@ -1,7 +1,7 @@
 import { publicProcedure, router } from "../_core/trpc";
 import { instagramService } from "../services/instagramService";
 import { getDb } from "../db";
-import { campaignSettings } from "../../drizzle/schema";
+import { campaignSettings, instagramFollowersHistory } from "../../drizzle/schema";
 
 export const instagramRouter = router({
   /**
@@ -143,6 +143,30 @@ export const instagramRouter = router({
       };
     } catch {
       return { daysUntilExpiry: null, expiresAt: null, isExpired: false, isWarning: false };
+    }
+  }),
+
+  /**
+   * Histórico diário de seguidores (snapshots salvos após cada sincronização)
+   */
+  getFollowersHistory: publicProcedure.query(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return [];
+      const rows = await db.select()
+        .from(instagramFollowersHistory)
+        .orderBy(instagramFollowersHistory.snapshotDate)
+        .limit(90);
+      return rows.map(r => ({
+        date: r.snapshotDate,
+        followers: r.followers,
+        totalLikes: r.totalLikes,
+        totalComments: r.totalComments,
+        totalShares: r.totalShares,
+        totalSaves: r.totalSaves,
+      }));
+    } catch {
+      return [];
     }
   }),
 

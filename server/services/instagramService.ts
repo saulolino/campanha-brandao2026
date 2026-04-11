@@ -14,8 +14,8 @@ import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 import { ENV } from '../_core/env.js';
 import { getDb } from '../db.js';
-import { instagramMetrics } from '../../drizzle/schema.js';
-import { eq } from 'drizzle-orm';
+import { instagramMetrics, instagramFollowersHistory } from '../../drizzle/schema.js';
+import { eq, and } from 'drizzle-orm';
 import { notifyOwner } from '../_core/notification.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -579,6 +579,39 @@ export class InstagramService {
         console.warn('[Instagram] Não foi possível enviar notificação viral:', notifErr);
       }
 
+      // Salvar snapshot diário de seguidores (apenas 1 por dia)
+      try {
+        const snapDb = await getDb();
+        if (!snapDb) throw new Error('DB indisponível');
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const existing = await snapDb.select({ id: instagramFollowersHistory.id })
+          .from(instagramFollowersHistory)
+          .where(and(
+            eq(instagramFollowersHistory.username, accountData.username),
+            eq(instagramFollowersHistory.snapshotDate, today)
+          ))
+          .limit(1);
+        if (existing.length === 0) {
+          const totalLikes = posts.reduce((s: number, p: any) => s + (p.likes || 0), 0);
+          const totalComments = posts.reduce((s: number, p: any) => s + (p.comments || 0), 0);
+          const totalShares = posts.reduce((s: number, p: any) => s + (p.shares || 0), 0);
+          const totalSaves = posts.reduce((s: number, p: any) => s + (p.saves || 0), 0);
+          await snapDb.insert(instagramFollowersHistory).values({
+            username: accountData.username,
+            followers: accountData.followers_count,
+            following: accountData.follows_count || 0,
+            postsCount: accountData.media_count || 0,
+            totalLikes,
+            totalComments,
+            totalShares,
+            totalSaves,
+            snapshotDate: today,
+          });
+          console.log(`[Instagram] Snapshot diário salvo: ${accountData.followers_count} seguidores em ${today}`);
+        }
+      } catch (snapErr) {
+        console.warn('[Instagram] Não foi possível salvar snapshot diário:', snapErr);
+      }
       console.log(`[Instagram] Sincronizado: ${accountData.followers_count} seguidores, ${posts.length} posts`);
       return { success: true, followers: accountData.followers_count, posts: posts.length, fetchedAt };
 

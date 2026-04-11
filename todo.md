@@ -641,3 +641,6 @@
 - [x] Comparativo semanal percentual na aba Crescimento (variação semana a semana)
 - [x] Notificação automática de post viral via notifyOwner após sincronização
 - [x] Corrigir badge vermelho "1" em Configurações no menu lateral (lógica de pendentes)
+- [x] Modal de aprovação rápida no badge de pendentes do menu lateral
+- [x] Tabela instagram_followers_history com snapshot diário de seguidores
+- [x] Gráfico real de evolução de seguidores em Métricas usando o histórico

@@ -26,6 +26,7 @@ export default function Metricas() {
   const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 }, queryOpts);
   const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery(undefined, queryOpts);
   const { data: lastSync } = trpc.instagram.getLastSync.useQuery(undefined, queryOpts);
+  const { data: followersHistory } = trpc.instagram.getFollowersHistory.useQuery(undefined, queryOpts);
 
   // Mutação de sincronização
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
@@ -37,6 +38,7 @@ export default function Metricas() {
         utils.instagram.getEngagementByType.invalidate();
         utils.instagram.getTopPosts.invalidate();
         utils.instagram.getLastSync.invalidate();
+        utils.instagram.getFollowersHistory.invalidate();
       } else {
         toast.error(`Erro na sincronização: ${result.error || 'Tente novamente.'}`);
       }
@@ -238,6 +240,40 @@ export default function Metricas() {
 
             {/* Crescimento */}
             <TabsContent value="crescimento" className="space-y-4">
+              {/* Gráfico de Evolução Real de Seguidores */}
+              {followersHistory && followersHistory.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-violet-400" />
+                      Evolução de Seguidores
+                    </CardTitle>
+                    <CardDescription>
+                      Crescimento real de seguidores ao longo do tempo — {followersHistory.length} snapshots diários registrados
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <LineChart data={followersHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 11 }}
+                          tickFormatter={(v: string) => { const [, m, d] = v.split('-'); return `${d}/${m}`; }}
+                        />
+                        <YAxis stroke="#9ca3af" tick={{ fontSize: 11 }} domain={['auto', 'auto']} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                          labelStyle={{ color: '#f3f4f6' }}
+                          itemStyle={{ color: '#f3f4f6' }}
+                          formatter={(v: any) => [v.toLocaleString(), 'Seguidores']}
+                          labelFormatter={(l: string) => { const [y, m, d] = l.split('-'); return `${d}/${m}/${y}`; }}
+                        />
+                        <Line type="monotone" dataKey="followers" stroke="#a78bfa" strokeWidth={2.5}
+                          dot={{ fill: '#a78bfa', r: 4 }} name="Seguidores" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
               <Card>
                 <CardHeader>
                   <CardTitle>Evolução por Semana</CardTitle>
