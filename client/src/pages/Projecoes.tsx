@@ -40,6 +40,7 @@ export default function Projecoes() {
   const { data: metricsData } = trpc.instagram.getMetrics.useQuery(undefined, {
     refetchOnWindowFocus: true,
     staleTime: 0,
+    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos automaticamente
   });
 
   // Usa seguidores reais do banco; fallback para campaignData se ainda não carregou
@@ -176,7 +177,7 @@ export default function Projecoes() {
                 </thead>
                 <tbody>
                   {MONTHLY_PROJECTION.map((row, idx) => {
-                    const inicio = idx === 0 ? CAMPAIGN.currentFollowers : MONTHLY_PROJECTION[idx - 1].total;
+                    const inicio = idx === 0 ? currentFollowers : MONTHLY_PROJECTION[idx - 1].total;
                     const custoSeguidor = (row.investment / row.growth).toFixed(2);
                     return (
                       <tr key={row.month} className="border-b border-border/30 hover:bg-muted/30 transition-colors">

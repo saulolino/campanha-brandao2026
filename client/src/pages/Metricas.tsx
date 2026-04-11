@@ -18,11 +18,12 @@ export default function Metricas() {
   const utils = trpc.useUtils();
 
   // Buscar dados reais do Instagram
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
-  const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery();
-  const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 });
-  const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery();
-  const { data: lastSync } = trpc.instagram.getLastSync.useQuery();
+  const queryOpts = { staleTime: 0, refetchOnWindowFocus: true, refetchInterval: 5 * 60 * 1000 };
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery(undefined, queryOpts);
+  const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery(undefined, queryOpts);
+  const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 }, queryOpts);
+  const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery(undefined, queryOpts);
+  const { data: lastSync } = trpc.instagram.getLastSync.useQuery(undefined, queryOpts);
 
   // Mutação de sincronização
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({

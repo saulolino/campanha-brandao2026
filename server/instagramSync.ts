@@ -165,6 +165,14 @@ export async function syncInstagramProfile(): Promise<boolean> {
     if (saved) {
       console.log("[Instagram Sync] Sincronização concluída com sucesso");
       console.log(`[Instagram Sync] Seguidores: ${profileData.followers}, Posts: ${profileData.postsCount}`);
+      // Recarregar instagramService para manter memória sincronizada com o banco
+      try {
+        const { instagramService } = await import('./services/instagramService.js');
+        instagramService.reload();
+        console.log('[Instagram Sync] instagramService recarregado.');
+      } catch (reloadErr) {
+        console.warn('[Instagram Sync] Não foi possível recarregar instagramService:', reloadErr);
+      }
     }
 
     return saved;

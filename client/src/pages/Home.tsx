@@ -208,7 +208,11 @@ function TeamHome() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const utils = trpc.useUtils();
 
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery(undefined, {
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos automaticamente
+  });
 
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {

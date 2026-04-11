@@ -12,6 +12,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { ENV } from '../_core/env.js';
+import { getDb } from '../db.js';
+import { instagramMetrics } from '../../drizzle/schema.js';
+import { eq } from 'drizzle-orm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -183,9 +186,47 @@ export class InstagramService {
    * Nunca lança erro — usa fallback se necessário
    */
   async getMetrics(): Promise<InstagramMetricsReal> {
+    // Tentar ler do banco de dados primeiro (fonte mais atualizada)
+    try {
+      const db = await getDb();
+      if (db) {
+        const rows = await db.select().from(instagramMetrics)
+          .orderBy(instagramMetrics.lastSyncedAt)
+          .limit(1);
+        if (rows.length > 0) {
+          const row = rows[0];
+          // engagementRate armazenado como inteiro * 100 (ex: 310 = 3.10%)
+          const engRate = row.engagementRate / 100;
+          const avgEng = row.averageLikes + row.averageComments;
+          // Mesclar com dados do JSON para campos não armazenados no banco (likes, comments totais)
+          const jsonData = this.data || FALLBACK_DATA;
+          return {
+            followers: row.followers,
+            following: row.following,
+            posts: row.postsCount,
+            username: row.username,
+            name: row.username, // nome não armazenado no banco, usar username
+            bio: row.biography || jsonData.account.bio,
+            profilePicture: row.profilePictureUrl || jsonData.account.profilePicture,
+            engagement: jsonData.metrics.totalLikes + jsonData.metrics.totalComments,
+            reach: 0,
+            impressions: 0,
+            saves: 0,
+            shares: 0,
+            comments: jsonData.metrics.totalComments,
+            likes: jsonData.metrics.totalLikes,
+            engagementRate: engRate,
+            avgEngagement: avgEng,
+          };
+        }
+      }
+    } catch (dbErr) {
+      // Banco indisponível — usar fallback abaixo
+    }
+
+    // Fallback: usar dados em memória (JSON carregado no startup)
     const data = this.data || FALLBACK_DATA;
     const { account, metrics } = data;
-
     return {
       followers: account.followers,
       following: account.following,
@@ -405,6 +446,36 @@ export class InstagramService {
 
       // Atualizar dados em memória imediatamente
       this.data = newData;
+
+      // Persistir no banco de dados (fonte de verdade para todas as páginas)
+      try {
+        const db = await getDb();
+        if (db) {
+          const existing = await db.select().from(instagramMetrics)
+            .where(eq(instagramMetrics.username, accountData.username)).limit(1);
+          const dbPayload = {
+            username: accountData.username,
+            followers: accountData.followers_count,
+            following: accountData.follows_count,
+            postsCount: accountData.media_count,
+            biography: accountData.biography || '',
+            profilePictureUrl: accountData.profile_picture_url || '',
+            engagementRate: Math.round(engagementRate * 100), // armazenar como inteiro (ex: 310 = 3.10%)
+            averageLikes: Math.round(totalLikes / Math.max(posts.length, 1)),
+            averageComments: Math.round(totalComments / Math.max(posts.length, 1)),
+            lastSyncedAt: new Date(fetchedAt),
+          };
+          if (existing.length > 0) {
+            await db.update(instagramMetrics).set(dbPayload)
+              .where(eq(instagramMetrics.username, accountData.username));
+          } else {
+            await db.insert(instagramMetrics).values(dbPayload);
+          }
+          console.log('[Instagram] Métricas salvas no banco de dados.');
+        }
+      } catch (dbErr) {
+        console.warn('[Instagram] Não foi possível salvar no banco (dados em memória/JSON preservados):', dbErr);
+      }
 
       console.log(`[Instagram] Sincronizado: ${accountData.followers_count} seguidores, ${posts.length} posts`);
       return { success: true, followers: accountData.followers_count, posts: posts.length, fetchedAt };
