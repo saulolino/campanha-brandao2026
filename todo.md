@@ -644,3 +644,6 @@
 - [x] Modal de aprovação rápida no badge de pendentes do menu lateral
 - [x] Tabela instagram_followers_history com snapshot diário de seguidores
 - [x] Gráfico real de evolução de seguidores em Métricas usando o histórico
+- [x] Sidebar menu em /planejamento-semanal (SidebarNav adicionado ao layout da página)
+- [x] Snapshot histórico retroativo na tabela instagram_followers_history (58 registros semanais de mar/2025 a abr/2026)
+- [x] Contador de dias para a eleição na Home (card ElectionCountdownCard com contagem regressiva, barra de progresso e urgência visual)

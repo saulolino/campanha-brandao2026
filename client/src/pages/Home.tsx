@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb,
   Settings, RefreshCw, Heart, MessageCircle, FileText, MapPin, Clock,
-  CheckCircle2, XCircle, AlertCircle, CalendarDays, Lock,
+  CheckCircle2, XCircle, AlertCircle, CalendarDays, Lock, Timer, Flag,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
@@ -40,8 +40,80 @@ function formatEventDate(date: Date | string) {
   });
 }
 
-// ─── Vista do Visitante ──────────────────────────────────────────────────────
+// ─── Card de Contagem Regressiva para a Eleição ─────────────────────────────
 
+function ElectionCountdownCard({ currentFollowers, targetFollowers }: { currentFollowers: number; targetFollowers: number }) {
+  const electionDate = useMemo(() => new Date('2026-10-04T00:00:00'), []);
+  const today = new Date();
+  const msRemaining = electionDate.getTime() - today.getTime();
+  const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
+  const progressPercentage = targetFollowers > 0 ? Math.min(100, (currentFollowers / targetFollowers) * 100) : 0;
+
+  // Classificar urgência por dias restantes
+  const urgency = daysRemaining <= 30 ? 'critical' : daysRemaining <= 90 ? 'warning' : 'normal';
+  const urgencyColors = {
+    critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-500', badge: 'bg-red-500/20 text-red-400 border-red-500/30' },
+    warning:  { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-500', badge: 'bg-orange-500/20 text-orange-400 border-orange-500/30' },
+    normal:   { bg: 'bg-primary/5', border: 'border-primary/20', text: 'text-primary', badge: 'bg-primary/10 text-primary border-primary/20' },
+  }[urgency];
+
+  return (
+    <Card className={`mb-8 border ${urgencyColors.border} ${urgencyColors.bg}`}>
+      <CardContent className="pt-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          {/* Ícone + Dias */}
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${urgencyColors.bg} border ${urgencyColors.border}`}>
+              <Timer className={`w-7 h-7 ${urgencyColors.text}`} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-0.5">Eleição Municipal — 1º Turno</p>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-5xl font-black ${urgencyColors.text}`}>{daysRemaining}</span>
+                <span className="text-lg text-muted-foreground font-medium">dias</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">4 de outubro de 2026</p>
+            </div>
+          </div>
+
+          {/* Separador */}
+          <div className="hidden md:block w-px h-16 bg-border/50" />
+
+          {/* Progresso de Seguidores */}
+          <div className="flex-1 w-full">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Flag className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">Meta de Seguidores</span>
+              </div>
+              <Badge variant="outline" className={`text-xs ${urgencyColors.badge}`}>
+                {progressPercentage.toFixed(1)}% concluído
+              </Badge>
+            </div>
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden mb-2">
+              <div
+                className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r ${
+                  urgency === 'critical' ? 'from-red-500 to-red-400' :
+                  urgency === 'warning' ? 'from-orange-500 to-orange-400' :
+                  'from-primary to-accent'
+                }`}
+                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>
+                <span className={`font-semibold ${urgencyColors.text}`}>{currentFollowers.toLocaleString('pt-BR')}</span> seguidores atuais
+              </span>
+              <span>Meta: <span className="font-semibold">{targetFollowers.toLocaleString('pt-BR')}</span></span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Vista do Visitante ──────────────────────────────────────────────────────
 function VisitorHome() {
   const { user } = useLocalAuth();
   const displayName = user?.nome || user?.name || "Visitante";
@@ -406,6 +478,9 @@ function TeamHome() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Contagem Regressiva para a Eleição */}
+          <ElectionCountdownCard currentFollowers={currentFollowers} targetFollowers={targetFollowers} />
 
           {/* Progress Bar */}
           <Card className="mb-8 border border-border/50">
