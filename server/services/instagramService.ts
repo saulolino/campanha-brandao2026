@@ -296,7 +296,7 @@ export class InstagramService {
     const posts = data.posts;
 
     // Agrupar por semana
-    const weeklyData: Record<string, { likes: number; comments: number; posts: number }> = {};
+    const weeklyData: Record<string, { likes: number; comments: number; shares: number; saves: number; posts: number }> = {};
 
     posts.forEach((post) => {
       const date = new Date(post.timestamp);
@@ -305,19 +305,25 @@ export class InstagramService {
       const weekKey = weekStart.toISOString().split('T')[0];
 
       if (!weeklyData[weekKey]) {
-        weeklyData[weekKey] = { likes: 0, comments: 0, posts: 0 };
+        weeklyData[weekKey] = { likes: 0, comments: 0, shares: 0, saves: 0, posts: 0 };
       }
       weeklyData[weekKey].likes += post.likes;
       weeklyData[weekKey].comments += post.comments;
+      weeklyData[weekKey].shares += post.shares || 0;
+      weeklyData[weekKey].saves += post.saves || 0;
       weeklyData[weekKey].posts += 1;
     });
 
     const daily = Object.entries(weeklyData)
       .map(([date, data]) => ({
         date,
-        engagement: data.likes + data.comments,
+        likes: data.likes,
+        comments: data.comments,
+        shares: data.shares,
+        saves: data.saves,
+        engagement: data.likes + data.comments + data.shares + data.saves,
         posts: data.posts,
-        avgEngagement: data.posts > 0 ? Math.round((data.likes + data.comments) / data.posts) : 0,
+        avgEngagement: data.posts > 0 ? Math.round((data.likes + data.comments + data.shares + data.saves) / data.posts) : 0,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 

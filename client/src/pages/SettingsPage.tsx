@@ -10,6 +10,7 @@ import { Users, Pencil, Trash2, ShieldCheck, Eye, UserCog, UserPlus, Activity, L
 import { useLocation } from "wouter";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
+import InstagramTokenAlert from "@/components/InstagramTokenAlert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -287,6 +288,7 @@ export default function SettingsPage() {
             </div>
             <p className="text-muted-foreground">Gerencie credenciais do Instagram, horários de sincronização e preferências de relatórios</p>
           </div>
+          <InstagramTokenAlert />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-8">

@@ -1,11 +1,12 @@
 import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
+import InstagramTokenAlert from "@/components/InstagramTokenAlert";
 import { useState } from "react";
 import { usePageTransition } from "@/hooks/usePageTransition";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -14,6 +15,7 @@ export default function Metricas() {
   const { animationClass } = usePageTransition();
   const [period, setPeriod] = useState("semanal");
   const [contentType, setContentType] = useState("todos");
+  const [sortBy, setSortBy] = useState<"engagement" | "shares" | "saves" | "likes">("engagement");
 
   const utils = trpc.useUtils();
 
@@ -45,21 +47,27 @@ export default function Metricas() {
   // Preparar dados para gráficos — o backend retorna engagement/posts por semana (não followers)
   const growthData = growth?.daily?.map((item: any) => ({
     date: new Date(item.date).toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' }),
+    likes: item.likes || 0,
+    comments: item.comments || 0,
+    shares: item.shares || 0,
+    saves: item.saves || 0,
     engagement: item.engagement || 0,
     posts: item.posts || 0,
     avgEngagement: item.avgEngagement || 0,
   })) || [];
 
-  // Filtrar posts por tipo de conteúdo
-  const filteredPosts = topPosts?.filter((post: any) => {
-    if (contentType === 'todos') return true;
-    const postType = post.mediaType?.toLowerCase() || '';
-    if (contentType === 'reels') return postType.includes('reel');
-    if (contentType === 'carousel') return postType.includes('carousel');
-    if (contentType === 'image') return postType.includes('image');
-    if (contentType === 'video') return postType.includes('video');
-    return true;
-  }) || [];
+  // Filtrar e ordenar posts
+  const filteredPosts = (topPosts || [])
+    .filter((post: any) => {
+      if (contentType === 'todos') return true;
+      const postType = post.mediaType?.toLowerCase() || '';
+      if (contentType === 'reels') return postType.includes('reel');
+      if (contentType === 'carousel') return postType.includes('carousel');
+      if (contentType === 'image') return postType.includes('image');
+      if (contentType === 'video') return postType.includes('video');
+      return true;
+    })
+    .sort((a: any, b: any) => (b[sortBy] || 0) - (a[sortBy] || 0));
 
   // Preparar dados de distribuição de engajamento
   const engagementDistribution = [
@@ -75,6 +83,7 @@ export default function Metricas() {
       <main className={`flex-1 overflow-auto ${animationClass}`}>
         <div className="p-8 max-w-6xl mx-auto">
           {metricsError && <InstagramErrorAlert error={metricsError as unknown as Error} />}
+          <InstagramTokenAlert />
 
           {/* Barra de status de sincronização */}
           <div className="flex items-center justify-between mb-4 px-1">
@@ -207,8 +216,8 @@ export default function Metricas() {
             <TabsContent value="crescimento" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Engajamento por Semana</CardTitle>
-                  <CardDescription>Curtidas + comentários por semana (últimos posts)</CardDescription>
+                  <CardTitle>Evolução por Semana</CardTitle>
+                  <CardDescription>Curtidas, comentários e compartilhamentos por semana (últimos posts)</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {growthLoading ? (
@@ -216,22 +225,50 @@ export default function Metricas() {
                       <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : growthData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={growthData}>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <LineChart data={growthData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="date" stroke="#9ca3af" />
-                        <YAxis stroke="#9ca3af" />
+                        <XAxis dataKey="date" stroke="#9ca3af" tick={{ fontSize: 12 }} />
+                        <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
                         <Tooltip 
                           contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
                           labelStyle={{ color: '#f3f4f6' }}
+                          itemStyle={{ color: '#f3f4f6' }}
+                        />
+                        <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 13 }} />
+                        <Line 
+                          type="monotone" 
+                          dataKey="likes" 
+                          stroke="#ef4444" 
+                          strokeWidth={2}
+                          dot={{ fill: '#ef4444', r: 4 }}
+                          name="Curtidas"
                         />
                         <Line 
                           type="monotone" 
-                          dataKey="engagement" 
+                          dataKey="comments" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2}
+                          dot={{ fill: '#3b82f6', r: 4 }}
+                          name="Comentários"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="shares" 
                           stroke="#10b981" 
                           strokeWidth={2}
-                          dot={{ fill: '#10b981' }}
-                          name="Engajamento"
+                          dot={{ fill: '#10b981', r: 4 }}
+                          name="Compartilhamentos"
+                          strokeDasharray="5 3"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="saves" 
+                          stroke="#f59e0b" 
+                          strokeWidth={2}
+                          dot={{ fill: '#f59e0b', r: 4 }}
+                          name="Salvos"
+                          strokeDasharray="2 4"
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -331,10 +368,45 @@ export default function Metricas() {
 
             {/* Top Posts */}
             <TabsContent value="topPosts" className="space-y-4">
+              {/* Filtros */}
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Tipo:</span>
+                  <Select value={contentType} onValueChange={setContentType}>
+                    <SelectTrigger className="w-36 h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="reels">Reels</SelectItem>
+                      <SelectItem value="carousel">Carrossel</SelectItem>
+                      <SelectItem value="image">Imagem</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Ordenar por:</span>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                    <SelectTrigger className="w-44 h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="engagement">Mais Engajamento</SelectItem>
+                      <SelectItem value="shares">Mais Compartilhados</SelectItem>
+                      <SelectItem value="saves">Mais Salvos</SelectItem>
+                      <SelectItem value="likes">Mais Curtidos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Posts por Engajamento</CardTitle>
-                  <CardDescription>Posts com melhor performance</CardDescription>
+                  <CardTitle>
+                    Top Posts por {sortBy === 'engagement' ? 'Engajamento' : sortBy === 'shares' ? 'Compartilhamentos' : sortBy === 'saves' ? 'Salvos' : 'Curtidas'}
+                  </CardTitle>
+                  <CardDescription>Posts com melhor performance — {filteredPosts.length} resultado{filteredPosts.length !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {topLoading ? (

@@ -1,5 +1,7 @@
 import { publicProcedure, router } from "../_core/trpc";
 import { instagramService } from "../services/instagramService";
+import { getDb } from "../db";
+import { campaignSettings } from "../../drizzle/schema";
 
 export const instagramRouter = router({
   /**
@@ -117,6 +119,31 @@ export const instagramRouter = router({
       lastSync: instagramService.getLastSyncDate(),
       isConfigured: instagramService.isConfigured(),
     };
+  }),
+
+  /**
+   * Obter status do token do Instagram (dias até expirar)
+   */
+  getTokenStatus: publicProcedure.query(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return { daysUntilExpiry: null, expiresAt: null, isExpired: false, isWarning: false };
+      const [settings] = await db.select().from(campaignSettings).limit(1);
+      if (!settings?.instagramTokenExpiresAt) {
+        // Data conhecida do token atual: 09/06/2026
+        return { daysUntilExpiry: null, expiresAt: '2026-06-09T00:00:00.000Z', isExpired: false, isWarning: false };
+      }
+      const expiresAt = settings.instagramTokenExpiresAt;
+      const daysUntilExpiry = Math.floor((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      return {
+        daysUntilExpiry,
+        expiresAt: expiresAt.toISOString(),
+        isExpired: daysUntilExpiry <= 0,
+        isWarning: daysUntilExpiry > 0 && daysUntilExpiry <= 30,
+      };
+    } catch {
+      return { daysUntilExpiry: null, expiresAt: null, isExpired: false, isWarning: false };
+    }
   }),
 
   /**
