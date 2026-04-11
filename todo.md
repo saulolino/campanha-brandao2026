@@ -655,3 +655,5 @@
 - [x] Painel de aprovação do coordenador em /propostas
 - [x] Badge de propostas pendentes no SidebarNav para coordenadores
 - [x] 16 testes de propostas passando (32 testes totais no projeto)
+- [ ] Sync periódica via MCP agendada pelo agente Manus (posts + insights + seguidores)
+- [x] Bug: TypeError null.toLocaleString no frontend — corrigido em getEngagementByType (avgEngagement null), reportExporter (datas null) e Metricas.tsx

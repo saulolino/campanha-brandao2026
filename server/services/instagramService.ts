@@ -339,11 +339,11 @@ export class InstagramService {
 
     return data.metrics.engagementByType.map((item) => ({
       type: item.type,
-      posts: item.posts,
-      avgEngagement: item.avgEngagement,
-      totalReach: item.totalReach || 0,
-      totalShares: item.totalShares || 0,
-      totalSaves: item.totalSaves || 0,
+      posts: item.posts ?? 0,
+      avgEngagement: item.avgEngagement ?? 0,
+      totalReach: item.totalReach ?? 0,
+      totalShares: item.totalShares ?? 0,
+      totalSaves: item.totalSaves ?? 0,
     }));
   }
 

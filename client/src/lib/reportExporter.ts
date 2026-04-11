@@ -21,9 +21,9 @@ export function exportPostsToCSV(posts: Post[], filename: string = "posts.csv"):
     `"${post.title.replace(/"/g, '""')}"`, // Escapar aspas
     post.status,
     post.createdBy,
-    new Date(post.createdAt).toLocaleString("pt-BR"),
-    new Date(post.updatedAt).toLocaleString("pt-BR"),
-    new Date(post.scheduledDate).toLocaleString("pt-BR"),
+    post.createdAt ? new Date(post.createdAt).toLocaleString("pt-BR") : '',
+    post.updatedAt ? new Date(post.updatedAt).toLocaleString("pt-BR") : '',
+    post.scheduledDate ? new Date(post.scheduledDate).toLocaleString("pt-BR") : '',
     `"${(post.caption || "").replace(/"/g, '""')}"`,
     `"${formatHistoryForCSV(post.history)}"`,
   ]);
@@ -86,7 +86,7 @@ export async function exportPostsToPDF(posts: Post[], filename: string = "posts.
       post.title.substring(0, 30),
       post.status,
       post.createdBy.substring(0, 20),
-      new Date(post.createdAt).toLocaleDateString("pt-BR"),
+      post.createdAt ? new Date(post.createdAt).toLocaleDateString("pt-BR") : '',
       post.history.length.toString(),
     ]);
 
@@ -135,7 +135,7 @@ export async function exportPostsToPDF(posts: Post[], filename: string = "posts.
         yPosition += 4;
 
         post.history.forEach((transition) => {
-          const date = new Date(transition.timestamp).toLocaleString("pt-BR");
+          const date = transition.timestamp ? new Date(transition.timestamp).toLocaleString("pt-BR") : '';
           const text = `  • ${transition.fromStatus} → ${transition.toStatus} por ${transition.movedBy} em ${date}`;
           doc.text(text, 15, yPosition);
           yPosition += 4;
@@ -164,7 +164,7 @@ function formatHistoryForCSV(history: Post["history"]): string {
   return history
     .map(
       (h) =>
-        `${h.fromStatus}→${h.toStatus} por ${h.movedBy} em ${new Date(h.timestamp).toLocaleString("pt-BR")}`
+        `${h.fromStatus}→${h.toStatus} por ${h.movedBy} em ${h.timestamp ? new Date(h.timestamp).toLocaleString("pt-BR") : ''}`
     )
     .join(" | ");
 }

@@ -417,7 +417,7 @@ export default function Metricas() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Engajamento Médio</span>
-                              <span className="font-semibold">{item.avgEngagement.toLocaleString()}</span>
+                              <span className="font-semibold">{(item.avgEngagement ?? 0).toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Compartilhamentos</span>
