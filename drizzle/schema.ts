@@ -291,3 +291,52 @@ export const planningMessages = mysqlTable("planning_messages", {
 });
 export type PlanningMessage = typeof planningMessages.$inferSelect;
 export type InsertPlanningMessage = typeof planningMessages.$inferInsert;
+
+// ─── Propostas de Pauta ─────────────────────────────────────────────────────────────────────────────────────
+// Qualquer membro da equipe pode propor conteúdo (post) ou evento de rua.
+// O coordenador aprova ou rejeita. Ao aprovar, a proposta vira um item real.
+export const contentProposals = mysqlTable("content_proposals", {
+  id: int("id").autoincrement().primaryKey(),
+
+  // Tipo de proposta
+  proposalType: mysqlEnum("proposalType", ["conteudo", "evento_rua"]).notNull(),
+
+  // Status do fluxo: pendente → aprovado → rejeitado
+  status: mysqlEnum("status", ["pendente", "aprovado", "rejeitado"]).default("pendente").notNull(),
+
+  // ── Campos comuns ──────────────────────────────────────────────────────────────────────────────
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  notes: text("notes"),
+  suggestedDate: timestamp("suggestedDate").notNull(),
+
+  // ── Campos específicos de CONTEÚDOM (post Instagram) ────────────────────────────────────
+  contentType: mysqlEnum("contentType", ["reels", "carrossel", "video", "story", "imagem"]),
+  objective: varchar("objective", { length: 255 }),
+  caption: text("caption"),
+  hashtags: text("hashtags"),
+  referenceUrls: text("referenceUrls"),
+
+  // ── Campos específicos de EVENTO DE RUA ───────────────────────────────────────────────
+  eventType: mysqlEnum("eventType", ["caminhada", "reuniao", "panfletagem", "visita", "debate", "entrevista", "show", "outro"]),
+  location: varchar("location", { length: 500 }),
+  neighborhood: varchar("neighborhood", { length: 255 }),
+  city: varchar("city", { length: 255 }).default("Brasília"),
+  eventTime: varchar("eventTime", { length: 5 }).default("09:00"),
+  endTime: varchar("endTime", { length: 5 }),
+  expectedAttendees: int("expectedAttendees").default(0),
+
+  // ── Rastreamento ──────────────────────────────────────────────────────────────────────────────
+  proposedById: int("proposedById").notNull(),
+  proposedByName: varchar("proposedByName", { length: 255 }),
+  reviewedById: int("reviewedById"),
+  reviewedByName: varchar("reviewedByName", { length: 255 }),
+  reviewNotes: text("reviewNotes"),
+  convertedItemId: int("convertedItemId"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  reviewedAt: timestamp("reviewedAt"),
+});
+export type ContentProposal = typeof contentProposals.$inferSelect;
+export type InsertContentProposal = typeof contentProposals.$inferInsert;

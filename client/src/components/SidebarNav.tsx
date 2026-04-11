@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin, Sparkles } from "lucide-react";
+import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin, Sparkles, Inbox } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
@@ -24,6 +24,7 @@ const NAV_ITEMS: Array<{
   route: string;
   allowedRoles: UserRole[];
   showPendingBadge?: boolean;
+  showProposalBadge?: boolean;
 }> = [
   {
     id: "home",
@@ -75,6 +76,14 @@ const NAV_ITEMS: Array<{
     allowedRoles: ["team", "coordinator", "superadmin"],
   },
   {
+    id: "propostas",
+    label: "Propostas de Pauta",
+    icon: Inbox,
+    route: "/propostas",
+    allowedRoles: ["team", "coordinator", "superadmin"],
+    showProposalBadge: true,
+  },
+  {
     id: "planejamento-semanal",
     label: "Planejamento IA",
     icon: Sparkles,
@@ -112,7 +121,15 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
   });
   const pendingCount = pendingData?.count ?? 0;
 
-  // Filtrar itens de navegação com base no role atual
+  // Buscar contagem de propostas pendentes (apenas para coordinator e superadmin)
+  const { data: proposalPendingData } = trpc.proposals.countPending.useQuery(undefined, {
+    enabled: canSeePending,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const proposalPendingCount = proposalPendingData?.count ?? 0;
+
+  // Filtrar itens de navegação com base no role atuall
   const visibleNavItems = NAV_ITEMS.filter((item) =>
     item.allowedRoles.includes(role as UserRole)
   );
@@ -201,6 +218,7 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
             const showBadge = item.showPendingBadge && canSeePending && pendingCount > 0;
+            const showProposalBadge = item.showProposalBadge && canSeePending && proposalPendingCount > 0;
             return (
               <button
                 key={item.id}
@@ -224,6 +242,14 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
                     className="min-w-[20px] h-5 px-1.5 bg-red-500 hover:bg-red-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none cursor-pointer transition-colors ring-2 ring-red-500/30 hover:ring-red-400/50"
                   >
                     {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
+                {showProposalBadge && (
+                  <span
+                    title={`${proposalPendingCount} proposta${proposalPendingCount > 1 ? 's' : ''} aguardando aprovação`}
+                    className="min-w-[20px] h-5 px-1.5 bg-amber-500 text-black text-[10px] font-bold rounded-full flex items-center justify-center leading-none cursor-pointer transition-colors ring-2 ring-amber-500/30"
+                  >
+                    {proposalPendingCount > 99 ? "99+" : proposalPendingCount}
                   </span>
                 )}
               </button>

@@ -649,3 +649,9 @@
 - [x] Contador de dias para a eleição na Home (card ElectionCountdownCard com contagem regressiva, barra de progresso e urgência visual)
 - [x] Bug: Erro na sincronização — manus-mcp-cli not found (corrigido: usa Graph API direta via graph.facebook.com)
 - [x] Ocultar card "Orçamento da Pré campanha" em /projecoes
+- [x] Tabela content_proposals no schema do banco (migração 0023 aplicada)
+- [x] Router tRPC proposals (CRUD + aprovação + rejeição + conversão para post/evento)
+- [x] Página /propostas com formulário de proposta (conteúdo ou evento de rua)
+- [x] Painel de aprovação do coordenador em /propostas
+- [x] Badge de propostas pendentes no SidebarNav para coordenadores
+- [x] 16 testes de propostas passando (32 testes totais no projeto)

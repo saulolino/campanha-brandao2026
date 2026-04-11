@@ -162,6 +162,13 @@
       "when": 1775929867034,
       "tag": "0022_handy_bruce_banner",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1775931625163,
+      "tag": "0023_hesitant_synch",
+      "breakpoints": true
     }
   ]
 }

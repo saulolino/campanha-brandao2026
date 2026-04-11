@@ -8,6 +8,7 @@ import { instagramRouter } from "./routers/instagram";
 import { streetEventsRouter } from "./routers/streetEvents";
 import { notificationsRouter } from "./routers/notifications";
 import { weeklyPlanningRouter } from "./routers/weeklyPlanning";
+import { proposalsRouter } from "./routers/proposals";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -29,6 +30,7 @@ export const appRouter = router({
   streetEvents: streetEventsRouter,
   notifications: notificationsRouter,
   weeklyPlanning: weeklyPlanningRouter,
+  proposals: proposalsRouter,
 });
 
 export type AppRouter = typeof appRouter;

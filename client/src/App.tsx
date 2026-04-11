@@ -26,6 +26,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
 import AgendaRua from "./pages/AgendaRua";
 import PlanejamentoSemanal from "./pages/PlanejamentoSemanal";
+import Propostas from "./pages/Propostas";
 
 // Páginas exclusivas do Superadmin
 import SettingsPage from "./pages/SettingsPage";
@@ -152,6 +153,18 @@ function Router() {
             rotaTentada="/planejamento-semanal"
           >
             <PlanejamentoSemanal />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      {/* ===== PROPOSTAS DE PAUTA — Equipe, Coordenador e Superadmin ===== */}
+      <Route path="/propostas">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/propostas"
+          >
+            <Propostas />
           </ProtectedRoute>
         )}
       </Route>
