@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `pendingReview` tinyint DEFAULT 1 NOT NULL;

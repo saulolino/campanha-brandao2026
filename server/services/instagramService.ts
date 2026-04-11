@@ -16,6 +16,7 @@ import { ENV } from '../_core/env.js';
 import { getDb } from '../db.js';
 import { instagramMetrics } from '../../drizzle/schema.js';
 import { eq } from 'drizzle-orm';
+import { notifyOwner } from '../_core/notification.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -554,6 +555,28 @@ export class InstagramService {
         }
       } catch (dbErr) {
         console.warn('[Instagram] Não foi possível salvar no banco (dados em memória/JSON preservados):', dbErr);
+      }
+
+      // Detectar posts virais e notificar o dono do projeto
+      try {
+        const avgShares = posts.length > 0
+          ? posts.reduce((s, p) => s + (p.shares || 0), 0) / posts.length
+          : 0;
+        const viralThreshold = Math.max(15, avgShares);
+        const viralPosts = posts.filter(p => (p.shares || 0) >= viralThreshold);
+        if (viralPosts.length > 0) {
+          const topViral = viralPosts.sort((a, b) => (b.shares || 0) - (a.shares || 0)).slice(0, 3);
+          const lines = topViral.map(p =>
+            `• ${p.caption?.slice(0, 60) || 'Sem legenda'}... — ${p.shares} compartilhamentos, ${p.likes} curtidas`
+          ).join('\n');
+          await notifyOwner({
+            title: `🔥 ${viralPosts.length} post${viralPosts.length > 1 ? 's virais' : ' viral'} detectado${viralPosts.length > 1 ? 's' : ''}`,
+            content: `Após sincronização do Instagram (@${accountData.username}), ${viralPosts.length} post${viralPosts.length > 1 ? 's ultrapassaram' : ' ultrapassou'} o limiar viral de ${Math.round(viralThreshold)} compartilhamentos:\n\n${lines}\n\nAcesse /metricas → Top Posts para ver todos os detalhes.`,
+          });
+          console.log(`[Instagram] Notificação viral enviada: ${viralPosts.length} posts acima do limiar (${Math.round(viralThreshold)}).`);
+        }
+      } catch (notifErr) {
+        console.warn('[Instagram] Não foi possível enviar notificação viral:', notifErr);
       }
 
       console.log(`[Instagram] Sincronizado: ${accountData.followers_count} seguidores, ${posts.length} posts`);

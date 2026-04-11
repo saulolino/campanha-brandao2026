@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint, double } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint, double, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -22,6 +22,8 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   passwordHash: varchar("passwordHash", { length: 255 }),
   whatsapp: varchar("whatsapp", { length: 20 }),
+  /** true = aguardando revisão do admin; false = já revisado (mesmo que role continue visitor) */
+  pendingReview: tinyint("pendingReview").default(1).notNull(),
 });
 
 export type User = typeof users.$inferSelect;

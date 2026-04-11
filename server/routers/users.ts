@@ -153,7 +153,11 @@ export const usersRouter = router({
         // Atualizar openId para manter consistência
         updateSet.openId = `local:${input.email}`;
       }
-      if (input.role !== undefined) updateSet.role = input.role;
+      if (input.role !== undefined) {
+        updateSet.role = input.role;
+        // Marcar como revisado quando o admin altera o role
+        updateSet.pendingReview = 0;
+      }
 
       if (Object.keys(updateSet).length === 0) {
         return { success: true, message: "Nenhuma alteração realizada" };
@@ -202,7 +206,8 @@ export const usersRouter = router({
         });
       }
 
-      await db.update(users).set({ role: input.newRole }).where(eq(users.id, input.userId));
+      // Marcar como revisado ao alterar role (mesmo que role continue visitor)
+      await db.update(users).set({ role: input.newRole, pendingReview: 0 }).where(eq(users.id, input.userId));
       return { success: true, message: `Usuário atualizado para ${input.newRole}` };
     }),
 
@@ -374,7 +379,7 @@ export const usersRouter = router({
         createdAt: users.createdAt,
         loginMethod: users.loginMethod,
       }).from(users)
-        .where(eq(users.role, "visitor"))
+        .where(eq(users.pendingReview, 1))
         .orderBy(desc(users.createdAt));
 
       return pending;
@@ -438,9 +443,10 @@ export const usersRouter = router({
       const db = await getDb();
       if (!db) return { count: 0 };
 
+      // Contar apenas usuários com pendingReview=1 (aguardando revisão do admin)
       const result = await db.select({ count: sql`COUNT(*)` })
         .from(users)
-        .where(eq(users.role, "visitor"));
+        .where(eq(users.pendingReview, 1));
 
       const count = Number(result[0]?.count ?? 0);
       return { count };
