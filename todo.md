@@ -634,3 +634,4 @@
 - [x] Bug: Projeções — KPIs não atualizam após sincronização do Instagram (corrigido: dados agora vêm do banco via tRPC)
 - [ ] Bug: Badge vermelho "1" no item Configurações aparece incorretamente (lógica de contagem de pendentes precisa excluir usuários já classificados)
 - [x] Badge de pendentes no menu: tornar clicável com link direto para /usuarios (página de aprovação)
+- [ ] Bug: Dropdown de role em /usuarios só mostra "Visitante", sem opções team/coordinator/superadmin

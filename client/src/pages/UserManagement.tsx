@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ROLE_DESCRIPTIONS, type UserRole } from "@shared/permissions";
@@ -20,11 +18,108 @@ const ROLE_COLORS: Record<string, string> = {
   superadmin: "bg-green-500/20 text-green-300 border-green-500/30",
 };
 
+// Componente separado para o Dialog de edição de role — estado local, sem conflito
+function EditRoleDialog({
+  userId,
+  userName,
+  currentRole,
+  userEmail,
+  userWhatsapp,
+  userCreatedAt,
+  onSuccess,
+  variant = "icon",
+}: {
+  userId: number;
+  userName: string;
+  currentRole: UserRole;
+  userEmail?: string;
+  userWhatsapp?: string | null;
+  userCreatedAt?: Date | string;
+  onSuccess: () => void;
+  variant?: "icon" | "full";
+}) {
+  const [open, setOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole);
+
+  const updateRoleMutation = trpc.users.updateRole.useMutation({
+    onSuccess: (_, vars) => {
+      const roleLabel = ROLE_DESCRIPTIONS[vars.newRole as UserRole]?.label || vars.newRole;
+      toast.success(`Usuário promovido para ${roleLabel}`);
+      setOpen(false);
+      onSuccess();
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  const handleSave = async () => {
+    await updateRoleMutation.mutateAsync({ userId, newRole: selectedRole });
+  };
+
+  const formatDate = (date: Date | string) =>
+    new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const formatWhatsapp = (w: string | null | undefined) => {
+    if (!w) return "-";
+    const d = w.replace(/\D/g, "");
+    if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+    if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return w;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setSelectedRole(currentRole); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Edit2 size={14} />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {variant === "full" ? `Classificar usuário — ${userName}` : `Editar acesso — ${userName}`}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          {variant === "full" && (
+            <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
+              {userEmail && <p><span className="text-muted-foreground">E-mail:</span> {userEmail}</p>}
+              {userWhatsapp !== undefined && <p><span className="text-muted-foreground">WhatsApp:</span> {formatWhatsapp(userWhatsapp)}</p>}
+              {userCreatedAt && <p><span className="text-muted-foreground">Cadastro:</span> {formatDate(userCreatedAt)}</p>}
+            </div>
+          )}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Nível de acesso</label>
+            <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as UserRole)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(["visitor", "team", "coordinator", "superadmin"] as UserRole[]).map((role) => (
+                  <SelectItem key={role} value={role}>
+                    <span className="font-medium">{ROLE_DESCRIPTIONS[role].label}</span>
+                    <span className="ml-2 text-muted-foreground text-xs">{ROLE_DESCRIPTIONS[role].description}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            className="w-full"
+            onClick={handleSave}
+            disabled={updateRoleMutation.isPending || selectedRole === currentRole}
+          >
+            {updateRoleMutation.isPending ? "Salvando..." : variant === "full" ? "Confirmar classificação" : "Salvar"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function UserManagement() {
-  const { user } = useAuth();
   const { isSuperAdmin } = usePermissions();
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [newRole, setNewRole] = useState<UserRole | undefined>();
   const [activeTab, setActiveTab] = useState<"all" | "pending">("pending");
 
   // Apenas SuperAdmin pode acessar
@@ -36,12 +131,14 @@ export default function UserManagement() {
   const { data: allUsers, isLoading, refetch } = trpc.users.list.useQuery();
   const { data: pendingUsers, isLoading: loadingPending, refetch: refetchPending } = trpc.users.listPending.useQuery();
 
+  const handleRefetch = () => {
+    refetch();
+    refetchPending();
+  };
+
   const updateRoleMutation = trpc.users.updateRole.useMutation({
     onSuccess: (_, vars) => {
-      refetch();
-      refetchPending();
-      setSelectedUserId(null);
-      setNewRole(undefined);
+      handleRefetch();
       const roleLabel = ROLE_DESCRIPTIONS[vars.newRole as UserRole]?.label || vars.newRole;
       toast.success(`Usuário promovido para ${roleLabel}`);
     },
@@ -50,12 +147,7 @@ export default function UserManagement() {
     },
   });
 
-  const handleUpdateRole = async () => {
-    if (!selectedUserId || !newRole) return;
-    await updateRoleMutation.mutateAsync({ userId: selectedUserId, newRole });
-  };
-
-  const handleQuickPromote = async (userId: number, role: UserRole, name: string) => {
+  const handleQuickPromote = async (userId: number, role: UserRole) => {
     await updateRoleMutation.mutateAsync({ userId, newRole: role });
   };
 
@@ -155,7 +247,7 @@ export default function UserManagement() {
                         size="sm"
                         variant="outline"
                         className="text-xs border-blue-500/40 text-blue-300 hover:bg-blue-500/10"
-                        onClick={() => handleQuickPromote(u.id, "team", u.name)}
+                        onClick={() => handleQuickPromote(u.id, "team")}
                         disabled={updateRoleMutation.isPending}
                       >
                         Equipe
@@ -164,57 +256,22 @@ export default function UserManagement() {
                         size="sm"
                         variant="outline"
                         className="text-xs border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10"
-                        onClick={() => handleQuickPromote(u.id, "coordinator", u.name)}
+                        onClick={() => handleQuickPromote(u.id, "coordinator")}
                         disabled={updateRoleMutation.isPending}
                       >
                         Coordenador
                       </Button>
-                      {/* Botão para edição avançada */}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => { setSelectedUserId(u.id); setNewRole(u.role); }}
-                          >
-                            <Edit2 size={14} />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Classificar usuário — {u.name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 pt-2">
-                            <div className="p-3 bg-muted/30 rounded-lg text-sm space-y-1">
-                              <p><span className="text-muted-foreground">E-mail:</span> {u.email}</p>
-                              <p><span className="text-muted-foreground">WhatsApp:</span> {formatWhatsapp(u.whatsapp)}</p>
-                              <p><span className="text-muted-foreground">Cadastro:</span> {formatDate(u.createdAt)}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium mb-2 block">Nível de acesso</label>
-                              <Select value={newRole} onValueChange={(v) => setNewRole(v as UserRole)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(["visitor", "team", "coordinator", "superadmin"] as UserRole[]).map((role) => (
-                                    <SelectItem key={role} value={role}>
-                                      {ROLE_DESCRIPTIONS[role].label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Button
-                              className="w-full"
-                              onClick={handleUpdateRole}
-                              disabled={updateRoleMutation.isPending || newRole === u.role}
-                            >
-                              {updateRoleMutation.isPending ? "Salvando..." : "Confirmar classificação"}
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                      {/* Dialog com estado local — sem conflito de estado compartilhado */}
+                      <EditRoleDialog
+                        userId={u.id}
+                        userName={u.name || "Sem nome"}
+                        currentRole={(u.role as UserRole) || "visitor"}
+                        userEmail={u.email}
+                        userWhatsapp={u.whatsapp}
+                        userCreatedAt={u.createdAt}
+                        onSuccess={handleRefetch}
+                        variant="full"
+                      />
                     </div>
                   </div>
                 ))}
@@ -280,39 +337,14 @@ export default function UserManagement() {
                       </td>
                       <td className="py-3 px-4 text-muted-foreground text-xs">{formatDate(u.createdAt)}</td>
                       <td className="py-3 px-4 text-center">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" onClick={() => { setSelectedUserId(u.id); setNewRole(u.role); }}>
-                              <Edit2 size={14} />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Editar acesso — {u.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 pt-2">
-                              <Select value={newRole} onValueChange={(v) => setNewRole(v as UserRole)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(["visitor", "team", "coordinator", "superadmin"] as UserRole[]).map((role) => (
-                                    <SelectItem key={role} value={role}>
-                                      {ROLE_DESCRIPTIONS[role].label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                className="w-full"
-                                onClick={handleUpdateRole}
-                                disabled={updateRoleMutation.isPending || newRole === u.role}
-                              >
-                                {updateRoleMutation.isPending ? "Salvando..." : "Salvar"}
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                        {/* Dialog com estado local por linha — sem conflito */}
+                        <EditRoleDialog
+                          userId={u.id}
+                          userName={u.name || "Sem nome"}
+                          currentRole={(u.role as UserRole) || "visitor"}
+                          onSuccess={handleRefetch}
+                          variant="icon"
+                        />
                       </td>
                     </tr>
                   ))
