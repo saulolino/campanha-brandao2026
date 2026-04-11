@@ -657,3 +657,4 @@
 - [x] 16 testes de propostas passando (32 testes totais no projeto)
 - [ ] Sync periódica via MCP agendada pelo agente Manus (posts + insights + seguidores)
 - [x] Bug: TypeError null.toLocaleString no frontend — corrigido em getEngagementByType (avgEngagement null), reportExporter (datas null) e Metricas.tsx
+- [x] Bug: Gráfico de Projeções — totais mensais recalculados partindo de 1.541 seguidores reais (Abr: 2.128 → Out: 20.038)

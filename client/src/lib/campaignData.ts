@@ -9,7 +9,7 @@ export const CAMPAIGN = {
   handle: "@eduardobrandaopv",
   slogan: "Brasília Cidade Parque",
   role: "Pré candidato",
-  currentFollowers: 1538,
+  currentFollowers: 1541,
   targetFollowers: 20000,
   startDate: "2026-04-25",
   endDate: "2026-10-31",
@@ -21,13 +21,13 @@ export const CAMPAIGN = {
 };
 
 export const MONTHLY_PROJECTION = [
-  { month: "Abr", label: "Abril (25-30)", growth: 587, total: 2092, investment: 1000 },
-  { month: "Mai", label: "Maio", growth: 2936, total: 5028, investment: 2500 },
-  { month: "Jun", label: "Junho", growth: 2936, total: 7964, investment: 2500 },
-  { month: "Jul", label: "Julho", growth: 3034, total: 10997, investment: 2500 },
-  { month: "Ago", label: "Agosto", growth: 3034, total: 14031, investment: 2500 },
-  { month: "Set", label: "Setembro", growth: 2936, total: 16966, investment: 2500 },
-  { month: "Out", label: "Outubro", growth: 3034, total: 20000, investment: 3000 },
+  { month: "Abr", label: "Abril (25-30)", growth: 587, total: 2128, investment: 1000 },
+  { month: "Mai", label: "Maio", growth: 2936, total: 5064, investment: 2500 },
+  { month: "Jun", label: "Junho", growth: 2936, total: 8000, investment: 2500 },
+  { month: "Jul", label: "Julho", growth: 3034, total: 11034, investment: 2500 },
+  { month: "Ago", label: "Agosto", growth: 3034, total: 14068, investment: 2500 },
+  { month: "Set", label: "Setembro", growth: 2936, total: 17004, investment: 2500 },
+  { month: "Out", label: "Outubro", growth: 3034, total: 20038, investment: 3000 },
 ];
 
 export const PILLARS = [
