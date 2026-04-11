@@ -630,3 +630,4 @@
 - [x] Renovação automática do token do Instagram (cron 30 dias antes do vencimento + notificação token_expirando)
 - [x] Notificação interna ao criar/confirmar evento na Agenda de Rua (evento_criado e evento_confirmado)
 - [x] Redirecionamento ao clicar em notificação novo_cadastro → aba Usuários + marcar como lida
+- [x] Módulo de Planejamento Semanal: chat guiado com IA que pesquisa fatos, gera posts e ações de rua e cadastra automaticamente nas agendas

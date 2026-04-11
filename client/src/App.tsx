@@ -25,6 +25,7 @@ import PerformanceDashboard from "./pages/PerformanceDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/UserManagement";
 import AgendaRua from "./pages/AgendaRua";
+import PlanejamentoSemanal from "./pages/PlanejamentoSemanal";
 
 // Páginas exclusivas do Superadmin
 import SettingsPage from "./pages/SettingsPage";
@@ -139,6 +140,18 @@ function Router() {
             rotaTentada="/performance"
           >
             <PostPerformance />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      {/* ===== PLANEJAMENTO SEMANAL — Coordenador e Superadmin ===== */}
+      <Route path="/planejamento-semanal">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["coordinator", "superadmin"]}
+            rotaTentada="/planejamento-semanal"
+          >
+            <PlanejamentoSemanal />
           </ProtectedRoute>
         )}
       </Route>

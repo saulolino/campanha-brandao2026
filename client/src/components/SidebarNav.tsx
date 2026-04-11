@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin } from "lucide-react";
+import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
@@ -72,6 +72,13 @@ const NAV_ITEMS: Array<{
     icon: MapPin,
     route: "/agenda-rua",
     allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "planejamento-semanal",
+    label: "Planejamento IA",
+    icon: Sparkles,
+    route: "/planejamento-semanal",
+    allowedRoles: ["coordinator", "superadmin"],
   },
   {
     id: "configuracoes",

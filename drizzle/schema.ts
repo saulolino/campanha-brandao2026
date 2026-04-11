@@ -232,3 +232,43 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+// ─── Planejamento Semanal ─────────────────────────────────────────────────────
+export const weeklyPlanningSessions = mysqlTable("weekly_planning_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  // Semana de referência (início da semana, segunda-feira)
+  weekStart: timestamp("weekStart").notNull(),
+  weekEnd: timestamp("weekEnd").notNull(),
+  // Status da sessão
+  status: mysqlEnum("status", ["em_andamento", "concluida", "cancelada"]).default("em_andamento").notNull(),
+  // Respostas do usuário (JSON com as perguntas e respostas)
+  answers: text("answers"), // JSON
+  // Fatos pesquisados pela IA (JSON)
+  researchedFacts: text("researchedFacts"), // JSON
+  // Posts gerados (JSON com os dados dos posts criados)
+  generatedPosts: text("generatedPosts"), // JSON com IDs dos posts criados
+  // Eventos gerados (JSON com os dados dos eventos criados)
+  generatedEvents: text("generatedEvents"), // JSON com IDs dos eventos criados
+  // Quem iniciou a sessão
+  createdByUserId: int("createdByUserId"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+export type WeeklyPlanningSession = typeof weeklyPlanningSessions.$inferSelect;
+export type InsertWeeklyPlanningSession = typeof weeklyPlanningSessions.$inferInsert;
+
+// ─── Mensagens do chat de planejamento ────────────────────────────────────────
+export const planningMessages = mysqlTable("planning_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  // Remetente: "user" ou "assistant"
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  // Metadados extras (ex: tipo de mensagem: pergunta, resposta, resumo, confirmação)
+  messageType: mysqlEnum("messageType", ["pergunta", "resposta", "resumo", "confirmacao", "erro", "info"]).default("info").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PlanningMessage = typeof planningMessages.$inferSelect;
+export type InsertPlanningMessage = typeof planningMessages.$inferInsert;
