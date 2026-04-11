@@ -92,10 +92,12 @@ export const instagramRouter = router({
           thumbnailUrl: post.thumbnailUrl,
           permalink: post.permalink,
           timestamp: post.timestamp,
-          engagement: post.likes + post.comments,
+          engagement: post.likes + post.comments + (post.shares || 0) + (post.saves || 0),
           likes: post.likes,
           comments: post.comments,
-          reach: post.reach,
+          shares: post.shares || 0,
+          saves: post.saves || 0,
+          reach: post.reach || 0,
         }))
         .sort((a, b) => b.engagement - a.engagement)
         .slice(0, input.limit || 5);

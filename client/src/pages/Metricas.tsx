@@ -296,7 +296,9 @@ export default function Metricas() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {engagementByType.map((item: any) => (
                         <div key={item.type} className="border border-border/50 rounded-lg p-4">
-                          <h4 className="font-semibold capitalize mb-3">{item.type}</h4>
+                          <h4 className="font-semibold capitalize mb-3">
+                            {item.type === 'VIDEO' ? 'Vídeo / Reels' : item.type === 'CAROUSEL_ALBUM' ? 'Carrossel' : item.type === 'IMAGE' ? 'Imagem' : item.type}
+                          </h4>
                           <div className="space-y-2">
                             <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Posts</span>
@@ -307,8 +309,16 @@ export default function Metricas() {
                               <span className="font-semibold">{item.avgEngagement.toLocaleString()}</span>
                             </div>
                             <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Compartilhamentos</span>
+                              <span className="font-semibold text-green-500">{(item.totalShares || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Salvos</span>
+                              <span className="font-semibold text-yellow-500">{(item.totalSaves || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
                               <span className="text-sm text-muted-foreground">Alcance Total</span>
-                              <span className="font-semibold">{item.totalReach.toLocaleString()}</span>
+                              <span className="font-semibold text-purple-500">{(item.totalReach || 0).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -343,7 +353,7 @@ export default function Metricas() {
                               </p>
                             </div>
                           </div>
-                          <div className="grid grid-cols-4 gap-4 pt-3 border-t border-border/30">
+                          <div className="grid grid-cols-3 md:grid-cols-6 gap-3 pt-3 border-t border-border/30">
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Engajamento</p>
                               <p className="font-semibold text-primary">{post.engagement?.toLocaleString() || 0}</p>
@@ -357,8 +367,16 @@ export default function Metricas() {
                               <p className="font-semibold text-blue-500">{post.comments?.toLocaleString() || 0}</p>
                             </div>
                             <div>
+                              <p className="text-xs text-muted-foreground mb-1">Compartilhamentos</p>
+                              <p className="font-semibold text-green-500">{post.shares?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Salvos</p>
+                              <p className="font-semibold text-yellow-500">{post.saves?.toLocaleString() || 0}</p>
+                            </div>
+                            <div>
                               <p className="text-xs text-muted-foreground mb-1">Alcance</p>
-                              <p className="font-semibold text-green-500">{post.reach?.toLocaleString() || 0}</p>
+                              <p className="font-semibold text-purple-500">{post.reach?.toLocaleString() || 0}</p>
                             </div>
                           </div>
                         </div>

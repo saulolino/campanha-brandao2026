@@ -75,11 +75,18 @@ interface InstagramData {
     timestamp: string;
     likes: number;
     comments: number;
+    shares: number;
+    saves: number;
+    reach: number;
+    views: number;
     thumbnailUrl: string;
   }>;
   metrics: {
     totalLikes: number;
     totalComments: number;
+    totalShares: number;
+    totalSaves: number;
+    totalReach: number;
     avgEngagement: number;
     engagementRate: number;
     engagementByType: Array<{
@@ -87,6 +94,9 @@ interface InstagramData {
       posts: number;
       totalLikes: number;
       totalComments: number;
+      totalShares: number;
+      totalSaves: number;
+      totalReach: number;
       avgEngagement: number;
     }>;
   };
@@ -106,23 +116,26 @@ const FALLBACK_DATA: InstagramData = {
     profilePicture: '',
   },
   posts: [
-    { id: '1', caption: 'Feliz Páscoa! Renascimento e esperança', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/1', timestamp: '2026-04-05T10:00:00Z', likes: 50, comments: 7, thumbnailUrl: '' },
-    { id: '2', caption: 'Causa animal: Hospital Veterinário Público', mediaType: 'CAROUSEL_ALBUM', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/2', timestamp: '2026-04-03T14:00:00Z', likes: 23, comments: 3, thumbnailUrl: '' },
-    { id: '3', caption: 'Você lembra do seu voto para Deputado Distrital?', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/3', timestamp: '2026-04-03T18:00:00Z', likes: 53, comments: 4, thumbnailUrl: '' },
-    { id: '4', caption: 'Defesa do Meio Ambiente é inegociável - PV', mediaType: 'IMAGE', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/4', timestamp: '2026-03-27T12:00:00Z', likes: 25, comments: 1, thumbnailUrl: '' },
-    { id: '5', caption: 'Master x BRB - Escândalo', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/5', timestamp: '2026-03-15T19:00:00Z', likes: 85, comments: 19, thumbnailUrl: '' },
-    { id: '6', caption: 'Deputado Israel Batista', mediaType: 'CAROUSEL_ALBUM', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/6', timestamp: '2026-03-14T14:00:00Z', likes: 107, comments: 10, thumbnailUrl: '' },
-    { id: '7', caption: 'Convidando Marina Silva para o PV', mediaType: 'IMAGE', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/7', timestamp: '2026-01-31T12:00:00Z', likes: 83, comments: 7, thumbnailUrl: '' },
+    { id: '1', caption: 'Feliz Páscoa! Renascimento e esperança', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/1', timestamp: '2026-04-05T10:00:00Z', likes: 50, comments: 7, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '2', caption: 'Causa animal: Hospital Veterinário Público', mediaType: 'CAROUSEL_ALBUM', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/2', timestamp: '2026-04-03T14:00:00Z', likes: 23, comments: 3, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '3', caption: 'Você lembra do seu voto para Deputado Distrital?', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/3', timestamp: '2026-04-03T18:00:00Z', likes: 53, comments: 4, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '4', caption: 'Defesa do Meio Ambiente é inegociável - PV', mediaType: 'IMAGE', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/4', timestamp: '2026-03-27T12:00:00Z', likes: 25, comments: 1, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '5', caption: 'Master x BRB - Escândalo', mediaType: 'VIDEO', mediaProductType: 'REELS', permalink: 'https://instagram.com/p/5', timestamp: '2026-03-15T19:00:00Z', likes: 85, comments: 19, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '6', caption: 'Deputado Israel Batista', mediaType: 'CAROUSEL_ALBUM', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/6', timestamp: '2026-03-14T14:00:00Z', likes: 107, comments: 10, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
+    { id: '7', caption: 'Convidando Marina Silva para o PV', mediaType: 'IMAGE', mediaProductType: 'FEED', permalink: 'https://instagram.com/p/7', timestamp: '2026-01-31T12:00:00Z', likes: 83, comments: 7, shares: 0, saves: 0, reach: 0, views: 0, thumbnailUrl: '' },
   ],
   metrics: {
     totalLikes: 426,
     totalComments: 51,
+    totalShares: 0,
+    totalSaves: 0,
+    totalReach: 0,
     avgEngagement: 68.1,
     engagementRate: 3.1,
     engagementByType: [
-      { type: 'VIDEO', posts: 4, totalLikes: 273, totalComments: 37, avgEngagement: 77.5 },
-      { type: 'CAROUSEL_ALBUM', posts: 2, totalLikes: 130, totalComments: 13, avgEngagement: 71.5 },
-      { type: 'IMAGE', posts: 2, totalLikes: 108, totalComments: 8, avgEngagement: 58.0 },
+      { type: 'VIDEO', posts: 4, totalLikes: 273, totalComments: 37, totalShares: 0, totalSaves: 0, totalReach: 0, avgEngagement: 77.5 },
+      { type: 'CAROUSEL_ALBUM', posts: 2, totalLikes: 130, totalComments: 13, totalShares: 0, totalSaves: 0, totalReach: 0, avgEngagement: 71.5 },
+      { type: 'IMAGE', posts: 2, totalLikes: 108, totalComments: 8, totalShares: 0, totalSaves: 0, totalReach: 0, avgEngagement: 58.0 },
     ],
   },
   fetchedAt: '2026-04-08T16:40:00Z',
@@ -205,14 +218,14 @@ export class InstagramService {
             following: row.following,
             posts: row.postsCount,
             username: row.username,
-            name: row.username, // nome não armazenado no banco, usar username
+            name: jsonData.account.name || row.username,
             bio: row.biography || jsonData.account.bio,
             profilePicture: row.profilePictureUrl || jsonData.account.profilePicture,
-            engagement: jsonData.metrics.totalLikes + jsonData.metrics.totalComments,
-            reach: 0,
+            engagement: jsonData.metrics.totalLikes + jsonData.metrics.totalComments + (jsonData.metrics.totalShares || 0) + (jsonData.metrics.totalSaves || 0),
+            reach: jsonData.metrics.totalReach || 0,
             impressions: 0,
-            saves: 0,
-            shares: 0,
+            saves: jsonData.metrics.totalSaves || 0,
+            shares: jsonData.metrics.totalShares || 0,
             comments: jsonData.metrics.totalComments,
             likes: jsonData.metrics.totalLikes,
             engagementRate: engRate,
@@ -235,11 +248,11 @@ export class InstagramService {
       name: account.name,
       bio: account.bio,
       profilePicture: account.profilePicture,
-      engagement: metrics.totalLikes + metrics.totalComments,
-      reach: 0,
+      engagement: metrics.totalLikes + metrics.totalComments + (metrics.totalShares || 0) + (metrics.totalSaves || 0),
+      reach: metrics.totalReach || 0,
       impressions: 0,
-      saves: 0,
-      shares: 0,
+      saves: metrics.totalSaves || 0,
+      shares: metrics.totalShares || 0,
       comments: metrics.totalComments,
       likes: metrics.totalLikes,
       engagementRate: metrics.engagementRate,
@@ -267,11 +280,11 @@ export class InstagramService {
         timestamp: post.timestamp,
         likes: post.likes,
         comments: post.comments,
-        shares: 0,
-        saves: 0,
-        reach: 0,
-        impressions: 0,
-        engagement: post.likes + post.comments,
+        shares: post.shares || 0,
+        saves: post.saves || 0,
+        reach: post.reach || 0,
+        impressions: post.views || 0,
+        engagement: post.likes + post.comments + (post.shares || 0) + (post.saves || 0),
       }));
   }
 
@@ -321,7 +334,9 @@ export class InstagramService {
       type: item.type,
       posts: item.posts,
       avgEngagement: item.avgEngagement,
-      totalReach: 0,
+      totalReach: item.totalReach || 0,
+      totalShares: item.totalShares || 0,
+      totalSaves: item.totalSaves || 0,
     }));
   }
 
@@ -370,11 +385,44 @@ export class InstagramService {
 
       const hasMediaPermission = !postsJson.error && Array.isArray(postsJson.data) && postsJson.data.length > 0;
 
-      let posts: Array<{ id: string; caption: string; mediaType: string; mediaProductType: string; permalink: string; timestamp: string; likes: number; comments: number; thumbnailUrl: string; }>;
+      // Tipo completo de post com insights
+      type PostWithInsights = {
+        id: string; caption: string; mediaType: string; mediaProductType: string;
+        permalink: string; timestamp: string; likes: number; comments: number;
+        shares: number; saves: number; reach: number; views: number; thumbnailUrl: string;
+      };
+
+      let posts: PostWithInsights[];
 
       if (hasMediaPermission) {
+        // Buscar insights de cada post em paralelo (shares, saves, reach, views)
+        const insightsMap = new Map<string, { shares: number; saves: number; reach: number; views: number }>();
+        const insightPromises = postsJson.data!.map(async (p) => {
+          try {
+            const insightsUrl = `https://graph.facebook.com/v21.0/${p.id}/insights?metric=shares,saved,reach,views,total_interactions&access_token=${token}`;
+            const insightsRes = await fetch(insightsUrl);
+            if (insightsRes.ok) {
+              const insightsJson = await insightsRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
+              const metrics: { shares: number; saves: number; reach: number; views: number } = { shares: 0, saves: 0, reach: 0, views: 0 };
+              (insightsJson.data || []).forEach((m) => {
+                const val = m.values?.[0]?.value || 0;
+                if (m.name === 'shares') metrics.shares = val;
+                else if (m.name === 'saved') metrics.saves = val;
+                else if (m.name === 'reach') metrics.reach = val;
+                else if (m.name === 'views') metrics.views = val;
+              });
+              insightsMap.set(p.id, metrics);
+            }
+          } catch {
+            // Insight indisponível para este post — usar zeros
+          }
+        });
+        await Promise.all(insightPromises);
+        console.log(`[Instagram] Insights buscados para ${insightsMap.size}/${postsJson.data!.length} posts`);
+
         posts = postsJson.data!.map(p => {
           const existing = existingPostsMap.get(p.id);
+          const ins = insightsMap.get(p.id) || { shares: existing?.shares || 0, saves: existing?.saves || 0, reach: existing?.reach || 0, views: existing?.views || 0 };
           return {
             id: p.id,
             caption: p.caption || '',
@@ -382,30 +430,45 @@ export class InstagramService {
             mediaProductType: p.media_product_type,
             permalink: p.permalink,
             timestamp: p.timestamp,
-            // Usar likes/comments da API se disponíveis, senão preservar do JSON existente
             likes: (p.like_count != null && p.like_count > 0) ? p.like_count : (existing?.likes || 0),
             comments: (p.comments_count != null && p.comments_count > 0) ? p.comments_count : (existing?.comments || 0),
+            shares: ins.shares,
+            saves: ins.saves,
+            reach: ins.reach,
+            views: ins.views,
             thumbnailUrl: p.thumbnail_url || p.media_url || existing?.thumbnailUrl || '',
           };
         });
       } else {
         // Sem permissão para listar mídia: preservar posts existentes e atualizar apenas conta
         console.warn('[Instagram] Sem permissão para listar mídia. Preservando posts e métricas existentes.');
-        posts = this.data?.posts || [];
+        posts = (this.data?.posts || []).map(p => ({
+          ...p,
+          shares: p.shares || 0,
+          saves: p.saves || 0,
+          reach: p.reach || 0,
+          views: p.views || 0,
+        }));
       }
 
       const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
       const totalComments = posts.reduce((s, p) => s + p.comments, 0);
-      const avgEngagement = posts.length > 0 ? Math.round((totalLikes + totalComments) / posts.length) : 0;
+      const totalShares = posts.reduce((s, p) => s + p.shares, 0);
+      const totalSaves = posts.reduce((s, p) => s + p.saves, 0);
+      const totalReach = posts.reduce((s, p) => s + p.reach, 0);
+      const avgEngagement = posts.length > 0 ? Math.round((totalLikes + totalComments + totalShares + totalSaves) / posts.length) : 0;
       const engagementRate = accountData.followers_count > 0 ? parseFloat(((avgEngagement / accountData.followers_count) * 100).toFixed(2)) : 0;
 
       // Calcular engajamento por tipo
-      const byType: Record<string, { posts: number; totalLikes: number; totalComments: number }> = {};
+      const byType: Record<string, { posts: number; totalLikes: number; totalComments: number; totalShares: number; totalSaves: number; totalReach: number }> = {};
       posts.forEach(p => {
-        if (!byType[p.mediaType]) byType[p.mediaType] = { posts: 0, totalLikes: 0, totalComments: 0 };
+        if (!byType[p.mediaType]) byType[p.mediaType] = { posts: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0, totalReach: 0 };
         byType[p.mediaType].posts++;
         byType[p.mediaType].totalLikes += p.likes;
         byType[p.mediaType].totalComments += p.comments;
+        byType[p.mediaType].totalShares += p.shares;
+        byType[p.mediaType].totalSaves += p.saves;
+        byType[p.mediaType].totalReach += p.reach;
       });
       // Preservar engagementByType existente se não houver posts novos
       const engagementByType = Object.keys(byType).length > 0
@@ -414,7 +477,10 @@ export class InstagramService {
             posts: d.posts,
             totalLikes: d.totalLikes,
             totalComments: d.totalComments,
-            avgEngagement: d.posts > 0 ? Math.round((d.totalLikes + d.totalComments) / d.posts) : 0,
+            totalShares: d.totalShares,
+            totalSaves: d.totalSaves,
+            totalReach: d.totalReach,
+            avgEngagement: d.posts > 0 ? Math.round((d.totalLikes + d.totalComments + d.totalShares + d.totalSaves) / d.posts) : 0,
           }))
         : (this.data?.metrics.engagementByType || []);
 
@@ -431,7 +497,7 @@ export class InstagramService {
           profilePicture: accountData.profile_picture_url || '',
         },
         posts,
-        metrics: { totalLikes, totalComments, avgEngagement, engagementRate, engagementByType },
+        metrics: { totalLikes, totalComments, totalShares, totalSaves, totalReach, avgEngagement, engagementRate, engagementByType },
         fetchedAt,
       };
 
