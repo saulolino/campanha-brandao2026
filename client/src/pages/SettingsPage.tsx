@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,16 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("instagram");
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+
+  // Ouvir evento de navegação de aba disparado pelo NotificationsTab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab: string }>).detail?.tab;
+      if (tab) setActiveTab(tab);
+    };
+    window.addEventListener("settings:navigate-tab", handler);
+    return () => window.removeEventListener("settings:navigate-tab", handler);
+  }, []);
 
   // Instagram Credentials
   const [instagramToken, setInstagramToken] = useState(localStorage.getItem("instagramAccessToken") || "");
@@ -990,22 +1000,52 @@ function NotifBadge() {
     </span>
   );
 }
+// Mapa de redirecionamento por tipo de notificação
+// Para notificações com ação: { tab: aba destino na SettingsPage, route: rota externa }
+const NOTIF_ACTION_MAP: Record<string, { tab?: string; route?: string }> = {
+  novo_cadastro: { tab: "users" },
+  instagram_sync: { tab: "instagram" },
+  token_expirando: { tab: "instagram" },
+  evento_criado: { route: "/agenda-rua" },
+  evento_confirmado: { route: "/agenda-rua" },
+  evento_realizado: { route: "/agenda-rua" },
+};
 
-// ─── Aba completa de Notificações ─────────────────────────────────────────────
+// ─── Aba completa de Notificações ───────────────────────────────────────────────
 function NotificationsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const utils = trpc.useUtils();
+  const [, navigate] = useLocation();
   const [filterType, setFilterType] = useState<NotifType>("all");
   const [onlyUnread, setOnlyUnread] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-
   const { data: notifs, isLoading } = trpc.notifications.list.useQuery(
     { limit: 100, offset: 0, onlyUnread, type: filterType },
     { refetchInterval: 30_000 }
   );
 
   const markRead = trpc.notifications.markRead.useMutation({
-    onSuccess: () => utils.notifications.list.invalidate(),
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.countUnread.invalidate();
+    },
   });
+
+  // Ao clicar no card: marcar como lida + redirecionar se houver ação mapeada
+  const handleNotifClick = (notif: { id: number; type: string; isRead: number }) => {
+    if (!notif.isRead) {
+      markRead.mutate({ id: notif.id });
+    }
+    const action = NOTIF_ACTION_MAP[notif.type];
+    if (!action) return;
+    if (action.route) {
+      navigate(action.route);
+    } else if (action.tab) {
+      // Redirecionar para a aba correta na SettingsPage
+      // O componente pai controla o activeTab via prop, mas aqui usamos o setActiveTab do pai
+      // Como NotificationsTab é filho, vamos usar um evento customizado via window
+      window.dispatchEvent(new CustomEvent("settings:navigate-tab", { detail: { tab: action.tab } }));
+    }
+  };
 
   const markAllRead = trpc.notifications.markAllRead.useMutation({
     onSuccess: () => {
@@ -1105,11 +1145,12 @@ function NotificationsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
             {notifs.map(notif => (
               <div
                 key={notif.id}
+                onClick={() => handleNotifClick(notif)}
                 className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
                   notif.isRead
-                    ? "border-white/5 bg-white/2 opacity-70"
-                    : "border-green-500/20 bg-green-500/5"
-                }`}
+                    ? "border-white/5 bg-white/2 opacity-70 hover:bg-white/5"
+                    : "border-green-500/20 bg-green-500/5 hover:bg-green-500/10"
+                } ${NOTIF_ACTION_MAP[notif.type] ? "cursor-pointer" : ""}`}
               >
                 {/* Ícone do tipo */}
                 <div className="mt-0.5 shrink-0">

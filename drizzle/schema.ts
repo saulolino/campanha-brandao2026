@@ -115,6 +115,7 @@ export const campaignSettings = mysqlTable("campaign_settings", {
   instagramAccessToken: text("instagramAccessToken"),
   instagramBusinessAccountId: varchar("instagramBusinessAccountId", { length: 255 }),
   instagramUsername: varchar("instagramUsername", { length: 255 }),
+  instagramTokenExpiresAt: timestamp("instagramTokenExpiresAt"), // data de expiração do token de longa duração
   // Horários de sincronização (em formato HH:mm, ex: "08:00", "14:00", "20:00")
   syncSchedule: varchar("syncSchedule", { length: 255 }).default("08:00,14:00,20:00").notNull(),
   // Preferências de relatório

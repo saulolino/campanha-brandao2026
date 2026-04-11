@@ -1,0 +1,1 @@
+ALTER TABLE `campaign_settings` ADD `instagramTokenExpiresAt` timestamp;

@@ -6,6 +6,7 @@ import { eq, desc, gte, lte, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { storagePut } from "../storage";
 import crypto from "crypto";
+import { createNotification } from "./notifications";
 
 const randomSuffix = () => crypto.randomBytes(6).toString("hex");
 
@@ -96,6 +97,14 @@ export const streetEventsRouter = router({
         lng: input.lng ? String(input.lng) : null,
       });
 
+      // Notificar coordenadores sobre novo evento
+      createNotification({
+        type: "evento_criado",
+        title: `Novo evento criado: ${input.title}`,
+        message: `Evento "${input.title}" (${input.type}) criado para ${input.eventDate.toLocaleDateString("pt-BR")} às ${input.eventTime} em ${input.location}${input.neighborhood ? `, ${input.neighborhood}` : ""}.`,
+        metadata: { title: input.title, type: input.type, date: input.eventDate.toISOString(), location: input.location },
+      }).catch(() => {});
+
       return { success: true, message: "Evento criado com sucesso" };
     }),
 
@@ -141,6 +150,24 @@ export const streetEventsRouter = router({
       }
 
       await db.update(streetEvents).set(updateSet).where(eq(streetEvents.id, id));
+
+      // Notificar se o status mudou para "confirmado" ou "realizado"
+      if (input.status === "confirmado" || input.status === "realizado") {
+        const notifType = input.status === "confirmado" ? "evento_confirmado" : "evento_realizado";
+        const notifTitle = input.status === "confirmado"
+          ? `Evento confirmado: ${input.title ?? `#${id}`}`
+          : `Evento realizado: ${input.title ?? `#${id}`}`;
+        const notifMsg = input.status === "confirmado"
+          ? `O evento "${input.title ?? `#${id}`}" foi confirmado${input.eventDate ? ` para ${input.eventDate.toLocaleDateString("pt-BR")}` : ""}.`
+          : `O evento "${input.title ?? `#${id}`}" foi marcado como realizado.`;
+        createNotification({
+          type: notifType,
+          title: notifTitle,
+          message: notifMsg,
+          metadata: { eventId: id, status: input.status },
+        }).catch(() => {});
+      }
+
       return { success: true, message: "Evento atualizado com sucesso" };
     }),
 

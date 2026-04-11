@@ -5,6 +5,7 @@ import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { createNotification } from "./routers/notifications";
 import { syncInstagramProfile } from "./instagramSync";
+import { checkAndRenewInstagramToken } from "./instagramTokenRenewal";
 
 let schedulerInitialized = false;
 
@@ -280,7 +281,17 @@ export function initializeScheduler(): void {
     }
   });
 
-  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora, sync do Instagram às 08h.");
+  // Verificar e renovar token do Instagram diariamente às 09h
+  cron.schedule("0 9 * * *", async () => {
+    try {
+      console.log("[Scheduler] Verificando token do Instagram...");
+      await checkAndRenewInstagramToken();
+    } catch (err: any) {
+      console.error("[Scheduler] Erro na verificação do token:", err.message);
+    }
+  });
+
+  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora, sync do Instagram às 08h, verificação do token às 09h.");
 }
 
 /**
