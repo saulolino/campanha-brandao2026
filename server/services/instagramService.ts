@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import { ENV } from '../_core/env.js';
 import { getDb } from '../db.js';
 import { instagramMetrics } from '../../drizzle/schema.js';
@@ -351,119 +352,125 @@ export class InstagramService {
    * Busca followers, posts e métricas em tempo real
    */
   async syncFromAPI(): Promise<{ success: boolean; followers: number; posts: number; fetchedAt: string; error?: string }> {
-    const token = ENV.instagramToken;
-    const accountId = ENV.instagramAccountId;
-
-    if (!token || !accountId) {
-      return { success: false, followers: 0, posts: 0, fetchedAt: new Date().toISOString(), error: 'Credenciais do Instagram não configuradas' };
-    }
-
     try {
-      // 1. Buscar dados da conta
-      const accountUrl = `https://graph.facebook.com/v21.0/${accountId}?fields=username,name,biography,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`;
-      const accountRes = await fetch(accountUrl);
-      if (!accountRes.ok) {
-        const errBody = await accountRes.text();
-        throw new Error(`Erro ao buscar conta: ${accountRes.status} - ${errBody}`);
-      }
-      const accountData = await accountRes.json() as {
-        username: string; name: string; biography: string;
-        followers_count: number; follows_count: number; media_count: number;
-        profile_picture_url: string;
+      // ====================================================================
+      // SYNC VIA MCP DO INSTAGRAM
+      // O token da Graph API não tem permissão instagram_basic para listar
+      // posts e insights. Usamos o MCP que já tem as permissões corretas.
+      // ====================================================================
+
+      // Helper para chamar o MCP via CLI
+      const callMcp = (tool: string, input: Record<string, unknown>): unknown => {
+        const inputJson = JSON.stringify(input);
+        const escaped = inputJson.replace(/'/g, "'\\''" );
+        execSync(`manus-mcp-cli tool call ${tool} --server instagram --input '${escaped}'`, {
+          encoding: 'utf-8',
+          timeout: 30000,
+        });
+        // Ler o arquivo de resultado mais recente
+        const resultDir = '/tmp/manus-mcp';
+        if (!fs.existsSync(resultDir)) throw new Error('Diretório MCP não encontrado');
+        const files = fs.readdirSync(resultDir)
+          .filter(f => f.startsWith('mcp_result_') && f.endsWith('.json'))
+          .map(f => ({ name: f, time: fs.statSync(`${resultDir}/${f}`).mtime.getTime() }))
+          .sort((a, b) => b.time - a.time);
+        if (files.length === 0) throw new Error('Nenhum resultado MCP encontrado');
+        const content = fs.readFileSync(`${resultDir}/${files[0].name}`, 'utf-8');
+        return JSON.parse(content);
       };
 
-      // 2. Buscar posts recentes com métricas
-      // Nota: like_count e comments_count requerem permissão instagram_basic
-      // Se não disponível, preservamos os dados de engajamento do JSON existente
-      const postsUrl = `https://graph.facebook.com/v21.0/${accountId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,thumbnail_url,media_url&limit=25&access_token=${token}`;
-      const postsRes = await fetch(postsUrl);
-      const postsJson = postsRes.ok ? (await postsRes.json() as {
-        data?: Array<{
-          id: string; caption?: string; media_type: string; media_product_type: string;
-          permalink: string; timestamp: string; like_count?: number; comments_count?: number;
+      // 1. Buscar dados da conta via MCP
+      const accountRaw = callMcp('get_account_info', {}) as {
+        username?: string; name?: string; biography?: string;
+        followers_count?: number; follows_count?: number; media_count?: number;
+        profile_picture_url?: string;
+      };
+      console.log('[Instagram] Conta via MCP:', accountRaw.username, 'seguidores:', accountRaw.followers_count);
+
+      // 2. Buscar lista de posts via MCP (máx 20)
+      const postListRaw = callMcp('get_post_list', { limit: 20 }) as {
+        posts?: Array<{
+          id: string; type?: string; caption?: string; link?: string;
+          likes?: number; comments?: number; posted?: string;
           thumbnail_url?: string; media_url?: string;
         }>;
-        error?: { message: string };
-      }) : { data: [] };
+      };
+      const rawPosts = postListRaw.posts || [];
+      console.log(`[Instagram] Posts via MCP: ${rawPosts.length} posts`);
 
-      // Mapa de posts existentes para preservar likes/comments quando a API não retorna
-      const existingPostsMap = new Map((this.data?.posts || []).map(p => [p.id, p]));
-
-      const hasMediaPermission = !postsJson.error && Array.isArray(postsJson.data) && postsJson.data.length > 0;
-
-      // Tipo completo de post com insights
+      // 3. Buscar insights de cada post via MCP em paralelo (máx 5 por vez para não sobrecarregar)
       type PostWithInsights = {
         id: string; caption: string; mediaType: string; mediaProductType: string;
         permalink: string; timestamp: string; likes: number; comments: number;
         shares: number; saves: number; reach: number; views: number; thumbnailUrl: string;
       };
 
-      let posts: PostWithInsights[];
+      const existingPostsMap = new Map((this.data?.posts || []).map(p => [p.id, p]));
 
-      if (hasMediaPermission) {
-        // Buscar insights de cada post em paralelo (shares, saves, reach, views)
-        const insightsMap = new Map<string, { shares: number; saves: number; reach: number; views: number }>();
-        const insightPromises = postsJson.data!.map(async (p) => {
-          try {
-            const insightsUrl = `https://graph.facebook.com/v21.0/${p.id}/insights?metric=shares,saved,reach,views,total_interactions&access_token=${token}`;
-            const insightsRes = await fetch(insightsUrl);
-            if (insightsRes.ok) {
-              const insightsJson = await insightsRes.json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> };
-              const metrics: { shares: number; saves: number; reach: number; views: number } = { shares: 0, saves: 0, reach: 0, views: 0 };
-              (insightsJson.data || []).forEach((m) => {
-                const val = m.values?.[0]?.value || 0;
-                if (m.name === 'shares') metrics.shares = val;
-                else if (m.name === 'saved') metrics.saves = val;
-                else if (m.name === 'reach') metrics.reach = val;
-                else if (m.name === 'views') metrics.views = val;
-              });
-              insightsMap.set(p.id, metrics);
-            }
-          } catch {
-            // Insight indisponível para este post — usar zeros
-          }
-        });
-        await Promise.all(insightPromises);
-        console.log(`[Instagram] Insights buscados para ${insightsMap.size}/${postsJson.data!.length} posts`);
-
-        posts = postsJson.data!.map(p => {
-          const existing = existingPostsMap.get(p.id);
-          const ins = insightsMap.get(p.id) || { shares: existing?.shares || 0, saves: existing?.saves || 0, reach: existing?.reach || 0, views: existing?.views || 0 };
-          return {
-            id: p.id,
-            caption: p.caption || '',
-            mediaType: p.media_type,
-            mediaProductType: p.media_product_type,
-            permalink: p.permalink,
-            timestamp: p.timestamp,
-            likes: (p.like_count != null && p.like_count > 0) ? p.like_count : (existing?.likes || 0),
-            comments: (p.comments_count != null && p.comments_count > 0) ? p.comments_count : (existing?.comments || 0),
-            shares: ins.shares,
-            saves: ins.saves,
-            reach: ins.reach,
-            views: ins.views,
-            thumbnailUrl: p.thumbnail_url || p.media_url || existing?.thumbnailUrl || '',
+      const posts: PostWithInsights[] = [];
+      for (const p of rawPosts) {
+        let shares = 0, saves = 0, reach = 0, views = 0;
+        try {
+          const ins = callMcp('get_post_insights', { post_id: p.id }) as {
+            shares?: number; saved?: number; reach?: number; views?: number;
           };
+          shares = ins.shares || 0;
+          saves = ins.saved || 0;
+          reach = ins.reach || 0;
+          views = ins.views || 0;
+        } catch (insErr) {
+          const existing = existingPostsMap.get(p.id);
+          shares = existing?.shares || 0;
+          saves = existing?.saves || 0;
+          reach = existing?.reach || 0;
+          views = existing?.views || 0;
+          console.warn(`[Instagram] Insights não disponíveis para post ${p.id}:`, insErr);
+        }
+
+        // Determinar tipo de mídia
+        const rawType = (p.type || 'IMAGE').toUpperCase();
+        const mediaType = rawType === 'CAROUSEL_ALBUM' ? 'CAROUSEL_ALBUM' :
+          rawType === 'VIDEO' ? 'VIDEO' : 'IMAGE';
+        const mediaProductType = rawType === 'VIDEO' ? 'REELS' :
+          rawType === 'CAROUSEL_ALBUM' ? 'FEED' : 'FEED';
+
+        posts.push({
+          id: p.id,
+          caption: p.caption || '',
+          mediaType,
+          mediaProductType,
+          permalink: p.link || '',
+          timestamp: p.posted || new Date().toISOString(),
+          likes: p.likes || 0,
+          comments: p.comments || 0,
+          shares,
+          saves,
+          reach,
+          views,
+          thumbnailUrl: p.thumbnail_url || p.media_url || existingPostsMap.get(p.id)?.thumbnailUrl || '',
         });
-      } else {
-        // Sem permissão para listar mídia: preservar posts existentes e atualizar apenas conta
-        console.warn('[Instagram] Sem permissão para listar mídia. Preservando posts e métricas existentes.');
-        posts = (this.data?.posts || []).map(p => ({
-          ...p,
-          shares: p.shares || 0,
-          saves: p.saves || 0,
-          reach: p.reach || 0,
-          views: p.views || 0,
-        }));
       }
+      console.log(`[Instagram] Insights coletados para ${posts.length} posts`);
 
       const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
       const totalComments = posts.reduce((s, p) => s + p.comments, 0);
       const totalShares = posts.reduce((s, p) => s + p.shares, 0);
       const totalSaves = posts.reduce((s, p) => s + p.saves, 0);
       const totalReach = posts.reduce((s, p) => s + p.reach, 0);
+      const followersCount = accountRaw.followers_count || 0;
       const avgEngagement = posts.length > 0 ? Math.round((totalLikes + totalComments + totalShares + totalSaves) / posts.length) : 0;
-      const engagementRate = accountData.followers_count > 0 ? parseFloat(((avgEngagement / accountData.followers_count) * 100).toFixed(2)) : 0;
+      const engagementRate = followersCount > 0 ? parseFloat(((avgEngagement / followersCount) * 100).toFixed(2)) : 0;
+
+      // Reconstituir accountData para compatibilidade com o restante do código
+      const accountData = {
+        username: accountRaw.username || '',
+        name: accountRaw.name || '',
+        biography: accountRaw.biography || '',
+        followers_count: followersCount,
+        follows_count: accountRaw.follows_count || 0,
+        media_count: accountRaw.media_count || posts.length,
+        profile_picture_url: accountRaw.profile_picture_url || '',
+      };
 
       // Calcular engajamento por tipo
       const byType: Record<string, { posts: number; totalLikes: number; totalComments: number; totalShares: number; totalSaves: number; totalReach: number }> = {};
