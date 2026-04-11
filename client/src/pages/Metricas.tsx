@@ -56,6 +56,30 @@ export default function Metricas() {
     avgEngagement: item.avgEngagement || 0,
   })) || [];
 
+  // Calcular limiar viral: máximo entre 15 e a média de compartilhamentos
+  const allPostsArr = (topPosts || []) as any[];
+  const avgShares = allPostsArr.length > 0
+    ? allPostsArr.reduce((s: number, p: any) => s + (p.shares || 0), 0) / allPostsArr.length
+    : 0;
+  const viralThreshold = Math.max(15, avgShares);
+
+  // Comparativo semanal: últimas 2 semanas do growthData
+  const weeklyComparison = (() => {
+    if (!growthData || growthData.length < 2) return null;
+    const half = Math.floor(growthData.length / 2);
+    const thisWeek = growthData.slice(-half);
+    const lastWeek = growthData.slice(-half * 2, -half);
+    if (thisWeek.length === 0 || lastWeek.length === 0) return null;
+    const sum = (arr: any[], key: string) => arr.reduce((s, d) => s + (d[key] || 0), 0);
+    const pct = (curr: number, prev: number) => prev === 0 ? null : Math.round(((curr - prev) / prev) * 100);
+    return {
+      likes: pct(sum(thisWeek, 'likes'), sum(lastWeek, 'likes')),
+      comments: pct(sum(thisWeek, 'comments'), sum(lastWeek, 'comments')),
+      shares: pct(sum(thisWeek, 'shares'), sum(lastWeek, 'shares')),
+      saves: pct(sum(thisWeek, 'saves'), sum(lastWeek, 'saves')),
+    };
+  })();
+
   // Filtrar e ordenar posts
   const filteredPosts = (topPosts || [])
     .filter((post: any) => {
@@ -218,6 +242,20 @@ export default function Metricas() {
                 <CardHeader>
                   <CardTitle>Evolução por Semana</CardTitle>
                   <CardDescription>Curtidas, comentários e compartilhamentos por semana (últimos posts)</CardDescription>
+                  {weeklyComparison && (
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {[
+                        { label: 'Curtidas', value: weeklyComparison.likes, color: 'text-red-400' },
+                        { label: 'Comentários', value: weeklyComparison.comments, color: 'text-blue-400' },
+                        { label: 'Compartilhamentos', value: weeklyComparison.shares, color: 'text-green-400' },
+                        { label: 'Salvos', value: weeklyComparison.saves, color: 'text-yellow-400' },
+                      ].map(({ label, value, color }) => value !== null && (
+                        <span key={label} className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-muted/60 font-medium ${color}`}>
+                          {value > 0 ? '▲' : value < 0 ? '▼' : '—'} {label}: {value > 0 ? '+' : ''}{value}%
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {growthLoading ? (
@@ -418,8 +456,15 @@ export default function Metricas() {
                       {filteredPosts.map((post: any, index: number) => (
                         <div key={post.id || index} className="border border-border/50 rounded-lg p-4 hover:border-primary/50 transition-colors">
                           <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h4 className="font-semibold line-clamp-2 mb-1">#{index + 1} - {post.caption || 'Sem legenda'}</h4>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start gap-2 mb-1">
+                                <h4 className="font-semibold line-clamp-2 flex-1">#{index + 1} - {post.caption || 'Sem legenda'}</h4>
+                                {(post.shares || 0) >= viralThreshold && (
+                                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-sm">
+                                    🔥 Viral
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">
                                 {new Date(post.timestamp).toLocaleDateString('pt-BR')}
                               </p>

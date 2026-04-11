@@ -635,3 +635,7 @@
 - [ ] Bug: Badge vermelho "1" no item Configurações aparece incorretamente (lógica de contagem de pendentes precisa excluir usuários já classificados)
 - [x] Badge de pendentes no menu: tornar clicável com link direto para /usuarios (página de aprovação)
 - [ ] Bug: Dropdown de role em /usuarios só mostra "Visitante", sem opções team/coordinator/superadmin
+
+- [x] Tarefa agendada semanal para coleta automática de dados do Instagram via MCP
+- [x] Badge "Viral" nos posts com compartilhamentos acima da média (>15) na aba Top Posts
+- [x] Comparativo semanal percentual na aba Crescimento (variação semana a semana)
