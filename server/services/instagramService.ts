@@ -11,7 +11,6 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 import { ENV } from '../_core/env.js';
 import { getDb } from '../db.js';
 import { instagramMetrics, instagramFollowersHistory } from '../../drizzle/schema.js';
@@ -355,112 +354,55 @@ export class InstagramService {
   async syncFromAPI(): Promise<{ success: boolean; followers: number; posts: number; fetchedAt: string; error?: string }> {
     try {
       // ====================================================================
-      // SYNC VIA MCP DO INSTAGRAM
-      // O token da Graph API não tem permissão instagram_basic para listar
-      // posts e insights. Usamos o MCP que já tem as permissões corretas.
+      // SYNC VIA INSTAGRAM GRAPH API (graph.facebook.com)
+      // O token disponível tem permissão para buscar dados da conta do
+      // Instagram Business Account (followers, following, media_count).
+      // Para posts e insights, preservamos os dados do JSON local.
       // ====================================================================
+      const token = ENV.instagramToken;
+      const accountId = ENV.instagramAccountId;
 
-      // Helper para chamar o MCP via CLI
-      const callMcp = (tool: string, input: Record<string, unknown>): unknown => {
-        const inputJson = JSON.stringify(input);
-        const escaped = inputJson.replace(/'/g, "'\\''" );
-        execSync(`manus-mcp-cli tool call ${tool} --server instagram --input '${escaped}'`, {
-          encoding: 'utf-8',
-          timeout: 30000,
-        });
-        // Ler o arquivo de resultado mais recente
-        const resultDir = '/tmp/manus-mcp';
-        if (!fs.existsSync(resultDir)) throw new Error('Diretório MCP não encontrado');
-        const files = fs.readdirSync(resultDir)
-          .filter(f => f.startsWith('mcp_result_') && f.endsWith('.json'))
-          .map(f => ({ name: f, time: fs.statSync(`${resultDir}/${f}`).mtime.getTime() }))
-          .sort((a, b) => b.time - a.time);
-        if (files.length === 0) throw new Error('Nenhum resultado MCP encontrado');
-        const content = fs.readFileSync(`${resultDir}/${files[0].name}`, 'utf-8');
-        return JSON.parse(content);
-      };
+      if (!token || !accountId) {
+        throw new Error('Token ou Account ID do Instagram não configurados. Configure INSTAGRAM_GRAPH_API_TOKEN e INSTAGRAM_BUSINESS_ACCOUNT_ID.');
+      }
 
-      // 1. Buscar dados da conta via MCP
-      const accountRaw = callMcp('get_account_info', {}) as {
+      // 1. Buscar dados da conta via Graph API
+      const profileUrl = `https://graph.facebook.com/v21.0/${accountId}?fields=username,name,biography,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`;
+      const profileRes = await fetch(profileUrl);
+      const profileData = await profileRes.json() as {
         username?: string; name?: string; biography?: string;
         followers_count?: number; follows_count?: number; media_count?: number;
-        profile_picture_url?: string;
+        profile_picture_url?: string; error?: { message: string; code: number };
       };
-      console.log('[Instagram] Conta via MCP:', accountRaw.username, 'seguidores:', accountRaw.followers_count);
 
-      // 2. Buscar lista de posts via MCP (máx 20)
-      const postListRaw = callMcp('get_post_list', { limit: 20 }) as {
-        posts?: Array<{
-          id: string; type?: string; caption?: string; link?: string;
-          likes?: number; comments?: number; posted?: string;
-          thumbnail_url?: string; media_url?: string;
-        }>;
-      };
-      const rawPosts = postListRaw.posts || [];
-      console.log(`[Instagram] Posts via MCP: ${rawPosts.length} posts`);
+      if (profileData.error) {
+        throw new Error(`Graph API error: ${profileData.error.message} (code ${profileData.error.code})`);
+      }
 
-      // 3. Buscar insights de cada post via MCP em paralelo (máx 5 por vez para não sobrecarregar)
+      const accountRaw = profileData;
+      console.log('[Instagram] Conta via Graph API:', accountRaw.username, 'seguidores:', accountRaw.followers_count);
+
+      // 2. Preservar posts existentes do JSON local (Graph API requer permissão instagram_content_publish)
       type PostWithInsights = {
         id: string; caption: string; mediaType: string; mediaProductType: string;
         permalink: string; timestamp: string; likes: number; comments: number;
         shares: number; saves: number; reach: number; views: number; thumbnailUrl: string;
       };
+      const posts: PostWithInsights[] = (this.data?.posts || []) as PostWithInsights[];
+      console.log(`[Instagram] Posts preservados do JSON local: ${posts.length} posts`);
 
-      const existingPostsMap = new Map((this.data?.posts || []).map(p => [p.id, p]));
-
-      const posts: PostWithInsights[] = [];
-      for (const p of rawPosts) {
-        let shares = 0, saves = 0, reach = 0, views = 0;
-        try {
-          const ins = callMcp('get_post_insights', { post_id: p.id }) as {
-            shares?: number; saved?: number; reach?: number; views?: number;
-          };
-          shares = ins.shares || 0;
-          saves = ins.saved || 0;
-          reach = ins.reach || 0;
-          views = ins.views || 0;
-        } catch (insErr) {
-          const existing = existingPostsMap.get(p.id);
-          shares = existing?.shares || 0;
-          saves = existing?.saves || 0;
-          reach = existing?.reach || 0;
-          views = existing?.views || 0;
-          console.warn(`[Instagram] Insights não disponíveis para post ${p.id}:`, insErr);
-        }
-
-        // Determinar tipo de mídia
-        const rawType = (p.type || 'IMAGE').toUpperCase();
-        const mediaType = rawType === 'CAROUSEL_ALBUM' ? 'CAROUSEL_ALBUM' :
-          rawType === 'VIDEO' ? 'VIDEO' : 'IMAGE';
-        const mediaProductType = rawType === 'VIDEO' ? 'REELS' :
-          rawType === 'CAROUSEL_ALBUM' ? 'FEED' : 'FEED';
-
-        posts.push({
-          id: p.id,
-          caption: p.caption || '',
-          mediaType,
-          mediaProductType,
-          permalink: p.link || '',
-          timestamp: p.posted || new Date().toISOString(),
-          likes: p.likes || 0,
-          comments: p.comments || 0,
-          shares,
-          saves,
-          reach,
-          views,
-          thumbnailUrl: p.thumbnail_url || p.media_url || existingPostsMap.get(p.id)?.thumbnailUrl || '',
-        });
-      }
-      console.log(`[Instagram] Insights coletados para ${posts.length} posts`);
-
-      const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
-      const totalComments = posts.reduce((s, p) => s + p.comments, 0);
-      const totalShares = posts.reduce((s, p) => s + p.shares, 0);
-      const totalSaves = posts.reduce((s, p) => s + p.saves, 0);
-      const totalReach = posts.reduce((s, p) => s + p.reach, 0);
+      const totalLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
+      const totalComments = posts.reduce((s, p) => s + (p.comments || 0), 0);
+      const totalShares = posts.reduce((s, p) => s + (p.shares || 0), 0);
+      const totalSaves = posts.reduce((s, p) => s + (p.saves || 0), 0);
+      const totalReach = posts.reduce((s, p) => s + (p.reach || 0), 0);
       const followersCount = accountRaw.followers_count || 0;
       const avgEngagement = posts.length > 0 ? Math.round((totalLikes + totalComments + totalShares + totalSaves) / posts.length) : 0;
-      const engagementRate = followersCount > 0 ? parseFloat(((avgEngagement / followersCount) * 100).toFixed(2)) : 0;
+      // Garantir que engagementRate seja sempre um número válido (nunca NaN)
+      const engagementRateRaw = followersCount > 0 && avgEngagement > 0
+        ? parseFloat(((avgEngagement / followersCount) * 100).toFixed(2))
+        : 0;
+      const engagementRate = isNaN(engagementRateRaw) ? 0 : engagementRateRaw;
 
       // Reconstituir accountData para compatibilidade com o restante do código
       const accountData = {

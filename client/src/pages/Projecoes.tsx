@@ -369,59 +369,7 @@ export default function Projecoes() {
           </Card>
         </div>
 
-        {/* Orçamento */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-yellow-400" />
-              Orçamento da Pré campanha
-            </CardTitle>
-            <CardDescription>
-              Total estimado: R$ {totalBudgetMin.toLocaleString()} – R$ {totalBudgetMax.toLocaleString()} / mês
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/50">
-                      <th className="text-left py-2 px-3 font-semibold text-muted-foreground">Item</th>
-                      <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Mín</th>
-                      <th className="text-right py-2 px-3 font-semibold text-muted-foreground">Máx</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {BUDGET.map((b) => (
-                      <tr key={b.item} className="border-b border-border/20 hover:bg-muted/20">
-                        <td className="py-2 px-3">{b.item}</td>
-                        <td className="text-right py-2 px-3 text-yellow-400">R$ {b.min.toLocaleString()}</td>
-                        <td className="text-right py-2 px-3 text-green-400">R$ {b.max.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-border bg-muted/20">
-                      <td className="py-2 px-3 font-bold">TOTAL</td>
-                      <td className="text-right py-2 px-3 font-bold text-yellow-400">R$ {totalBudgetMin.toLocaleString()}</td>
-                      <td className="text-right py-2 px-3 font-bold text-green-400">R$ {totalBudgetMax.toLocaleString()}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={BUDGET} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
-                  <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 10 }} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis type="category" dataKey="item" stroke="#9ca3af" tick={{ fontSize: 10 }} width={130} />
-                  <Tooltip contentStyle={{ backgroundColor: "#1a2e1a", border: "1px solid #2d6a4f" }} formatter={(v: number) => [`R$ ${v.toLocaleString()}`]} />
-                  <Bar dataKey="min" fill="#c9a84c" name="Mínimo" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="max" fill="#2d6a4f" name="Máximo" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Orçamento da Pré campanha — oculto a pedido da equipe */}
 
         {/* Equipe — oculto a pedido */}
 

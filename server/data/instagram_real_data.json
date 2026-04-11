@@ -4,9 +4,9 @@
     "name": "Eduardo Brandão",
     "bio": "🔸 Presidente do Partido Verde DF  \n🔸 Ex-Secretário do Meio Ambiente\n🔸 Engenheiro e apaixonado por Brasília",
     "followers": 1541,
-    "following": 2602,
-    "posts": 262,
-    "profilePicture": "https://scontent-iad6-1.xx.fbcdn.net/v/t51.2885-15/43817457_2200899903459517_6815044682687447040_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=7d201b&_nc_ohc=4326pP_s0-MQ7kNvwH_I2Y8&_nc_oc=AdqPs1DJ9OiPF2LUQWspxPyoRq6cb_k483KW0trhNnKv3IuQl5RYFjKCFuFfjxntHJE&_nc_zt=23&_nc_ht=scontent-iad6-1.xx&edm=AL-3X8kEAAAA&oh=00_Af1MY_0WNVVXm1xOcv6Fw7BLXfilPcjxO9IU53Z1cxxTxA&oe=69DEEF79"
+    "following": 2609,
+    "posts": 263,
+    "profilePicture": "https://scontent-iad6-1.xx.fbcdn.net/v/t51.2885-15/43817457_2200899903459517_6815044682687447040_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=7d201b&_nc_ohc=4326pP_s0-MQ7kNvwGbMFz6&_nc_oc=AdoMFZQedT453ZwECwh2CFOESPBP5zBRHGmK-E7MNDWgR0JSAdzoxj7AQa7UriOIgfw&_nc_zt=23&_nc_ht=scontent-iad6-1.xx&edm=AL-3X8kEAAAA&oh=00_Af2ZWutVOfAvth74AVu5HuXQD8wiVsbsLW5YTephlKRu1g&oe=69E07939"
   },
   "posts": [
     {
@@ -366,12 +366,12 @@
         "posts": 5,
         "totalLikes": 218,
         "totalComments": 20,
-        "totalShares": 84,
-        "totalSaves": 0,
-        "totalReach": 1616,
-        "avgEngagement": 64
+        "totalShares": null,
+        "totalSaves": null,
+        "totalReach": null,
+        "avgEngagement": null
       }
     ]
   },
-  "fetchedAt": "2026-04-11T17:45:00.000Z"
+  "fetchedAt": "2026-04-11T18:11:34.223Z"
 }

@@ -647,3 +647,5 @@
 - [x] Sidebar menu em /planejamento-semanal (SidebarNav adicionado ao layout da página)
 - [x] Snapshot histórico retroativo na tabela instagram_followers_history (58 registros semanais de mar/2025 a abr/2026)
 - [x] Contador de dias para a eleição na Home (card ElectionCountdownCard com contagem regressiva, barra de progresso e urgência visual)
+- [x] Bug: Erro na sincronização — manus-mcp-cli not found (corrigido: usa Graph API direta via graph.facebook.com)
+- [x] Ocultar card "Orçamento da Pré campanha" em /projecoes
