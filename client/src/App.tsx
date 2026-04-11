@@ -32,10 +32,10 @@ import SettingsPage from "./pages/SettingsPage";
 
 /**
  * Hierarquia de acesso:
- * - Visitante  → apenas /login, /home, /redefinir-senha
- * - Equipe     → + conteúdo (leitura), estratégia, métricas, projeções, relatórios, apoiadores
- * - Coordenador→ + publicar/agendar conteúdo (permissão canPublishPost)
- * - Superadmin → + configurações, gerenciamento de usuários, admin
+   * - Visitante  → apenas /home (resumo da Agenda de Rua, somente leitura)
+   * - Equipe     → home + conteúdo, estratégia, métricas, projeções, relatórios, agenda de rua
+   * - Coordenador→ + publicar/agendar conteúdo + planejamento IA
+   * - Superadmin → + configurações, gerenciamento de usuários, admin
  *
  * Acesso negado: usuários autenticados sem permissão veem a página AcessoNegado.
  * Usuários não autenticados são redirecionados para /login.
@@ -56,7 +56,7 @@ function Router() {
       <Route path="/conteudo">
         {() => (
           <ProtectedRoute
-            requiredRole={["visitor", "team", "coordinator", "superadmin"]}
+            requiredRole={["team", "coordinator", "superadmin"]}
             rotaTentada="/conteudo"
           >
             <Conteudo />
@@ -111,7 +111,7 @@ function Router() {
       <Route path="/agenda-rua">
         {() => (
           <ProtectedRoute
-            requiredRole={["visitor", "team", "coordinator", "superadmin"]}
+            requiredRole={["team", "coordinator", "superadmin"]}
             rotaTentada="/agenda-rua"
           >
             <AgendaRua />

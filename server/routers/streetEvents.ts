@@ -73,9 +73,14 @@ export const streetEventsRouter = router({
       lat: z.number().optional(),
       lng: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Apenas team, coordinator e superadmin podem criar eventos
+      if (!ctx.user || !['team', 'coordinator', 'superadmin'].includes(ctx.user.role ?? '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sem permissão para criar eventos' });
+      }
 
       await db.insert(streetEvents).values({
         title: input.title,
@@ -132,9 +137,14 @@ export const streetEventsRouter = router({
       lat: z.number().optional(),
       lng: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+      // Apenas team, coordinator e superadmin podem editar eventos
+      if (!ctx.user || !['team', 'coordinator', 'superadmin'].includes(ctx.user.role ?? '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sem permissão para editar eventos' });
+      }
 
       const { id, lat, lng, ...updateData } = input;
       const updateSet: Record<string, unknown> = {};
@@ -198,7 +208,12 @@ export const streetEventsRouter = router({
       fileBase64: z.string(),
       mimeType: z.string(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Apenas team, coordinator e superadmin podem fazer upload
+      if (!ctx.user || !['team', 'coordinator', 'superadmin'].includes(ctx.user.role ?? '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Sem permissão para upload de mídia' });
+      }
+
       const buffer = Buffer.from(input.fileBase64, "base64");
       const ext = input.fileName.split(".").pop() || "bin";
       const fileKey = `street-events/${randomSuffix()}.${ext}`;

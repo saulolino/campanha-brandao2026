@@ -1,26 +1,218 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb, Settings, RefreshCw, Heart, MessageCircle, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb,
+  Settings, RefreshCw, Heart, MessageCircle, FileText, MapPin, Clock,
+  CheckCircle2, XCircle, AlertCircle, CalendarDays, Lock,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useLocalAuth } from "@/hooks/useLocalAuth";
 
-export default function Home() {
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+  planejado:  { label: "Planejado",  color: "bg-blue-500/20 text-blue-300 border-blue-500/30",   icon: Clock },
+  confirmado: { label: "Confirmado", color: "bg-green-500/20 text-green-300 border-green-500/30", icon: CheckCircle2 },
+  realizado:  { label: "Realizado",  color: "bg-slate-500/20 text-slate-300 border-slate-500/30", icon: CheckCircle2 },
+  cancelado:  { label: "Cancelado",  color: "bg-red-500/20 text-red-300 border-red-500/30",       icon: XCircle },
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  caminhada: "Caminhada",
+  reuniao: "Reunião",
+  panfletagem: "Panfletagem",
+  visita: "Visita",
+  debate: "Debate",
+  entrevista: "Entrevista",
+  show: "Show",
+  outro: "Outro",
+};
+
+function formatEventDate(date: Date | string) {
+  return new Date(date).toLocaleDateString("pt-BR", {
+    weekday: "short", day: "2-digit", month: "2-digit", year: "numeric",
+  });
+}
+
+// ─── Vista do Visitante ──────────────────────────────────────────────────────
+
+function VisitorHome() {
+  const { user } = useLocalAuth();
+  const displayName = user?.nome || user?.name || "Visitante";
+
+  // Buscar próximos eventos (confirmados e planejados)
+  const now = new Date();
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + 60); // próximos 60 dias
+
+  const { data: events, isLoading } = trpc.streetEvents.list.useQuery({
+    limit: 50,
+    startDate: now,
+    endDate,
+  });
+
+  // Filtrar apenas planejados e confirmados (não cancelados)
+  const upcomingEvents = (events || []).filter(
+    (e) => e.status !== "cancelado"
+  ).sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+
+  const confirmedCount = upcomingEvents.filter((e) => e.status === "confirmado").length;
+  const plannedCount = upcomingEvents.filter((e) => e.status === "planejado").length;
+
+  return (
+    <div className="flex h-screen bg-background">
+      <SidebarNav activeSection="home" />
+
+      <main className="flex-1 overflow-auto">
+        <div className="p-6 max-w-4xl mx-auto">
+
+          {/* Cabeçalho de boas-vindas */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <span className="text-green-400 font-bold text-lg">{displayName.charAt(0).toUpperCase()}</span>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">Olá, {displayName.split(" ")[0]}!</h1>
+                <p className="text-sm text-muted-foreground">Bem-vindo(a) ao painel da pré campanha Eduardo Brandão</p>
+              </div>
+            </div>
+
+            {/* Banner de acesso limitado */}
+            <div className="mt-4 flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <Lock size={18} className="text-amber-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-300">Acesso de visitante</p>
+                <p className="text-xs text-amber-400/80 mt-0.5">
+                  Você está visualizando a agenda de eventos em modo somente leitura.
+                  Para acesso completo ao painel, solicite ao administrador que eleve seu nível de acesso.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* KPIs resumidos */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <Card className="border border-border/50">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{isLoading ? "..." : confirmedCount}</p>
+                    <p className="text-xs text-muted-foreground">Eventos confirmados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardContent className="pt-5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <CalendarDays className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{isLoading ? "..." : plannedCount}</p>
+                    <p className="text-xs text-muted-foreground">Eventos planejados</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista de próximos eventos */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin size={18} className="text-green-400" />
+              <h2 className="text-lg font-semibold text-foreground">Próximos eventos de rua</h2>
+              <span className="text-xs text-muted-foreground">(próximos 60 dias)</span>
+            </div>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-20 bg-muted/20 rounded-lg animate-pulse" />
+                ))}
+              </div>
+            ) : upcomingEvents.length === 0 ? (
+              <Card className="border border-border/50">
+                <CardContent className="py-12 text-center">
+                  <CalendarDays className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                  <p className="text-muted-foreground font-medium">Nenhum evento nos próximos 60 dias</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {upcomingEvents.map((event) => {
+                  const statusCfg = STATUS_CONFIG[event.status] || STATUS_CONFIG.planejado;
+                  const StatusIcon = statusCfg.icon;
+                  return (
+                    <Card key={event.id} className="border border-border/50 hover:border-border transition-colors">
+                      <CardContent className="py-4 px-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-semibold text-sm text-foreground truncate">{event.title}</span>
+                              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border flex items-center gap-1 ${statusCfg.color}`}>
+                                <StatusIcon size={10} />
+                                {statusCfg.label}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-full">
+                                {TYPE_LABELS[event.type] || event.type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <Clock size={11} />
+                                {formatEventDate(event.eventDate)} às {event.eventTime || "09:00"}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin size={11} />
+                                {event.neighborhood ? `${event.neighborhood} — ` : ""}{event.location}
+                              </span>
+                              {(event.expectedAttendees ?? 0) > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <Users size={11} />
+                                  {event.expectedAttendees} esperados
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ─── Vista da Equipe / Coordenador / Superadmin ──────────────────────────────
+
+function TeamHome() {
   const [, navigate] = useLocation();
   const [lastSync, setLastSync] = useState<string>('');
   const [syncError, setSyncError] = useState<string | null>(null);
   const utils = trpc.useUtils();
-  
-  // Buscar métricas reais do Instagram
+
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery();
 
-  // Mutation para sincronizar dados diretamente da API do Instagram
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {
       if (result.success) {
-        // Invalidar todas as queries do Instagram para buscar dados frescos
         await utils.instagram.getMetrics.invalidate();
         await utils.instagram.getPosts.invalidate();
         await utils.instagram.getGrowth.invalidate();
@@ -37,17 +229,12 @@ export default function Home() {
       setSyncError(err.message);
     },
   });
-  
-  const handleNavigate = (route: string) => {
-    navigate(route);
-  };
 
   const handleRefresh = () => {
     setSyncError(null);
     syncMutation.mutate();
   };
 
-  // Calcular KPIs baseado em dados reais
   const targetFollowers = 20000;
   const currentFollowers = metrics?.followers || 0;
   const requiredGrowth = Math.max(0, targetFollowers - currentFollowers);
@@ -55,8 +242,8 @@ export default function Home() {
   const totalLikes = metrics?.likes || 0;
   const totalComments = metrics?.comments || 0;
   const avgEngagement = totalPosts > 0 ? Math.round((totalLikes + totalComments) / Math.min(totalPosts, 20)) : 0;
-  
-  // Atualizar timestamp de última sincronização
+  const progressPercentage = (currentFollowers / targetFollowers) * 100;
+
   useEffect(() => {
     if (metrics) {
       const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -64,18 +251,15 @@ export default function Home() {
     }
   }, [metrics]);
 
-  const progressPercentage = (currentFollowers / targetFollowers) * 100;
-
   return (
     <div className="flex h-screen bg-background">
       <SidebarNav activeSection="home" />
-      
+
       <main className="flex-1 overflow-auto">
         <div className="p-8 max-w-7xl mx-auto">
-          {/* Error Alert */}
           {metricsError && <InstagramErrorAlert error={metricsError as unknown as Error} />}
-          
-          {/* Header com perfil real */}
+
+          {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-1">Painel Principal</h1>
@@ -106,8 +290,8 @@ export default function Home() {
               <span className="text-sm text-green-600">Dados sincronizados diretamente do Instagram às {lastSync}</span>
             </div>
           )}
-          
-          {/* KPI Cards - 4 colunas */}
+
+          {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
@@ -242,11 +426,11 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Quick Access - 3 colunas */}
+          {/* Quick Access */}
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Acesso Rápido aos Módulos</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleNavigate("/conteudo")}>
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/conteudo")}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
@@ -261,7 +445,7 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleNavigate("/estrategia")}>
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/estrategia")}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Lightbulb className="w-5 h-5" />
@@ -276,7 +460,7 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleNavigate("/metricas")}>
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/metricas")}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />
@@ -291,7 +475,7 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleNavigate("/projecoes")}>
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/projecoes")}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" />
@@ -306,7 +490,22 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleNavigate("/configuracoes")}>
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/agenda-rua")}>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MapPin className="w-5 h-5" />
+                    Agenda de Rua
+                  </CardTitle>
+                  <CardDescription>Eventos e ações presenciais</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button variant="outline" size="sm" className="w-full">
+                    Acessar <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-border/50 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate("/configuracoes")}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Settings className="w-5 h-5" />
@@ -326,4 +525,11 @@ export default function Home() {
       </main>
     </div>
   );
+}
+
+// ─── Componente principal — bifurca por role ─────────────────────────────────
+
+export default function Home() {
+  const { isVisitor } = usePermissions();
+  return isVisitor ? <VisitorHome /> : <TeamHome />;
 }
