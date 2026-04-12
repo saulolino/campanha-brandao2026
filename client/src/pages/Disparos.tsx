@@ -2,23 +2,19 @@
  * Página de Disparos WhatsApp
  *
  * Permite que membros da equipe selecionem itens de agenda (posts Instagram
- * e eventos de rua), visualizem a mensagem formatada e disparem para um
- * grupo de WhatsApp via Whapi.Cloud.
+ * e eventos de rua), visualizem a mensagem formatada e disparem para um ou
+ * mais grupos de WhatsApp via Whapi.Cloud.
+ *
+ * Fix: checkboxes usam apenas onCheckedChange; o div pai NÃO tem onClick
+ * para evitar duplo disparo (Radix Checkbox já propaga o evento).
  */
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import SidebarNav from "@/components/SidebarNav";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -41,10 +37,11 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  ChevronRight,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 type DispatchType = "diario" | "semanal";
@@ -99,24 +96,40 @@ const STATUS_COLORS: Record<string, string> = {
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Disparos() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
+
   // Estado do formulário
   const [dispatchType, setDispatchType] = useState<DispatchType>("diario");
   const [selectedPostIds, setSelectedPostIds] = useState<number[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
-  const [selectedGroupName, setSelectedGroupName] = useState<string>("");
+  // Múltiplos grupos selecionados: array de { id, name }
+  const [selectedGroups, setSelectedGroups] = useState<Array<{ id: string; name: string }>>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // Estado para controlar envio multi-grupo
+  const [sendingProgress, setSendingProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Queries
   const agendaQuery = trpc.whatsapp.getAgendaItems.useQuery({ dispatchType });
   const groupsQuery = trpc.whatsapp.getGroups.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
+  // Grupos favoritos salvos nas configurações — pré-selecionados automaticamente
+  const favoritesQuery = trpc.whatsappSettings.getSettings.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
   const historicoQuery = trpc.whatsapp.getHistorico.useQuery(undefined, {
     refetchInterval: 30_000,
   });
 
-  // Preview da mensagem
+  // Pré-selecionar grupos favoritos quando chegam do servidor (apenas uma vez)
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const favoriteGroups = favoritesQuery.data?.defaultGroups ?? [];
+  if (!favoritesLoaded && favoriteGroups.length > 0 && selectedGroups.length === 0) {
+    setSelectedGroups(favoriteGroups);
+    setFavoritesLoaded(true);
+  }
+
+  // Preview da mensagem — ativado mesmo sem itens selecionados para mostrar template
   const previewQuery = trpc.whatsapp.previewMessage.useQuery(
     {
       dispatchType,
@@ -124,26 +137,17 @@ export default function Disparos() {
       eventIds: selectedEventIds,
     },
     {
-      enabled: selectedPostIds.length > 0 || selectedEventIds.length > 0,
-        placeholderData: (prev: any) => prev,
+      placeholderData: (prev: any) => prev,
     }
   );
 
-  // Mutation de envio
+  // Mutation de envio (um grupo por vez)
   const sendMutation = trpc.whatsapp.sendDisparo.useMutation({
     onSuccess: () => {
-      toast.success(`Disparo para "${selectedGroupName}" realizado com sucesso.`);
-      setConfirmOpen(false);
-      setSelectedPostIds([]);
-      setSelectedEventIds([]);
-      setSelectedGroupId("");
-      setSelectedGroupName("");
       historicoQuery.refetch();
     },
     onError: (err) => {
       toast.error(`Erro ao enviar: ${err.message}`);
-      setConfirmOpen(false);
-      historicoQuery.refetch();
     },
   });
 
@@ -175,8 +179,9 @@ export default function Disparos() {
 
   const totalSelected = selectedPostIds.length + selectedEventIds.length;
   const previewMessage = previewQuery.data?.message ?? "";
-  const canSend = totalSelected > 0 && selectedGroupId !== "";
+  const canSend = totalSelected > 0 && selectedGroups.length > 0 && !!previewMessage;
 
+  // ── Handlers de seleção ──────────────────────────────────────────────────────
   function togglePost(id: number) {
     setSelectedPostIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -189,22 +194,59 @@ export default function Disparos() {
     );
   }
 
-  function handleGroupChange(value: string) {
-    setSelectedGroupId(value);
-    const group = groups.find((g) => g.id === value);
-    setSelectedGroupName(group?.name ?? value);
+  function toggleGroup(group: { id: string; name: string }) {
+    setSelectedGroups((prev) => {
+      const exists = prev.some((g) => g.id === group.id);
+      if (exists) return prev.filter((g) => g.id !== group.id);
+      return [...prev, group];
+    });
   }
 
-  function handleSend() {
-    if (!canSend || !previewMessage) return;
-    sendMutation.mutate({
-      dispatchType,
-      groupId: selectedGroupId,
-      groupName: selectedGroupName,
-      postIds: selectedPostIds,
-      eventIds: selectedEventIds,
-      message: previewMessage,
-    });
+  // ── Envio para múltiplos grupos ──────────────────────────────────────────────
+  async function handleSend() {
+    if (!canSend) return;
+    setSendingProgress({ current: 0, total: selectedGroups.length });
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < selectedGroups.length; i++) {
+      const group = selectedGroups[i];
+      setSendingProgress({ current: i + 1, total: selectedGroups.length });
+      try {
+        await sendMutation.mutateAsync({
+          dispatchType,
+          groupId: group.id,
+          groupName: group.name,
+          postIds: selectedPostIds,
+          eventIds: selectedEventIds,
+          message: previewMessage,
+        });
+        successCount++;
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setSendingProgress(null);
+    setConfirmOpen(false);
+
+    if (errorCount === 0) {
+      toast.success(
+        `Disparo realizado com sucesso para ${successCount} grupo${successCount > 1 ? "s" : ""}!`
+      );
+    } else if (successCount > 0) {
+      toast.warning(
+        `${successCount} enviado${successCount > 1 ? "s" : ""}, ${errorCount} com erro.`
+      );
+    } else {
+      toast.error("Falha ao enviar para todos os grupos.");
+    }
+
+    // Reset seleção
+    setSelectedPostIds([]);
+    setSelectedEventIds([]);
+    setSelectedGroups([]);
+    historicoQuery.refetch();
   }
 
   return (
@@ -222,63 +264,65 @@ export default function Disparos() {
               <div>
                 <h1 className="text-lg font-bold text-white">Disparos WhatsApp</h1>
                 <p className="text-xs text-gray-400">
-                  Selecione itens da agenda e dispare para grupos da campanha
+                  Selecione itens da agenda e envie para grupos
                 </p>
               </div>
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                agendaQuery.refetch();
-                groupsQuery.refetch();
-              }}
-              className="border-[#1a2f1a] text-gray-400 hover:text-white bg-transparent"
-            >
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Atualizar
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Seletor de tipo */}
+              <div className="flex rounded-lg border border-[#1a2f1a] overflow-hidden">
+                <button
+                  onClick={() => {
+                    setDispatchType("diario");
+                    setSelectedPostIds([]);
+                    setSelectedEventIds([]);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    dispatchType === "diario"
+                      ? "bg-green-600 text-white"
+                      : "bg-[#0d1a0d] text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Agenda do Dia
+                </button>
+                <button
+                  onClick={() => {
+                    setDispatchType("semanal");
+                    setSelectedPostIds([]);
+                    setSelectedEventIds([]);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium transition-colors ${
+                    dispatchType === "semanal"
+                      ? "bg-green-600 text-white"
+                      : "bg-[#0d1a0d] text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Agenda da Semana
+                </button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => agendaQuery.refetch()}
+                className="text-gray-400 hover:text-white"
+                disabled={agendaQuery.isFetching}
+              >
+                <RefreshCw className={`h-4 w-4 ${agendaQuery.isFetching ? "animate-spin" : ""}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/configuracoes?tab=whatsapp")}
+                className="text-gray-400 hover:text-white"
+                title="Configurações WhatsApp"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Seletor de tipo de disparo */}
-          <div className="flex gap-3">
-            <Button
-              variant={dispatchType === "diario" ? "default" : "outline"}
-              onClick={() => {
-                setDispatchType("diario");
-                setSelectedPostIds([]);
-                setSelectedEventIds([]);
-              }}
-              className={
-                dispatchType === "diario"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "border-[#1a2f1a] text-gray-400 hover:text-white bg-transparent"
-              }
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Agenda do Dia
-            </Button>
-            <Button
-              variant={dispatchType === "semanal" ? "default" : "outline"}
-              onClick={() => {
-                setDispatchType("semanal");
-                setSelectedPostIds([]);
-                setSelectedEventIds([]);
-              }}
-              className={
-                dispatchType === "semanal"
-                  ? "bg-green-600 hover:bg-green-700 text-white"
-                  : "border-[#1a2f1a] text-gray-400 hover:text-white bg-transparent"
-              }
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Agenda da Semana
-            </Button>
-          </div>
-
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Coluna esquerda: seleção de itens */}
             <div className="xl:col-span-2 space-y-4">
@@ -306,43 +350,47 @@ export default function Disparos() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {posts.map((post) => (
-                        <div
-                          key={post.id}
-                          onClick={() => togglePost(post.id)}
-                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedPostIds.includes(post.id)
-                              ? "bg-green-500/10 border-green-500/30"
-                              : "bg-[#111a11] border-[#1a2f1a] hover:border-green-500/20"
-                          }`}
-                        >
-                          <Checkbox
-                            checked={selectedPostIds.includes(post.id)}
-                            onCheckedChange={() => togglePost(post.id)}
-                            className="mt-0.5 border-gray-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-white truncate">
-                                {post.title}
-                              </span>
-                              <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-xs shrink-0">
-                                {POST_TYPE_LABELS[post.type] ?? post.type}
-                              </Badge>
+                      {posts.map((post) => {
+                        const isChecked = selectedPostIds.includes(post.id);
+                        return (
+                          <label
+                            key={post.id}
+                            htmlFor={`post-${post.id}`}
+                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors select-none ${
+                              isChecked
+                                ? "bg-green-500/10 border-green-500/30"
+                                : "bg-[#111a11] border-[#1a2f1a] hover:border-green-500/20"
+                            }`}
+                          >
+                            <Checkbox
+                              id={`post-${post.id}`}
+                              checked={isChecked}
+                              onCheckedChange={() => togglePost(post.id)}
+                              className="mt-0.5 border-gray-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium text-white truncate">
+                                  {post.title}
+                                </span>
+                                <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-xs shrink-0">
+                                  {POST_TYPE_LABELS[post.type] ?? post.type}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(post.scheduledDate)}
+                                  {post.scheduledTime ? ` às ${post.scheduledTime}` : ""}
+                                </span>
+                                {post.objective && (
+                                  <span className="truncate">🎯 {post.objective}</span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(post.scheduledDate)}
-                                {post.scheduledTime ? ` às ${post.scheduledTime}` : ""}
-                              </span>
-                              {post.objective && (
-                                <span className="truncate">🎯 {post.objective}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -372,51 +420,55 @@ export default function Disparos() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {events.map((event) => (
-                        <div
-                          key={event.id}
-                          onClick={() => toggleEvent(event.id)}
-                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedEventIds.includes(event.id)
-                              ? "bg-green-500/10 border-green-500/30"
-                              : "bg-[#111a11] border-[#1a2f1a] hover:border-green-500/20"
-                          }`}
-                        >
-                          <Checkbox
-                            checked={selectedEventIds.includes(event.id)}
-                            onCheckedChange={() => toggleEvent(event.id)}
-                            className="mt-0.5 border-gray-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-white truncate">
-                                {event.title}
-                              </span>
-                              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs shrink-0">
-                                {EVENT_TYPE_LABELS[event.type] ?? event.type}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(event.eventDate)}
-                                {event.eventTime ? ` às ${event.eventTime}` : ""}
-                              </span>
-                              <span className="flex items-center gap-1 truncate">
-                                <MapPin className="h-3 w-3 shrink-0" />
-                                {event.location}
-                                {event.neighborhood ? ` — ${event.neighborhood}` : ""}
-                              </span>
-                              {event.expectedAttendees ? (
-                                <span className="flex items-center gap-1">
-                                  <Users className="h-3 w-3" />
-                                  {event.expectedAttendees} pessoas
+                      {events.map((event) => {
+                        const isChecked = selectedEventIds.includes(event.id);
+                        return (
+                          <label
+                            key={event.id}
+                            htmlFor={`event-${event.id}`}
+                            className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors select-none ${
+                              isChecked
+                                ? "bg-green-500/10 border-green-500/30"
+                                : "bg-[#111a11] border-[#1a2f1a] hover:border-green-500/20"
+                            }`}
+                          >
+                            <Checkbox
+                              id={`event-${event.id}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleEvent(event.id)}
+                              className="mt-0.5 border-gray-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600 shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-medium text-white truncate">
+                                  {event.title}
                                 </span>
-                              ) : null}
+                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs shrink-0">
+                                  {EVENT_TYPE_LABELS[event.type] ?? event.type}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(event.eventDate)}
+                                  {event.eventTime ? ` às ${event.eventTime}` : ""}
+                                </span>
+                                <span className="flex items-center gap-1 truncate">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {event.location}
+                                  {event.neighborhood ? ` — ${event.neighborhood}` : ""}
+                                </span>
+                                {event.expectedAttendees ? (
+                                  <span className="flex items-center gap-1">
+                                    <Users className="h-3 w-3" />
+                                    {event.expectedAttendees} pessoas
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -439,34 +491,34 @@ export default function Disparos() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {totalSelected === 0 ? (
-                    <div className="text-center py-6">
-                      <MessageSquare className="h-8 w-8 text-gray-700 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">
-                        Selecione itens à esquerda para visualizar a mensagem.
-                      </p>
-                    </div>
-                  ) : previewQuery.isLoading ? (
+                  {previewQuery.isLoading ? (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
                     </div>
                   ) : (
-                    <ScrollArea className="h-64">
+                    <ScrollArea className="h-56">
                       <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
-                        {previewMessage}
+                        {previewMessage || "Selecione itens para visualizar a mensagem."}
                       </pre>
                     </ScrollArea>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Seletor de grupo */}
+              {/* Seletor de grupos — múltipla seleção */}
               <Card className="bg-[#0d1a0d] border-[#1a2f1a]">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-400" />
-                    Grupo de Destino
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-400" />
+                      Grupos de Destino
+                    </CardTitle>
+                    {selectedGroups.length > 0 && (
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
+                        {selectedGroups.length} selecionado{selectedGroups.length > 1 ? "s" : ""}
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {groupsQuery.isLoading ? (
@@ -478,6 +530,15 @@ export default function Disparos() {
                     <div className="text-center py-4">
                       <XCircle className="h-6 w-6 text-red-400 mx-auto mb-1" />
                       <p className="text-xs text-red-400">Erro ao carregar grupos</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Configure o WHAPI_TOKEN em{" "}
+                        <button
+                          onClick={() => navigate("/configuracoes?tab=whatsapp")}
+                          className="text-green-400 underline"
+                        >
+                          Configurações → WhatsApp
+                        </button>
+                      </p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -487,30 +548,54 @@ export default function Disparos() {
                         Tentar novamente
                       </Button>
                     </div>
+                  ) : groups.length === 0 ? (
+                    <div className="text-center py-4">
+                      <Users className="h-6 w-6 text-gray-600 mx-auto mb-1" />
+                      <p className="text-xs text-gray-500">Nenhum grupo encontrado.</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Configure grupos em{" "}
+                        <button
+                          onClick={() => navigate("/configuracoes?tab=whatsapp")}
+                          className="text-green-400 underline"
+                        >
+                          Configurações → WhatsApp
+                        </button>
+                      </p>
+                    </div>
                   ) : (
-                    <Select value={selectedGroupId} onValueChange={handleGroupChange}>
-                      <SelectTrigger className="bg-[#111a11] border-[#1a2f1a] text-white">
-                        <SelectValue placeholder="Selecione um grupo..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0d1a0d] border-[#1a2f1a] max-h-64">
-                        {groups.map((group) => (
-                          <SelectItem
-                            key={group.id}
-                            value={group.id}
-                            className="text-white hover:bg-[#1a2f1a] focus:bg-[#1a2f1a]"
-                          >
-                            <div className="flex flex-col">
-                              <span>{group.name}</span>
-                              {group.participantsCount > 0 && (
-                                <span className="text-xs text-gray-400">
-                                  {group.participantsCount} participantes
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ScrollArea className="h-48">
+                      <div className="space-y-1 pr-2">
+                        {groups.map((group) => {
+                          const isSelected = selectedGroups.some((g) => g.id === group.id);
+                          return (
+                            <label
+                              key={group.id}
+                              htmlFor={`group-${group.id}`}
+                              className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors select-none ${
+                                isSelected
+                                  ? "bg-blue-500/10 border-blue-500/30"
+                                  : "bg-[#111a11] border-[#1a2f1a] hover:border-blue-500/20"
+                              }`}
+                            >
+                              <Checkbox
+                                id={`group-${group.id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => toggleGroup(group)}
+                                className="border-gray-600 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-white truncate">{group.name}</p>
+                                {group.participantsCount > 0 && (
+                                  <p className="text-xs text-gray-400">
+                                    {group.participantsCount} participantes
+                                  </p>
+                                )}
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   )}
 
                   {/* Botão de disparo */}
@@ -522,12 +607,16 @@ export default function Disparos() {
                     {sendMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Enviando...
+                        {sendingProgress
+                          ? `Enviando ${sendingProgress.current}/${sendingProgress.total}...`
+                          : "Enviando..."}
                       </>
                     ) : (
                       <>
                         <Send className="h-4 w-4 mr-2" />
-                        Disparar Mensagem
+                        {selectedGroups.length > 1
+                          ? `Disparar para ${selectedGroups.length} grupos`
+                          : "Disparar Mensagem"}
                       </>
                     )}
                   </Button>
@@ -536,7 +625,9 @@ export default function Disparos() {
                     <p className="text-xs text-gray-500 text-center">
                       {totalSelected === 0
                         ? "Selecione ao menos um item de agenda"
-                        : "Selecione um grupo de destino"}
+                        : selectedGroups.length === 0
+                        ? "Selecione ao menos um grupo de destino"
+                        : "Aguardando preview da mensagem..."}
                     </p>
                   )}
                 </CardContent>
@@ -628,9 +719,15 @@ export default function Disparos() {
           </DialogHeader>
 
           <div className="space-y-3 py-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Grupo de destino</span>
-              <span className="font-medium text-white">{selectedGroupName}</span>
+            <div className="space-y-1">
+              <span className="text-xs text-gray-400">Grupos de destino</span>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedGroups.map((g) => (
+                  <Badge key={g.id} className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs">
+                    {g.name}
+                  </Badge>
+                ))}
+              </div>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Tipo de disparo</span>
@@ -673,12 +770,16 @@ export default function Disparos() {
               {sendMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Enviando...
+                  {sendingProgress
+                    ? `${sendingProgress.current}/${sendingProgress.total}...`
+                    : "Enviando..."}
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-2" />
-                  Confirmar Envio
+                  {selectedGroups.length > 1
+                    ? `Enviar para ${selectedGroups.length} grupos`
+                    : "Confirmar Envio"}
                 </>
               )}
             </Button>

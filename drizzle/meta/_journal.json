@@ -176,6 +176,13 @@
       "when": 1776027023893,
       "tag": "0024_messy_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1776028347964,
+      "tag": "0025_bored_photon",
+      "breakpoints": true
     }
   ]
 }

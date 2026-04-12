@@ -141,6 +141,12 @@ export const campaignSettings = mysqlTable("campaign_settings", {
   reportFormat: mysqlEnum("reportFormat", ["pdf", "csv", "both"]).default("pdf").notNull(),
   reportFrequency: mysqlEnum("reportFrequency", ["daily", "weekly", "monthly"]).default("weekly").notNull(),
   reportRecipients: text("reportRecipients"), // JSON array de emails
+  // WhatsApp / Whapi.Cloud
+  whapiToken: text("whapiToken"),                                      // Bearer token da Whapi.Cloud
+  whapiChannelName: varchar("whapiChannelName", { length: 255 }),       // Nome do canal/número conectado
+  whapiChannelPhone: varchar("whapiChannelPhone", { length: 30 }),      // Número de telefone do canal
+  whapiChannelStatus: varchar("whapiChannelStatus", { length: 64 }),    // Status: connected / disconnected / etc.
+  whapiDefaultGroups: text("whapiDefaultGroups"),                       // JSON: [{ id, name, participantsCount }]
   // Controle
   isActive: tinyint("isActive").default(1).notNull(),
   lastUpdatedBy: int("lastUpdatedBy"),

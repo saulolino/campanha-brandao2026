@@ -17,12 +17,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key, Bell, BellOff, Trash2 as Trash2Icon, CheckCheck, Filter, Loader2, UserPlus as UserPlusIcon, CalendarPlus, Instagram, RefreshCcw, Info, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key, Bell, BellOff, Trash2 as Trash2Icon, CheckCheck, Filter, Loader2, UserPlus as UserPlusIcon, CalendarPlus, Instagram, RefreshCcw, Info, X, MessageSquare, Wifi, WifiOff, Star, StarOff } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function SettingsPage() {
   const [, navigate] = useLocation();
   const { animationClass } = usePageTransition();
-  const [activeTab, setActiveTab] = useState("instagram");
+  // Ler ?tab= da URL para navegação direta
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") ?? "instagram";
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
 
@@ -291,7 +297,7 @@ export default function SettingsPage() {
           <InstagramTokenAlert />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsList className="grid w-full grid-cols-6 mb-8">
               <TabsTrigger value="instagram" className="flex items-center gap-2">
                 <Key className="w-4 h-4" />
                 <span className="hidden sm:inline">Instagram</span>
@@ -308,6 +314,12 @@ export default function SettingsPage() {
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Usuários</span>
               </TabsTrigger>
+              {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+                <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </TabsTrigger>
+              )}
               {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
                 <TabsTrigger value="notifications" className="flex items-center gap-2 relative">
                   <Bell className="w-4 h-4" />
@@ -946,6 +958,13 @@ export default function SettingsPage() {
               </Dialog>
             </TabsContent>
 
+            {/* ─── Aba WhatsApp ──────────────────────────────────────────────── */}
+            {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+              <TabsContent value="whatsapp">
+                <WhatsAppSettingsTab />
+              </TabsContent>
+            )}
+
             {/* ─── Aba Notificações ─────────────────────────────────────────── */}
             {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
               <TabsContent value="notifications">
@@ -1238,5 +1257,329 @@ function NotificationsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+  );
+}
+
+// ─── Aba de Configurações WhatsApp ────────────────────────────────────────────
+function WhatsAppSettingsTab() {
+  const utils = trpc.useUtils();
+
+  // Estado do token
+  const [newToken, setNewToken] = useState("");
+  const [showToken, setShowToken] = useState(false);
+
+  // Estado de grupos selecionados como favoritos
+  const [selectedFavorites, setSelectedFavorites] = useState<
+    Array<{ id: string; name: string; participantsCount: number }>
+  >([]);
+  const [favoritesInitialized, setFavoritesInitialized] = useState(false);
+
+  // Queries
+  const settingsQuery = trpc.whatsappSettings.getSettings.useQuery(undefined, {
+    staleTime: 30_000,
+  });
+  const groupsQuery = trpc.whatsappSettings.listGroups.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    enabled: !!settingsQuery.data?.hasToken,
+  });
+
+  // Inicializar favoritos quando os dados chegam
+  const settings = settingsQuery.data;
+  if (settings && !favoritesInitialized && settings.defaultGroups.length > 0) {
+    setSelectedFavorites(settings.defaultGroups);
+    setFavoritesInitialized(true);
+  }
+
+  // Mutations
+  const saveTokenMutation = trpc.whatsappSettings.saveToken.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        data.channelStatus === "error"
+          ? "Token salvo, mas não foi possível verificar o canal."
+          : `Token salvo! Canal: ${data.channelName ?? data.channelPhone ?? "conectado"}`
+      );
+      setNewToken("");
+      utils.whatsappSettings.getSettings.invalidate();
+      utils.whatsappSettings.listGroups.invalidate();
+    },
+    onError: (err) => toast.error(`Erro ao salvar token: ${err.message}`),
+  });
+
+  const checkChannelMutation = trpc.whatsappSettings.checkChannel.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        data.channelStatus === "error"
+          ? "Não foi possível conectar ao canal."
+          : `Canal verificado: ${data.channelName ?? data.channelPhone ?? data.channelStatus}`
+      );
+      utils.whatsappSettings.getSettings.invalidate();
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const saveFavoritesMutation = trpc.whatsappSettings.saveDefaultGroups.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} grupo${data.count !== 1 ? "s" : ""} favorito${data.count !== 1 ? "s" : ""} salvo${data.count !== 1 ? "s" : ""}!`);
+      utils.whatsappSettings.getSettings.invalidate();
+    },
+    onError: (err) => toast.error(`Erro ao salvar favoritos: ${err.message}`),
+  });
+
+  function toggleFavorite(group: { id: string; name: string; participantsCount: number }) {
+    setSelectedFavorites((prev) => {
+      const exists = prev.some((g) => g.id === group.id);
+      if (exists) return prev.filter((g) => g.id !== group.id);
+      return [...prev, group];
+    });
+  }
+
+  const channelStatusColor: Record<string, string> = {
+    active: "text-green-500",
+    connected: "text-green-500",
+    inactive: "text-yellow-500",
+    disconnected: "text-red-500",
+    error: "text-red-500",
+    unknown: "text-gray-400",
+  };
+
+  const channelStatusLabel: Record<string, string> = {
+    active: "Conectado",
+    connected: "Conectado",
+    inactive: "Inativo",
+    disconnected: "Desconectado",
+    error: "Erro de conexão",
+    unknown: "Desconhecido",
+  };
+
+  const groups = groupsQuery.data?.groups ?? [];
+  const groupsError = groupsQuery.data?.error ?? null;
+
+  return (
+    <div className="space-y-6">
+      {/* Card: Token Whapi.Cloud */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-green-500" />
+            Conexão Whapi.Cloud
+          </CardTitle>
+          <CardDescription>
+            Configure o token de acesso da API Whapi.Cloud para envio de mensagens WhatsApp.
+            Obtenha seu token em{" "}
+            <a
+              href="https://app.whapi.cloud"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              app.whapi.cloud
+            </a>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Status atual do canal */}
+          {settingsQuery.isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Carregando configurações...</span>
+            </div>
+          ) : settings ? (
+            <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status do Canal</span>
+                <div className="flex items-center gap-2">
+                  {settings.channelStatus === "active" || settings.channelStatus === "connected" ? (
+                    <Wifi className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 text-gray-400" />
+                  )}
+                  <span
+                    className={`text-sm font-medium ${
+                      channelStatusColor[settings.channelStatus ?? "unknown"] ?? "text-gray-400"
+                    }`}
+                  >
+                    {channelStatusLabel[settings.channelStatus ?? "unknown"] ?? settings.channelStatus ?? "—"}
+                  </span>
+                </div>
+              </div>
+              {settings.channelName && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Nome do canal</span>
+                  <span className="font-medium">{settings.channelName}</span>
+                </div>
+              )}
+              {settings.channelPhone && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Número</span>
+                  <span className="font-medium font-mono">{settings.channelPhone}</span>
+                </div>
+              )}
+              {settings.hasToken && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Token atual</span>
+                  <span className="font-mono text-xs text-muted-foreground">{settings.maskedToken}</span>
+                </div>
+              )}
+              {settings.hasToken && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => checkChannelMutation.mutate()}
+                  disabled={checkChannelMutation.isPending}
+                  className="w-full mt-2"
+                >
+                  {checkChannelMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Verificando...</>
+                  ) : (
+                    <><RefreshCw className="w-4 h-4 mr-2" />Verificar Status do Canal</>
+                  )}
+                </Button>
+              )}
+            </div>
+          ) : null}
+
+          {/* Formulário de novo token */}
+          <div className="space-y-2">
+            <Label htmlFor="whapi-token">
+              {settings?.hasToken ? "Atualizar Token" : "Token de Acesso"}
+            </Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  id="whapi-token"
+                  type={showToken ? "text" : "password"}
+                  placeholder="Cole aqui o Bearer token da Whapi.Cloud"
+                  value={newToken}
+                  onChange={(e) => setNewToken(e.target.value)}
+                  className="font-mono text-sm pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowToken(!showToken)}
+                >
+                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <Button
+                onClick={() => saveTokenMutation.mutate({ token: newToken })}
+                disabled={saveTokenMutation.isPending || newToken.trim().length < 10}
+              >
+                {saveTokenMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
+                ) : (
+                  "Salvar Token"
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O token é armazenado de forma segura no banco de dados e nunca exposto ao cliente.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card: Grupos Favoritos */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                Grupos Favoritos para Disparo
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Selecione os grupos que aparecerão pré-selecionados na página de disparos.
+                {selectedFavorites.length > 0 && (
+                  <span className="ml-1 font-medium text-foreground">
+                    {selectedFavorites.length} selecionado{selectedFavorites.length > 1 ? "s" : ""}.
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => saveFavoritesMutation.mutate({ groups: selectedFavorites })}
+              disabled={saveFavoritesMutation.isPending}
+            >
+              {saveFavoritesMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
+              ) : (
+                "Salvar Favoritos"
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!settings?.hasToken ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <WifiOff className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Configure o token Whapi.Cloud acima para listar os grupos.</p>
+            </div>
+          ) : groupsQuery.isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Carregando grupos...</span>
+            </div>
+          ) : groupsError ? (
+            <div className="text-center py-8">
+              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-destructive opacity-60" />
+              <p className="text-sm text-destructive">{groupsError}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => groupsQuery.refetch()}
+                className="mt-2"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Tentar novamente
+              </Button>
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Nenhum grupo encontrado no canal conectado.</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-80">
+              <div className="space-y-1 pr-2">
+                {groups.map((group) => {
+                  const isFav = selectedFavorites.some((g) => g.id === group.id);
+                  return (
+                    <label
+                      key={group.id}
+                      htmlFor={`fav-${group.id}`}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors select-none ${
+                        isFav
+                          ? "bg-yellow-500/10 border-yellow-500/30"
+                          : "bg-muted/20 border-border hover:border-yellow-500/20"
+                      }`}
+                    >
+                      <Checkbox
+                        id={`fav-${group.id}`}
+                        checked={isFav}
+                        onCheckedChange={() => toggleFavorite(group)}
+                        className="border-muted-foreground data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{group.name}</p>
+                        {group.participantsCount > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {group.participantsCount} participantes
+                          </p>
+                        )}
+                      </div>
+                      {isFav && (
+                        <Star className="w-4 h-4 text-yellow-500 shrink-0" />
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

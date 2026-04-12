@@ -670,3 +670,12 @@
 - [x] Módulo WhatsApp: página /disparos com seleção de agenda, prévia da mensagem e seleção de grupo
 - [x] Módulo WhatsApp: item "Disparos WhatsApp" no SidebarNav com ícone MessageSquare
 - [x] Módulo WhatsApp: 7 testes passando (40 testes totais no projeto)
+- [ ] Propostas: aba "Minhas Propostas" com histórico pessoal filtrado por usuário logado
+- [ ] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado)
+- [ ] MonthlyGoalCard: baseFollowers dinâmico lido do banco (instagramMetrics.followers)
+- [x] Bug: checkboxes de seleção em /disparos corrigidas (removido duplo disparo onClick+onCheckedChange)
+- [x] Configurações: aba WhatsApp adicionada em /configuracoes (coordinator/superadmin) com token Whapi.Cloud, status do canal e seleção de múltiplos grupos favoritos
+- [x] Disparos: grupos favoritos salvos nas Configurações pré-selecionados automaticamente em /disparos
+- [x] Schema: 5 colunas WhatsApp adicionadas em campaign_settings (migração 0025 aplicada)
+- [x] Router tRPC: whatsappSettingsRouter com 5 procedures (getSettings, saveToken, checkChannel, saveDefaultGroups, listGroups)
+- [x] Testes: 53 testes passando (10 novos no whatsappSettings.test.ts)
