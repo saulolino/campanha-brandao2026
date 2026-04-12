@@ -509,11 +509,29 @@ export default function Disparos() {
                     <CardTitle className="text-sm font-semibold text-gray-300 flex items-center gap-2">
                       <Users className="h-4 w-4 text-blue-400" />
                       Grupos de Destino
+                      {selectedGroups.length > 0 && (
+                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
+                          {selectedGroups.length} selecionado{selectedGroups.length > 1 ? "s" : ""}
+                        </Badge>
+                      )}
                     </CardTitle>
-                    {selectedGroups.length > 0 && (
-                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">
-                        {selectedGroups.length} selecionado{selectedGroups.length > 1 ? "s" : ""}
-                      </Badge>
+                    {groups.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-gray-400 hover:text-white h-7 px-2"
+                        onClick={() => {
+                          if (selectedGroups.length === groups.length) {
+                            // Todos selecionados → desmarcar todos
+                            setSelectedGroups([]);
+                          } else {
+                            // Selecionar todos
+                            setSelectedGroups(groups.map((g: { id: string; name: string; participantsCount: number }) => ({ id: g.id, name: g.name })));
+                          }
+                        }}
+                      >
+                        {selectedGroups.length === groups.length ? "Desmarcar todos" : "Selecionar todos"}
+                      </Button>
                     )}
                   </div>
                 </CardHeader>

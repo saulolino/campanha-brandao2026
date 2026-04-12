@@ -274,7 +274,7 @@ function VisitorHome() {
 
 // ─── Card de Alerta de Meta Mensal ─────────────────────────────────────────
 
-function MonthlyGoalCard({ currentFollowers }: { currentFollowers: number }) {
+function MonthlyGoalCard({ currentFollowers, baseFollowers: baseFollowersProp }: { currentFollowers: number; baseFollowers?: number }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = today.getMonth(); // 0-indexed
   const currentYear = today.getFullYear();
@@ -305,7 +305,7 @@ function MonthlyGoalCard({ currentFollowers }: { currentFollowers: number }) {
   // Crescimento real no mês: diferença entre hoje e início do mês
   // Usamos currentFollowers como proxy — sem histórico intra-mês, mostramos o delta
   // baseado no planejado vs atual
-  const baseFollowers = 1541; // valor real em 12/04/2026 (início do plano)
+  const baseFollowers = baseFollowersProp ?? 1541;
   const realGrowthThisMonth = Math.max(0, currentFollowers - baseFollowers);
 
   const isOnTrack = realGrowthThisMonth >= expectedByToday;
@@ -376,6 +376,11 @@ function TeamHome() {
     refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos automaticamente
   });
 
+  // Histórico de seguidores para calcular baseFollowers dinâmico (início do mês atual)
+  const { data: followersHistory = [] } = trpc.instagram.getFollowersHistory.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {
       if (result.success) {
@@ -403,6 +408,24 @@ function TeamHome() {
 
   const targetFollowers = 20000;
   const currentFollowers = metrics?.followers || 0;
+
+  // baseFollowers dinâmico: snapshot mais próximo do início do mês atual no histórico
+  const baseFollowers = useMemo(() => {
+    if (!followersHistory || followersHistory.length === 0) return 1541; // fallback
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    // Ordenar por data e pegar o registro mais próximo do início do mês (antes ou no dia 1)
+    const sorted = [...followersHistory].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    // Pegar o último registro antes ou no dia 1 do mês atual
+    const beforeMonthStart = sorted.filter(h => new Date(h.date) <= monthStart);
+    if (beforeMonthStart.length > 0) {
+      return beforeMonthStart[beforeMonthStart.length - 1].followers;
+    }
+    // Se não houver registro antes do início do mês, usar o mais antigo disponível
+    return sorted[0]?.followers ?? 1541;
+  }, [followersHistory]);
   const requiredGrowth = Math.max(0, targetFollowers - currentFollowers);
   const totalPosts = metrics?.posts || 0;
   const totalLikes = metrics?.likes || 0;
@@ -596,7 +619,7 @@ function TeamHome() {
           </Card>
 
           {/* Alerta de Meta Mensal */}
-          <MonthlyGoalCard currentFollowers={currentFollowers} />
+          <MonthlyGoalCard currentFollowers={currentFollowers} baseFollowers={baseFollowers} />
 
           {/* Quick Access */}
           <div>

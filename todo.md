@@ -670,9 +670,9 @@
 - [x] Módulo WhatsApp: página /disparos com seleção de agenda, prévia da mensagem e seleção de grupo
 - [x] Módulo WhatsApp: item "Disparos WhatsApp" no SidebarNav com ícone MessageSquare
 - [x] Módulo WhatsApp: 7 testes passando (40 testes totais no projeto)
-- [ ] Propostas: aba "Minhas Propostas" com histórico pessoal filtrado por usuário logado
-- [ ] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado)
-- [ ] MonthlyGoalCard: baseFollowers dinâmico lido do banco (instagramMetrics.followers)
+- [x] Propostas: aba "Minhas Propostas" com histórico pessoal filtrado por usuário logado (procedure getMyProposals adicionada)
+- [x] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado) na aba Minhas Propostas
+- [x] MonthlyGoalCard: baseFollowers dinâmico lido do histórico de seguidores do banco (snapshot do início do mês)
 - [x] Bug: checkboxes de seleção em /disparos corrigidas (removido duplo disparo onClick+onCheckedChange)
 - [x] Configurações: aba WhatsApp adicionada em /configuracoes (coordinator/superadmin) com token Whapi.Cloud, status do canal e seleção de múltiplos grupos favoritos
 - [x] Disparos: grupos favoritos salvos nas Configurações pré-selecionados automaticamente em /disparos
@@ -682,3 +682,7 @@
 - [x] Bug: lista de grupos não aparecia na aba WhatsApp após salvar token — corrigido
 - [x] Bug: endpoint /health da Whapi.Cloud retorna { status: { code: 4, text: 'AUTH' } } (não string) — parsing corrigido no router
 - [x] Disparos: card "Grupos de Destino" exibe apenas grupos favoritos salvos nas Configurações (procedure getFavoriteGroups adicionada ao whatsappSettingsRouter)
+- [x] Propostas: aba "Minhas Propostas" com histórico pessoal filtrado por usuário logado
+- [x] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado)
+- [x] MonthlyGoalCard: baseFollowers dinâmico lido do banco (instagramMetrics.followers)
+- [x] Disparos: botão "Selecionar todos" / "Desmarcar todos" no card de grupos favoritos

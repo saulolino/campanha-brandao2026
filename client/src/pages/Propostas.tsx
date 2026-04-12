@@ -130,10 +130,14 @@ export default function Propostas() {
   const isCoordinator = user?.role === "coordinator" || user?.role === "superadmin";
   const isTeam = user?.role === "team" || isCoordinator;
 
-  // Filtros da lista
+  // Filtros da lista (aba coordenador)
   const [filterStatus, setFilterStatus] = useState<"todas" | ProposalStatus>("todas");
   const [filterType, setFilterType] = useState<"todas" | ProposalType>("todas");
-  const [activeTab, setActiveTab] = useState<"lista" | "nova">("lista");
+  const [activeTab, setActiveTab] = useState<"lista" | "minhas" | "nova">("lista");
+
+  // Filtros da aba Minhas Propostas
+  const [myFilterStatus, setMyFilterStatus] = useState<"todas" | ProposalStatus>("todas");
+  const [myFilterType, setMyFilterType] = useState<"todas" | ProposalType>("todas");
 
   // Modal de nova proposta
   const [proposalType, setProposalType] = useState<ProposalType>("conteudo");
@@ -149,10 +153,16 @@ export default function Propostas() {
   // Modal de detalhe (visualização)
   const [detailId, setDetailId] = useState<number | null>(null);
 
-  // ── Queries ──────────────────────────────────────────────────────────────────
+  // ── Queries ────────────────────────────────────────────
   const { data: proposals = [], isLoading, refetch } = trpc.proposals.list.useQuery({
     status: filterStatus,
     proposalType: filterType,
+  });
+
+  // Minhas propostas (sempre filtrado pelo usuário logado)
+  const { data: myProposals = [], isLoading: myLoading } = trpc.proposals.getMyProposals.useQuery({
+    status: myFilterStatus,
+    proposalType: myFilterType,
   });
 
   const { data: detailProposal } = trpc.proposals.getById.useQuery(
@@ -168,8 +178,9 @@ export default function Propostas() {
       toast.success(data.message);
       setContentForm(defaultContentForm);
       setEventForm(defaultEventForm);
-      setActiveTab("lista");
+      setActiveTab("minhas");
       utils.proposals.list.invalidate();
+      utils.proposals.getMyProposals.invalidate();
       utils.proposals.countPending.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -181,6 +192,7 @@ export default function Propostas() {
       setReviewModalOpen(false);
       setReviewNotes("");
       utils.proposals.list.invalidate();
+      utils.proposals.getMyProposals.invalidate();
       utils.proposals.countPending.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -192,6 +204,7 @@ export default function Propostas() {
       setReviewModalOpen(false);
       setReviewNotes("");
       utils.proposals.list.invalidate();
+      utils.proposals.getMyProposals.invalidate();
       utils.proposals.countPending.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -201,6 +214,7 @@ export default function Propostas() {
     onSuccess: (data) => {
       toast.success(data.message);
       utils.proposals.list.invalidate();
+      utils.proposals.getMyProposals.invalidate();
       utils.proposals.countPending.invalidate();
     },
     onError: (err) => toast.error(err.message),
@@ -313,17 +327,29 @@ export default function Propostas() {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "lista" | "nova")}>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "lista" | "minhas" | "nova")}>
             <div className="px-6 pt-4">
               <TabsList className="bg-white/5 border border-white/10">
-                <TabsTrigger value="lista" className="data-[state=active]:bg-[#4ade80]/20 data-[state=active]:text-[#4ade80]">
-                  Lista de Propostas
-                  {counts.pendente > 0 && isCoordinator && (
-                    <span className="ml-2 bg-amber-500 text-black text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                      {counts.pendente}
-                    </span>
-                  )}
-                </TabsTrigger>
+                {isCoordinator && (
+                  <TabsTrigger value="lista" className="data-[state=active]:bg-[#4ade80]/20 data-[state=active]:text-[#4ade80]">
+                    Todas as Propostas
+                    {counts.pendente > 0 && (
+                      <span className="ml-2 bg-amber-500 text-black text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                        {counts.pendente}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                {isTeam && (
+                  <TabsTrigger value="minhas" className="data-[state=active]:bg-[#4ade80]/20 data-[state=active]:text-[#4ade80]">
+                    Minhas Propostas
+                    {myProposals.filter(p => p.status === "pendente").length > 0 && (
+                      <span className="ml-2 bg-amber-500 text-black text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                        {myProposals.filter(p => p.status === "pendente").length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
                 {isTeam && (
                   <TabsTrigger value="nova" className="data-[state=active]:bg-[#4ade80]/20 data-[state=active]:text-[#4ade80]">
                     Nova Proposta
@@ -546,7 +572,185 @@ export default function Propostas() {
               )}
             </TabsContent>
 
-            {/* ── Aba: Nova Proposta ─────────────────────────────────────────── */}
+             {/* ── Aba: Minhas Propostas ────────────────────────────────────── */}
+            {isTeam && (
+              <TabsContent value="minhas" className="px-6 pb-6 mt-4">
+                {/* Filtros */}
+                <div className="flex flex-wrap gap-3 mb-5">
+                  <Select value={myFilterStatus} onValueChange={(v) => setMyFilterStatus(v as typeof myFilterStatus)}>
+                    <SelectTrigger className="w-40 bg-white/5 border-white/10 text-white text-sm">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a2a1a] border-white/10 text-white">
+                      <SelectItem value="todas">Todos os status</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="aprovado">Aprovado</SelectItem>
+                      <SelectItem value="rejeitado">Rejeitado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={myFilterType} onValueChange={(v) => setMyFilterType(v as typeof myFilterType)}>
+                    <SelectTrigger className="w-44 bg-white/5 border-white/10 text-white text-sm">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a2a1a] border-white/10 text-white">
+                      <SelectItem value="todas">Todos os tipos</SelectItem>
+                      <SelectItem value="conteudo">Conteúdo (Post)</SelectItem>
+                      <SelectItem value="evento_rua">Evento de Rua</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Resumo rápido */}
+                <div className="grid grid-cols-3 gap-3 mb-5">
+                  {(["pendente", "aprovado", "rejeitado"] as ProposalStatus[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setMyFilterStatus(myFilterStatus === s ? "todas" : s)}
+                      className={`rounded-lg border p-3 text-left transition-all ${
+                        myFilterStatus === s ? "ring-1 ring-[#4ade80]" : ""
+                      } ${STATUS_CONFIG[s].color}`}
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-medium mb-1">
+                        {STATUS_CONFIG[s].icon}
+                        {STATUS_CONFIG[s].label}
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {myProposals.filter(p => p.status === s).length}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Lista */}
+                {myLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-6 h-6 animate-spin text-[#4ade80]" />
+                  </div>
+                ) : myProposals.length === 0 ? (
+                  <div className="text-center py-20 text-white/40">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Você ainda não enviou nenhuma proposta.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 border-white/20 text-white/60 hover:text-white"
+                      onClick={() => setActiveTab("nova")}
+                    >
+                      Criar primeira proposta
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {myProposals.map((p) => {
+                      const status = p.status as ProposalStatus;
+                      const cfg = STATUS_CONFIG[status];
+                      const isContent = p.proposalType === "conteudo";
+
+                      return (
+                        <div
+                          key={p.id}
+                          className="bg-white/5 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              {/* Tipo + Status */}
+                              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                                  isContent
+                                    ? "bg-blue-500/15 text-blue-300 border-blue-500/25"
+                                    : "bg-orange-500/15 text-orange-300 border-orange-500/25"
+                                }`}>
+                                  {isContent ? <FileText className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                                  {isContent ? "Conteúdo" : "Evento de Rua"}
+                                </span>
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${cfg.color}`}>
+                                  {cfg.icon}
+                                  {cfg.label}
+                                </span>
+                                {isContent && p.contentType && (
+                                  <span className="text-[11px] text-white/40 bg-white/5 px-2 py-0.5 rounded-full">
+                                    {CONTENT_TYPE_LABELS[p.contentType]}
+                                  </span>
+                                )}
+                                {!isContent && p.eventType && (
+                                  <span className="text-[11px] text-white/40 bg-white/5 px-2 py-0.5 rounded-full">
+                                    {EVENT_TYPE_LABELS[p.eventType]}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Título */}
+                              <h3 className="font-semibold text-white text-sm mb-1 truncate">{p.title}</h3>
+
+                              {/* Metadados */}
+                              <div className="flex items-center gap-4 text-[11px] text-white/40 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <CalendarIcon className="w-3 h-3" />
+                                  {formatDate(p.suggestedDate)}
+                                </span>
+                                {!isContent && p.neighborhood && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {p.neighborhood}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Feedback do coordenador */}
+                              {status !== "pendente" && p.reviewNotes && (
+                                <div className={`mt-2 text-[11px] px-2.5 py-1.5 rounded-lg border ${
+                                  status === "aprovado"
+                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+                                    : "bg-red-500/10 border-red-500/20 text-red-300"
+                                }`}>
+                                  <span className="font-medium">{p.reviewedByName}:</span> {p.reviewNotes}
+                                </div>
+                              )}
+                              {status === "aprovado" && p.convertedItemId && (
+                                <div className="mt-2 text-[11px] text-emerald-400 flex items-center gap-1">
+                                  <ArrowRight className="w-3 h-3" />
+                                  {isContent ? `Post #${p.convertedItemId} criado na agenda` : `Evento #${p.convertedItemId} criado na agenda`}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-white/40 hover:text-white hover:bg-white/10"
+                                onClick={() => setDetailId(p.id)}
+                                title="Ver detalhes"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {status === "pendente" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="w-8 h-8 text-white/30 hover:text-red-400 hover:bg-red-500/10"
+                                  onClick={() => {
+                                    if (confirm("Excluir esta proposta?")) {
+                                      deleteMutation.mutate({ id: p.id });
+                                    }
+                                  }}
+                                  title="Excluir proposta"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            {/* ── Aba: Nova Proposta ───────────────────────────────────────── */}
             {isTeam && (
               <TabsContent value="nova" className="px-6 pb-6 mt-4">
                 <div className="max-w-2xl mx-auto">

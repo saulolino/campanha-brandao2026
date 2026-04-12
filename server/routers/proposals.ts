@@ -355,6 +355,35 @@ export const proposalsRouter = router({
       return { message: "Proposta rejeitada." };
     }),
 
+  // ── Minhas propostas (filtradas por usuário logado) ───────────────────────────────
+  getMyProposals: protectedProcedure
+    .input(z.object({
+      status: z.enum(["pendente", "aprovado", "rejeitado", "todas"]).default("todas"),
+      proposalType: z.enum(["conteudo", "evento_rua", "todas"]).default("todas"),
+    }))
+    .query(async ({ ctx, input }) => {
+      requireTeamOrAbove(ctx.user.role);
+      const db = await getDb();
+      if (!db) return [];
+
+      const conditions: ReturnType<typeof eq>[] = [
+        eq(contentProposals.proposedById, ctx.user.id),
+      ];
+
+      if (input.status !== "todas") {
+        conditions.push(eq(contentProposals.status, input.status as "pendente" | "aprovado" | "rejeitado"));
+      }
+      if (input.proposalType !== "todas") {
+        conditions.push(eq(contentProposals.proposalType, input.proposalType as "conteudo" | "evento_rua"));
+      }
+
+      const rows = await db.select().from(contentProposals)
+        .where(and(...conditions))
+        .orderBy(desc(contentProposals.createdAt));
+
+      return rows;
+    }),
+
   // ── Excluir proposta (apenas o próprio proponente, se ainda pendente) ───────
   delete: protectedProcedure
     .input(z.object({ id: z.number().int() }))
