@@ -664,3 +664,9 @@
 - [x] Propostas: seleção múltipla de formatos no formulário de nova proposta (checkboxes visuais)
 - [x] Propostas: seleção múltipla de objetivos no formulário de nova proposta (checkboxes visuais)
 - [x] Propostas: seletor de data com calendário (DatePicker) no formulário de nova proposta
+- [x] Módulo WhatsApp: secret WHAPI_TOKEN configurado
+- [x] Módulo WhatsApp: tabela whatsapp_dispatches no schema (migração 0024 aplicada)
+- [x] Módulo WhatsApp: router tRPC whatsapp (getGroups, previewMessage, sendDisparo, getHistorico, getAgendaItems)
+- [x] Módulo WhatsApp: página /disparos com seleção de agenda, prévia da mensagem e seleção de grupo
+- [x] Módulo WhatsApp: item "Disparos WhatsApp" no SidebarNav com ícone MessageSquare
+- [x] Módulo WhatsApp: 7 testes passando (40 testes totais no projeto)

@@ -40,7 +40,7 @@ import {
   XCircle,
   Loader2,
   ChevronRight,
-  Calendar,
+  Calendar as CalendarIcon,
   Users,
   Tag,
   MessageSquare,
@@ -447,7 +447,7 @@ export default function Propostas() {
                             {/* Metadados */}
                             <div className="flex items-center gap-4 text-[11px] text-white/40 flex-wrap">
                               <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
+                                <CalendarIcon className="w-3 h-3" />
                                 {formatDate(p.suggestedDate)}
                               </span>
                               {!isContent && p.neighborhood && (
@@ -676,7 +676,7 @@ export default function Propostas() {
                                   : "border-white/10 text-white/40 bg-white/5 hover:border-white/20"
                               }`}
                             >
-                              <Calendar className="w-4 h-4 flex-shrink-0" />
+                              <CalendarIcon className="w-4 h-4 flex-shrink-0" />
                               {contentForm.suggestedDate
                                 ? format(contentForm.suggestedDate, "dd/MM/yyyy", { locale: ptBR })
                                 : "Selecione uma data"}
@@ -806,7 +806,7 @@ export default function Propostas() {
                                     : "border-white/10 text-white/40 bg-white/5 hover:border-white/20"
                                 }`}
                               >
-                                <Calendar className="w-4 h-4 flex-shrink-0" />
+                                <CalendarIcon className="w-4 h-4 flex-shrink-0" />
                                 {eventForm.suggestedDate
                                   ? format(eventForm.suggestedDate, "dd/MM/yyyy", { locale: ptBR })
                                   : "Selecione uma data"}

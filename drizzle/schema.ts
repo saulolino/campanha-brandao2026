@@ -340,3 +340,28 @@ export const contentProposals = mysqlTable("content_proposals", {
 });
 export type ContentProposal = typeof contentProposals.$inferSelect;
 export type InsertContentProposal = typeof contentProposals.$inferInsert;
+
+// ─── WhatsApp Dispatches ──────────────────────────────────────────────────────
+// Histórico de disparos de agenda via WhatsApp (Whapi.Cloud)
+export const whatsappDispatches = mysqlTable("whatsapp_dispatches", {
+  id: int("id").autoincrement().primaryKey(),
+  // Grupo de destino
+  groupId: varchar("groupId", { length: 255 }).notNull(),
+  groupName: varchar("groupName", { length: 255 }).notNull(),
+  // Tipo de disparo: diário ou semanal
+  dispatchType: mysqlEnum("dispatchType", ["diario", "semanal"]).notNull(),
+  // Mensagem enviada
+  message: text("message").notNull(),
+  // IDs dos itens incluídos, serializado como JSON
+  includedPostIds: text("includedPostIds"),
+  includedEventIds: text("includedEventIds"),
+  // Quem disparou
+  sentById: int("sentById").notNull(),
+  sentByName: varchar("sentByName", { length: 255 }),
+  // Status do envio
+  status: mysqlEnum("status", ["enviado", "erro"]).default("enviado").notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type WhatsappDispatch = typeof whatsappDispatches.$inferSelect;
+export type InsertWhatsappDispatch = typeof whatsappDispatches.$inferInsert;

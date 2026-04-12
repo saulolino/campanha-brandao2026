@@ -27,6 +27,7 @@ import UserManagement from "./pages/UserManagement";
 import AgendaRua from "./pages/AgendaRua";
 import PlanejamentoSemanal from "./pages/PlanejamentoSemanal";
 import Propostas from "./pages/Propostas";
+import Disparos from "./pages/Disparos";
 
 // Páginas exclusivas do Superadmin
 import SettingsPage from "./pages/SettingsPage";
@@ -153,6 +154,18 @@ function Router() {
             rotaTentada="/planejamento-semanal"
           >
             <PlanejamentoSemanal />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      {/* ===== DISPAROS WHATSAPP — Equipe, Coordenador e Superadmin ===== */}
+      <Route path="/disparos">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/disparos"
+          >
+            <Disparos />
           </ProtectedRoute>
         )}
       </Route>
