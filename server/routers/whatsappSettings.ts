@@ -234,6 +234,29 @@ export const whatsappSettingsRouter = router({
     }),
 
   /**
+   * Retorna apenas os grupos favoritos salvos nas Configurações
+   * (acessível para equipe, coordenador e superadmin)
+   */
+  getFavoriteGroups: protectedProcedure.query(async ({ ctx }) => {
+    // Equipe e acima podem ver os grupos favoritos para disparo
+    if (!ctx.user?.role || ctx.user.role === "visitor") {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado." });
+    }
+
+    const db = await requireDb();
+    const settings = await getOrCreateSettings(db);
+
+    let defaultGroups: Array<{ id: string; name: string; participantsCount: number }> = [];
+    try {
+      defaultGroups = JSON.parse(settings.whapiDefaultGroups ?? "[]");
+    } catch {
+      defaultGroups = [];
+    }
+
+    return { groups: defaultGroups };
+  }),
+
+  /**
    * Lista grupos disponíveis via Whapi.Cloud (usando token salvo no banco)
    */
   listGroups: protectedProcedure

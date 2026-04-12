@@ -681,3 +681,4 @@
 - [x] Testes: 53 testes passando (10 novos no whatsappSettings.test.ts)
 - [x] Bug: lista de grupos não aparecia na aba WhatsApp após salvar token — corrigido
 - [x] Bug: endpoint /health da Whapi.Cloud retorna { status: { code: 4, text: 'AUTH' } } (não string) — parsing corrigido no router
+- [x] Disparos: card "Grupos de Destino" exibe apenas grupos favoritos salvos nas Configurações (procedure getFavoriteGroups adicionada ao whatsappSettingsRouter)

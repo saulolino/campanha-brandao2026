@@ -110,20 +110,17 @@ export default function Disparos() {
 
   // Queries
   const agendaQuery = trpc.whatsapp.getAgendaItems.useQuery({ dispatchType });
-  const groupsQuery = trpc.whatsapp.getGroups.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000,
-  });
-  // Grupos favoritos salvos nas configurações — pré-selecionados automaticamente
-  const favoritesQuery = trpc.whatsappSettings.getSettings.useQuery(undefined, {
+  // Apenas grupos favoritos salvos nas Configurações (não todos os grupos da conta)
+  const favoriteGroupsQuery = trpc.whatsappSettings.getFavoriteGroups.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
   const historicoQuery = trpc.whatsapp.getHistorico.useQuery(undefined, {
     refetchInterval: 30_000,
   });
 
-  // Pré-selecionar grupos favoritos quando chegam do servidor (apenas uma vez)
+  // Pré-selecionar todos os grupos favoritos automaticamente ao carregar
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
-  const favoriteGroups = favoritesQuery.data?.defaultGroups ?? [];
+  const favoriteGroups = favoriteGroupsQuery.data?.groups ?? [];
   if (!favoritesLoaded && favoriteGroups.length > 0 && selectedGroups.length === 0) {
     setSelectedGroups(favoriteGroups);
     setFavoritesLoaded(true);
@@ -174,7 +171,7 @@ export default function Disparos() {
 
   const posts = agendaQuery.data?.posts ?? [];
   const events = agendaQuery.data?.events ?? [];
-  const groups = groupsQuery.data ?? [];
+  const groups = favoriteGroups; // apenas grupos favoritos salvos nas Configurações
   const historico = historicoQuery.data ?? [];
 
   const totalSelected = selectedPostIds.length + selectedEventIds.length;
@@ -521,17 +518,17 @@ export default function Disparos() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {groupsQuery.isLoading ? (
+                  {favoriteGroupsQuery.isLoading ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
-                      <span className="ml-2 text-sm text-gray-500">Carregando grupos...</span>
+                      <span className="ml-2 text-sm text-gray-500">Carregando grupos favoritos...</span>
                     </div>
-                  ) : groupsQuery.isError ? (
+                  ) : favoriteGroupsQuery.isError ? (
                     <div className="text-center py-4">
                       <XCircle className="h-6 w-6 text-red-400 mx-auto mb-1" />
-                      <p className="text-xs text-red-400">Erro ao carregar grupos</p>
+                      <p className="text-xs text-red-400">Erro ao carregar grupos favoritos</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Configure o WHAPI_TOKEN em{" "}
+                        Configure os grupos em{"\ "}
                         <button
                           onClick={() => navigate("/configuracoes?tab=whatsapp")}
                           className="text-green-400 underline"
@@ -542,7 +539,7 @@ export default function Disparos() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => groupsQuery.refetch()}
+                        onClick={() => favoriteGroupsQuery.refetch()}
                         className="mt-2 text-gray-400 hover:text-white"
                       >
                         Tentar novamente
@@ -551,21 +548,21 @@ export default function Disparos() {
                   ) : groups.length === 0 ? (
                     <div className="text-center py-4">
                       <Users className="h-6 w-6 text-gray-600 mx-auto mb-1" />
-                      <p className="text-xs text-gray-500">Nenhum grupo encontrado.</p>
+                      <p className="text-xs text-gray-500">Nenhum grupo favorito cadastrado.</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Configure grupos em{" "}
+                        Selecione os grupos em{"\ "}
                         <button
                           onClick={() => navigate("/configuracoes?tab=whatsapp")}
                           className="text-green-400 underline"
                         >
-                          Configurações → WhatsApp
+                          Configurações → WhatsApp → Grupos Favoritos
                         </button>
                       </p>
                     </div>
                   ) : (
                     <ScrollArea className="h-48">
                       <div className="space-y-1 pr-2">
-                        {groups.map((group) => {
+                        {groups.map((group: { id: string; name: string; participantsCount: number }) => {
                           const isSelected = selectedGroups.some((g) => g.id === group.id);
                           return (
                             <label
