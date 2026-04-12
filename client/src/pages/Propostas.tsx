@@ -4,6 +4,10 @@
 // O coordenador aprova ou rejeita, convertendo em item real.
 // ============================================================
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import SidebarNav from "@/components/SidebarNav";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -55,9 +59,9 @@ interface ContentForm {
   title: string;
   description: string;
   notes: string;
-  suggestedDate: string;
-  contentType: "reels" | "carrossel" | "video" | "story" | "imagem" | "";
-  objective: string;
+  suggestedDate: Date | undefined;
+  contentTypes: string[];  // múltipla seleção
+  objectives: string[];   // múltipla seleção
   caption: string;
   hashtags: string;
   referenceUrls: string;
@@ -67,7 +71,7 @@ interface EventForm {
   title: string;
   description: string;
   notes: string;
-  suggestedDate: string;
+  suggestedDate: Date | undefined;
   eventType: "caminhada" | "reuniao" | "panfletagem" | "visita" | "debate" | "entrevista" | "show" | "outro" | "";
   location: string;
   neighborhood: string;
@@ -78,12 +82,12 @@ interface EventForm {
 }
 
 const defaultContentForm: ContentForm = {
-  title: "", description: "", notes: "", suggestedDate: "",
-  contentType: "", objective: "", caption: "", hashtags: "", referenceUrls: "",
+  title: "", description: "", notes: "", suggestedDate: undefined,
+  contentTypes: [], objectives: [], caption: "", hashtags: "", referenceUrls: "",
 };
 
 const defaultEventForm: EventForm = {
-  title: "", description: "", notes: "", suggestedDate: "",
+  title: "", description: "", notes: "", suggestedDate: undefined,
   eventType: "", location: "", neighborhood: "", city: "Brasília",
   eventTime: "09:00", endTime: "", expectedAttendees: "",
 };
@@ -205,18 +209,21 @@ export default function Propostas() {
   // ── Submit de nova proposta ──────────────────────────────────────────────────
   const handleSubmitContent = () => {
     if (!contentForm.title || !contentForm.description || !contentForm.suggestedDate ||
-        !contentForm.contentType || !contentForm.objective || !contentForm.caption) {
+        contentForm.contentTypes.length === 0 || contentForm.objectives.length === 0 || !contentForm.caption) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
+    // Serializa arrays como string separada por vírgula
+    const primaryContentType = contentForm.contentTypes[0] as "reels" | "carrossel" | "video" | "story" | "imagem";
+    const objectiveStr = contentForm.objectives.join(",");
     createMutation.mutate({
       proposalType: "conteudo",
       title: contentForm.title,
       description: contentForm.description,
       notes: contentForm.notes || undefined,
-      suggestedDate: new Date(contentForm.suggestedDate),
-      contentType: contentForm.contentType as "reels" | "carrossel" | "video" | "story" | "imagem",
-      objective: contentForm.objective,
+      suggestedDate: contentForm.suggestedDate,
+      contentType: primaryContentType,
+      objective: objectiveStr,
       caption: contentForm.caption,
       hashtags: contentForm.hashtags || undefined,
       referenceUrls: contentForm.referenceUrls || undefined,
@@ -235,7 +242,7 @@ export default function Propostas() {
       title: eventForm.title,
       description: eventForm.description,
       notes: eventForm.notes || undefined,
-      suggestedDate: new Date(eventForm.suggestedDate),
+      suggestedDate: eventForm.suggestedDate,
       eventType: eventForm.eventType as "caminhada" | "reuniao" | "panfletagem" | "visita" | "debate" | "entrevista" | "show" | "outro",
       location: eventForm.location,
       neighborhood: eventForm.neighborhood,
@@ -594,45 +601,98 @@ export default function Propostas() {
                       </Field>
 
                       <SectionTitle>Especificações do Post</SectionTitle>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field label="Formato *">
-                          <Select
-                            value={contentForm.contentType}
-                            onValueChange={v => setContentForm(f => ({ ...f, contentType: v as ContentForm["contentType"] }))}
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue placeholder="Selecione o formato" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1a2a1a] border-white/10 text-white">
-                              {Object.entries(CONTENT_TYPE_LABELS).map(([v, l]) => (
-                                <SelectItem key={v} value={v}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                        <Field label="Objetivo *">
-                          <Select
-                            value={contentForm.objective}
-                            onValueChange={v => setContentForm(f => ({ ...f, objective: v }))}
-                          >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                              <SelectValue placeholder="Selecione o objetivo" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#1a2a1a] border-white/10 text-white">
-                              {OBJECTIVE_OPTIONS.map(o => (
-                                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </Field>
-                      </div>
+
+                      {/* Seleção múltipla de formatos */}
+                      <Field label="Formato(s) *" hint="Selecione um ou mais">
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(CONTENT_TYPE_LABELS).map(([v, l]) => {
+                            const selected = contentForm.contentTypes.includes(v);
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setContentForm(f => ({
+                                  ...f,
+                                  contentTypes: selected
+                                    ? f.contentTypes.filter(t => t !== v)
+                                    : [...f.contentTypes, v],
+                                }))}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  selected
+                                    ? "bg-[#4ade80]/20 border-[#4ade80]/60 text-[#4ade80]"
+                                    : "bg-white/5 border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+                                }`}
+                              >
+                                {l}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {contentForm.contentTypes.length === 0 && (
+                          <p className="text-[11px] text-white/30 mt-1">Nenhum formato selecionado</p>
+                        )}
+                      </Field>
+
+                      {/* Seleção múltipla de objetivos */}
+                      <Field label="Objetivo(s) *" hint="Selecione um ou mais">
+                        <div className="flex flex-wrap gap-2">
+                          {OBJECTIVE_OPTIONS.map(o => {
+                            const selected = contentForm.objectives.includes(o.value);
+                            return (
+                              <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => setContentForm(f => ({
+                                  ...f,
+                                  objectives: selected
+                                    ? f.objectives.filter(x => x !== o.value)
+                                    : [...f.objectives, o.value],
+                                }))}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  selected
+                                    ? "bg-blue-500/20 border-blue-400/60 text-blue-300"
+                                    : "bg-white/5 border-white/15 text-white/60 hover:border-white/30 hover:text-white"
+                                }`}
+                              >
+                                {o.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {contentForm.objectives.length === 0 && (
+                          <p className="text-[11px] text-white/30 mt-1">Nenhum objetivo selecionado</p>
+                        )}
+                      </Field>
+
+                      {/* DatePicker com calendário */}
                       <Field label="Data sugerida para publicação *">
-                        <Input
-                          type="date"
-                          value={contentForm.suggestedDate}
-                          onChange={e => setContentForm(f => ({ ...f, suggestedDate: e.target.value }))}
-                          className="bg-white/5 border-white/10 text-white"
-                        />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md border text-sm text-left transition-colors ${
+                                contentForm.suggestedDate
+                                  ? "border-white/20 text-white bg-white/5"
+                                  : "border-white/10 text-white/40 bg-white/5 hover:border-white/20"
+                              }`}
+                            >
+                              <Calendar className="w-4 h-4 flex-shrink-0" />
+                              {contentForm.suggestedDate
+                                ? format(contentForm.suggestedDate, "dd/MM/yyyy", { locale: ptBR })
+                                : "Selecione uma data"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 bg-[#0d1a0d] border-white/15" align="start">
+                            <CalendarPicker
+                              mode="single"
+                              selected={contentForm.suggestedDate}
+                              onSelect={d => setContentForm(f => ({ ...f, suggestedDate: d }))}
+                              locale={ptBR}
+                              initialFocus
+                              className="text-white"
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </Field>
 
                       <SectionTitle>Texto e Referências</SectionTitle>
@@ -736,12 +796,33 @@ export default function Propostas() {
                           </Select>
                         </Field>
                         <Field label="Data sugerida *">
-                          <Input
-                            type="date"
-                            value={eventForm.suggestedDate}
-                            onChange={e => setEventForm(f => ({ ...f, suggestedDate: e.target.value }))}
-                            className="bg-white/5 border-white/10 text-white"
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                className={`w-full flex items-center gap-2 px-3 py-2 rounded-md border text-sm text-left transition-colors ${
+                                  eventForm.suggestedDate
+                                    ? "border-white/20 text-white bg-white/5"
+                                    : "border-white/10 text-white/40 bg-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <Calendar className="w-4 h-4 flex-shrink-0" />
+                                {eventForm.suggestedDate
+                                  ? format(eventForm.suggestedDate, "dd/MM/yyyy", { locale: ptBR })
+                                  : "Selecione uma data"}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 bg-[#0d1a0d] border-white/15" align="start">
+                              <CalendarPicker
+                                mode="single"
+                                selected={eventForm.suggestedDate}
+                                onSelect={d => setEventForm(f => ({ ...f, suggestedDate: d }))}
+                                locale={ptBR}
+                                initialFocus
+                                className="text-white"
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </Field>
                       </div>
                       <div className="grid grid-cols-2 gap-4">

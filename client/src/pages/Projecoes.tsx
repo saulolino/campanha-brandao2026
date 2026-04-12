@@ -36,15 +36,16 @@ const CONTENT_COLORS = ["#2d6a4f", "#40916c", "#c9a84c", "#e76f51"];
 export default function Projecoes() {
   const { animationClass } = usePageTransition();
 
-  // Busca dados reais do Instagram — atualiza automaticamente após cada sync
-  const { data: metricsData } = trpc.instagram.getMetrics.useQuery(undefined, {
+  // Busca projeção dinâmica do servidor — totais recalculados a partir do valor real de seguidores
+  const { data: projectionData } = trpc.instagram.getProjection.useQuery(undefined, {
     refetchOnWindowFocus: true,
     staleTime: 0,
-    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos automaticamente
+    refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos
   });
 
   // Usa seguidores reais do banco; fallback para campaignData se ainda não carregou
-  const currentFollowers = metricsData?.followers ?? CAMPAIGN.currentFollowers;
+  const currentFollowers = projectionData?.currentFollowers ?? CAMPAIGN.currentFollowers;
+  const dynamicProjection = projectionData?.projection ?? MONTHLY_PROJECTION;
 
   const progressPct = Math.round((currentFollowers / CAMPAIGN.targetFollowers) * 100);
   const remainingFollowers = CAMPAIGN.targetFollowers - currentFollowers;
@@ -55,18 +56,18 @@ export default function Projecoes() {
 
   const growthChartData = useMemo(() => [
     { month: "Hoje", seguidores: currentFollowers, crescimento: 0, investimento: 0 },
-    ...MONTHLY_PROJECTION.map((m) => ({
+    ...dynamicProjection.map((m) => ({
       month: m.month,
       seguidores: m.total,
       crescimento: m.growth,
       investimento: m.investment,
     })),
-  ], [currentFollowers]);
+  ], [currentFollowers, dynamicProjection]);
 
-  const investmentData = useMemo(() => MONTHLY_PROJECTION.map((m) => ({
+  const investmentData = useMemo(() => dynamicProjection.map((m) => ({
     month: m.month,
     investimento: m.investment,
-  })), []);
+  })), [dynamicProjection]);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -176,8 +177,8 @@ export default function Projecoes() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MONTHLY_PROJECTION.map((row, idx) => {
-                    const inicio = idx === 0 ? currentFollowers : MONTHLY_PROJECTION[idx - 1].total;
+                  {dynamicProjection.map((row, idx) => {
+                    const inicio = idx === 0 ? currentFollowers : dynamicProjection[idx - 1].total;
                     const custoSeguidor = (row.investment / row.growth).toFixed(2);
                     return (
                       <tr key={row.month} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
@@ -195,9 +196,9 @@ export default function Projecoes() {
                   <tr className="border-t-2 border-border bg-muted/20">
                     <td className="py-3 px-4 font-bold">TOTAL</td>
                     <td className="py-3 px-4" />
-                    <td className="text-right py-3 px-4 text-green-400 font-bold">+{MONTHLY_PROJECTION.reduce((s, m) => s + m.growth, 0).toLocaleString()}</td>
-                    <td className="text-right py-3 px-4 font-bold text-primary">20.000</td>
-                    <td className="text-right py-3 px-4 text-yellow-400 font-bold">R$ {MONTHLY_PROJECTION.reduce((s, m) => s + m.investment, 0).toLocaleString()}</td>
+                    <td className="text-right py-3 px-4 text-green-400 font-bold">+{dynamicProjection.reduce((s, m) => s + m.growth, 0).toLocaleString()}</td>
+                    <td className="text-right py-3 px-4 font-bold text-primary">{(dynamicProjection[dynamicProjection.length - 1]?.total ?? 20000).toLocaleString()}</td>
+                    <td className="text-right py-3 px-4 text-yellow-400 font-bold">R$ {dynamicProjection.reduce((s, m) => s + m.investment, 0).toLocaleString()}</td>
                     <td className="py-3 px-4" />
                   </tr>
                 </tfoot>

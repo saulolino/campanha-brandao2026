@@ -658,3 +658,9 @@
 - [ ] Sync periódica via MCP agendada pelo agente Manus (posts + insights + seguidores)
 - [x] Bug: TypeError null.toLocaleString no frontend — corrigido em getEngagementByType (avgEngagement null), reportExporter (datas null) e Metricas.tsx
 - [x] Bug: Gráfico de Projeções — totais mensais recalculados partindo de 1.541 seguidores reais (Abr: 2.128 → Out: 20.038)
+- [x] Projeções dinâmicas: totais mensais calculados a partir do valor real de seguidores do banco (procedure getProjection)
+- [x] Alerta de meta mensal na Home: MonthlyGoalCard com indicador de no prazo / atrasado
+- [x] Notificação ao coordenador quando nova proposta é submetida (notifyOwner + notificação interna no banco)
+- [x] Propostas: seleção múltipla de formatos no formulário de nova proposta (checkboxes visuais)
+- [x] Propostas: seleção múltipla de objetivos no formulário de nova proposta (checkboxes visuais)
+- [x] Propostas: seletor de data com calendário (DatePicker) no formulário de nova proposta

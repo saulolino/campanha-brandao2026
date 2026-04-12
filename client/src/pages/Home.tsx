@@ -272,6 +272,96 @@ function VisitorHome() {
   );
 }
 
+// ─── Card de Alerta de Meta Mensal ─────────────────────────────────────────
+
+function MonthlyGoalCard({ currentFollowers }: { currentFollowers: number }) {
+  const today = useMemo(() => new Date(), []);
+  const currentMonth = today.getMonth(); // 0-indexed
+  const currentYear = today.getFullYear();
+
+  // Crescimentos mensais planejados: Abr-Out/2026
+  // Índice 0 = Abril (mês 3), 1 = Maio (mês 4), ..., 6 = Outubro (mês 9)
+  const MONTHLY_GROWTHS = [587, 2936, 2936, 3034, 3034, 2936, 3034];
+  const MONTH_NAMES = ["Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro"];
+  const MONTH_OFFSETS = [3, 4, 5, 6, 7, 8, 9]; // mês do ano (0-indexed)
+
+  // Encontrar o mês atual no plano
+  const planIdx = MONTH_OFFSETS.findIndex((m) => m === currentMonth && currentYear === 2026);
+
+  if (planIdx === -1) {
+    // Fora do período do plano — não exibir
+    return null;
+  }
+
+  const plannedGrowth = MONTHLY_GROWTHS[planIdx];
+  const monthStart = new Date(2026, currentMonth, 1);
+  const daysInMonth = new Date(2026, currentMonth + 1, 0).getDate();
+  const dayOfMonth = today.getDate();
+  const monthProgress = dayOfMonth / daysInMonth; // 0..1
+
+  // Meta esperada até hoje (proporcional)
+  const expectedByToday = Math.round(plannedGrowth * monthProgress);
+
+  // Crescimento real no mês: diferença entre hoje e início do mês
+  // Usamos currentFollowers como proxy — sem histórico intra-mês, mostramos o delta
+  // baseado no planejado vs atual
+  const baseFollowers = 1541; // valor real em 12/04/2026 (início do plano)
+  const realGrowthThisMonth = Math.max(0, currentFollowers - baseFollowers);
+
+  const isOnTrack = realGrowthThisMonth >= expectedByToday;
+  const delta = realGrowthThisMonth - expectedByToday;
+
+  const statusColor = isOnTrack
+    ? "border-green-500/30 bg-green-500/5"
+    : "border-amber-500/30 bg-amber-500/5";
+  const statusTextColor = isOnTrack ? "text-green-400" : "text-amber-400";
+  const statusIcon = isOnTrack ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />;
+  const statusLabel = isOnTrack ? "No prazo" : "Atenção";
+
+  return (
+    <Card className={`mb-8 border ${statusColor}`}>
+      <CardContent className="pt-5 pb-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className={`flex items-center gap-2 mb-1 ${statusTextColor}`}>
+              {statusIcon}
+              <span className="text-sm font-semibold">{statusLabel} — Meta de {MONTH_NAMES[planIdx]}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Crescimento planejado no mês: <strong className="text-foreground">+{plannedGrowth.toLocaleString('pt-BR')} seguidores</strong>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Esperado até hoje ({dayOfMonth}/{String(currentMonth + 1).padStart(2, '0')}):
+              <strong className="text-foreground ml-1">+{expectedByToday.toLocaleString('pt-BR')}</strong>
+              {" "}&nbsp;·&nbsp; Real:
+              <strong className={`ml-1 ${isOnTrack ? 'text-green-400' : 'text-amber-400'}`}>+{realGrowthThisMonth.toLocaleString('pt-BR')}</strong>
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className={`text-2xl font-bold ${isOnTrack ? 'text-green-400' : 'text-amber-400'}`}>
+              {delta >= 0 ? '+' : ''}{delta.toLocaleString('pt-BR')}
+            </div>
+            <div className="text-[11px] text-muted-foreground">{isOnTrack ? 'acima do esperado' : 'abaixo do esperado'}</div>
+          </div>
+        </div>
+        {/* Barra de progresso mensal */}
+        <div className="mt-4">
+          <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+            <span>0</span>
+            <span>Meta: +{plannedGrowth.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${isOnTrack ? 'bg-green-500' : 'bg-amber-500'}`}
+              style={{ width: `${Math.min(100, plannedGrowth > 0 ? (realGrowthThisMonth / plannedGrowth) * 100 : 0)}%` }}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Vista da Equipe / Coordenador / Superadmin ──────────────────────────────
 
 function TeamHome() {
@@ -504,6 +594,9 @@ function TeamHome() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Alerta de Meta Mensal */}
+          <MonthlyGoalCard currentFollowers={currentFollowers} />
 
           {/* Quick Access */}
           <div>

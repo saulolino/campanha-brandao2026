@@ -10,7 +10,7 @@
  *   4. O ID do item criado é salvo em convertedItemId para rastreabilidade.
  */
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc.js";
+import { protectedProcedure, router } from "../\_core/trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db.js";
 import {
@@ -20,6 +20,7 @@ import {
   notifications,
 } from "../../drizzle/schema.js";
 import { eq, desc, and, or } from "drizzle-orm";
+import { notifyOwner } from "../\_core/notification.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function requireCoordinator(role: string | null | undefined) {
@@ -117,7 +118,7 @@ export const proposalsRouter = router({
       const [result] = await db.insert(contentProposals).values({ ...base, ...extra });
       const proposalId = (result as { insertId: number }).insertId;
 
-      // Notificar coordenadores sobre nova proposta
+      // Notificar coordenadores sobre nova proposta (notificação interna no banco)
       try {
         const typeLabel = input.proposalType === "conteudo" ? "Conteúdo" : "Evento de Rua";
         await db.insert(notifications).values({
@@ -128,6 +129,16 @@ export const proposalsRouter = router({
           isRead: 0,
         });
       } catch { /* notificação não crítica */ }
+
+      // Notificar o dono do projeto via Manus (push notification)
+      try {
+        const typeLabel = input.proposalType === "conteudo" ? "Conteúdo" : "Evento de Rua";
+        const dateStr = input.suggestedDate.toLocaleDateString("pt-BR");
+        await notifyOwner({
+          title: `📌 Nova Proposta de ${typeLabel}: ${input.title}`,
+          content: `${base.proposedByName} enviou uma nova proposta de ${typeLabel.toLowerCase()} para ${dateStr}.\n\nTítulo: ${input.title}\nDescrição: ${input.description.slice(0, 200)}${input.description.length > 200 ? '...' : ''}\n\nAcesse /propostas para aprovar ou rejeitar.`,
+        });
+      } catch { /* push notification não crítica */ }
 
       return { id: proposalId, message: "Proposta enviada com sucesso! Aguardando aprovação do coordenador." };
     }),

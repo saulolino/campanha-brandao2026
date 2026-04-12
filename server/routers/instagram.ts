@@ -171,6 +171,67 @@ export const instagramRouter = router({
   }),
 
   /**
+   * Projeção mensal dinâmica calculada a partir do valor real de seguidores
+   * Os crescimentos mensais planejados são fixos; os totais são recalculados
+   * automaticamente toda vez que o valor real de seguidores muda.
+   */
+  getProjection: publicProcedure.query(async () => {
+    try {
+      // Busca o valor mais recente de seguidores do banco
+      const db = await getDb();
+      let currentFollowers = 1541; // fallback
+      if (db) {
+        const rows = await db.select()
+          .from(instagramFollowersHistory)
+          .orderBy(instagramFollowersHistory.snapshotDate)
+          .limit(200);
+        if (rows.length > 0) {
+          currentFollowers = rows[rows.length - 1].followers;
+        }
+      }
+
+      // Crescimentos mensais planejados (fixos — definidos pela estratégia)
+      const monthlyGrowths = [
+        { month: 'Abr', label: 'Abril (25-30)', growth: 587, investment: 1000 },
+        { month: 'Mai', label: 'Maio',          growth: 2936, investment: 2500 },
+        { month: 'Jun', label: 'Junho',         growth: 2936, investment: 2500 },
+        { month: 'Jul', label: 'Julho',         growth: 3034, investment: 2500 },
+        { month: 'Ago', label: 'Agosto',        growth: 3034, investment: 2500 },
+        { month: 'Set', label: 'Setembro',      growth: 2936, investment: 2500 },
+        { month: 'Out', label: 'Outubro',       growth: 3034, investment: 3000 },
+      ];
+
+      // Recalcula os totais acumulados partindo do valor real atual
+      let running = currentFollowers;
+      const projection = monthlyGrowths.map(m => {
+        running += m.growth;
+        return { ...m, total: running };
+      });
+
+      return {
+        currentFollowers,
+        targetFollowers: 20000,
+        projection,
+      };
+    } catch {
+      // Fallback com valores estáticos
+      return {
+        currentFollowers: 1541,
+        targetFollowers: 20000,
+        projection: [
+          { month: 'Abr', label: 'Abril (25-30)', growth: 587,  total: 2128,  investment: 1000 },
+          { month: 'Mai', label: 'Maio',          growth: 2936, total: 5064,  investment: 2500 },
+          { month: 'Jun', label: 'Junho',         growth: 2936, total: 8000,  investment: 2500 },
+          { month: 'Jul', label: 'Julho',         growth: 3034, total: 11034, investment: 2500 },
+          { month: 'Ago', label: 'Agosto',        growth: 3034, total: 14068, investment: 2500 },
+          { month: 'Set', label: 'Setembro',      growth: 2936, total: 17004, investment: 2500 },
+          { month: 'Out', label: 'Outubro',       growth: 3034, total: 20038, investment: 3000 },
+        ],
+      };
+    }
+  }),
+
+  /**
    * Sincronizar dados diretamente da Instagram Graph API
    * Busca followers, posts e métricas em tempo real
    */
