@@ -117,10 +117,22 @@ export const whatsappSettingsRouter = router({
 
       try {
         const channelData = await whapiRequest("/health", input.token);
-        // Whapi /health retorna { status: "active"|"inactive", channel: { name, phone } }
-        channelStatus = channelData.status ?? "unknown";
-        channelName = channelData.channel?.name ?? channelData.me?.name ?? null;
-        channelPhone = channelData.channel?.phone ?? channelData.me?.phone ?? null;
+        // Whapi /health retorna { status: { code: 4, text: "AUTH" }, user: { id: "..." } }
+        // status.code === 4 significa AUTH (conectado/autenticado)
+        const statusObj = channelData.status;
+        if (statusObj && typeof statusObj === "object") {
+          // Formato novo: { code: number, text: string }
+          channelStatus = statusObj.code === 4 ? "active" : (statusObj.text?.toLowerCase() ?? "unknown");
+        } else if (typeof statusObj === "string") {
+          channelStatus = statusObj;
+        } else {
+          channelStatus = "active"; // se chegou sem erro, está ativo
+        }
+        // Nome e telefone do usuário conectado
+        channelName = channelData.user?.name ?? channelData.channel?.name ?? channelData.me?.name ?? null;
+        channelPhone = channelData.user?.id ?? channelData.channel?.phone ?? channelData.me?.phone ?? null;
+        // Formatar o telefone (remover @c.us se presente)
+        if (channelPhone) channelPhone = channelPhone.replace(/@.+$/, "");
       } catch (err: any) {
         // Token inválido — salva mesmo assim mas marca como erro
         channelStatus = "error";
@@ -162,9 +174,17 @@ export const whatsappSettingsRouter = router({
 
     try {
       const channelData = await whapiRequest("/health", settings.whapiToken);
-      channelStatus = channelData.status ?? "unknown";
-      channelName = channelData.channel?.name ?? channelData.me?.name ?? null;
-      channelPhone = channelData.channel?.phone ?? channelData.me?.phone ?? null;
+      const statusObj = channelData.status;
+      if (statusObj && typeof statusObj === "object") {
+        channelStatus = statusObj.code === 4 ? "active" : (statusObj.text?.toLowerCase() ?? "unknown");
+      } else if (typeof statusObj === "string") {
+        channelStatus = statusObj;
+      } else {
+        channelStatus = "active";
+      }
+      channelName = channelData.user?.name ?? channelData.channel?.name ?? channelData.me?.name ?? null;
+      channelPhone = channelData.user?.id ?? channelData.channel?.phone ?? channelData.me?.phone ?? null;
+      if (channelPhone) channelPhone = channelPhone.replace(/@.+$/, "");
     } catch (err: any) {
       channelStatus = "error";
     }

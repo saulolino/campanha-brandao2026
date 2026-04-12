@@ -679,3 +679,5 @@
 - [x] Schema: 5 colunas WhatsApp adicionadas em campaign_settings (migração 0025 aplicada)
 - [x] Router tRPC: whatsappSettingsRouter com 5 procedures (getSettings, saveToken, checkChannel, saveDefaultGroups, listGroups)
 - [x] Testes: 53 testes passando (10 novos no whatsappSettings.test.ts)
+- [x] Bug: lista de grupos não aparecia na aba WhatsApp após salvar token — corrigido
+- [x] Bug: endpoint /health da Whapi.Cloud retorna { status: { code: 4, text: 'AUTH' } } (não string) — parsing corrigido no router

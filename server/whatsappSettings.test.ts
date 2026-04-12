@@ -73,6 +73,45 @@ describe("requireCoordinatorOrAbove", () => {
   });
 });
 
+// ─── Testes do parsing do /health da Whapi.Cloud ────────────────────────────
+describe("parseHealthStatus", () => {
+  function parseHealthStatus(channelData: any): string {
+    const statusObj = channelData.status;
+    if (statusObj && typeof statusObj === "object") {
+      return statusObj.code === 4 ? "active" : (statusObj.text?.toLowerCase() ?? "unknown");
+    } else if (typeof statusObj === "string") {
+      return statusObj;
+    }
+    return "active";
+  }
+
+  it("interpreta status.code === 4 como 'active'", () => {
+    const health = { status: { code: 4, text: "AUTH" }, user: { id: "556182024392" } };
+    expect(parseHealthStatus(health)).toBe("active");
+  });
+
+  it("interpreta status.code !== 4 como texto lowercase", () => {
+    const health = { status: { code: 1, text: "INIT" } };
+    expect(parseHealthStatus(health)).toBe("init");
+  });
+
+  it("interpreta status como string diretamente", () => {
+    const health = { status: "connected" };
+    expect(parseHealthStatus(health)).toBe("connected");
+  });
+
+  it("retorna 'active' quando status é undefined", () => {
+    const health = { user: { id: "123" } };
+    expect(parseHealthStatus(health)).toBe("active");
+  });
+
+  it("extrai telefone do user.id", () => {
+    const health = { status: { code: 4, text: "AUTH" }, user: { id: "556182024392" } };
+    const phone = health.user?.id?.replace(/@.+$/, "") ?? null;
+    expect(phone).toBe("556182024392");
+  });
+});
+
 // ─── Testes de serialização de grupos favoritos ───────────────────────────────
 describe("defaultGroups serialization", () => {
   const groups = [

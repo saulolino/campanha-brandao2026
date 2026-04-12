@@ -1278,9 +1278,11 @@ function WhatsAppSettingsTab() {
   const settingsQuery = trpc.whatsappSettings.getSettings.useQuery(undefined, {
     staleTime: 30_000,
   });
+  // Habilitar listGroups assim que o token existir (independente do channelStatus)
   const groupsQuery = trpc.whatsappSettings.listGroups.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
     enabled: !!settingsQuery.data?.hasToken,
+    retry: 1,
   });
 
   // Inicializar favoritos quando os dados chegam
