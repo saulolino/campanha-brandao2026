@@ -225,48 +225,69 @@ ${QUESTIONS_FLOW[0].pergunta}`;
         const planMsg = [...history].reverse().find(m => m.role === "assistant" && m.content.includes("```json"));
         if (planMsg) {
           try {
-            const jsonMatch = planMsg.content.match(/```json\n?([\s\S]*?)\n?```/);
-            if (jsonMatch) {
-              const plan = JSON.parse(jsonMatch[1]);
+            // Tentar extrair JSON do bloco ```json ... ``` ou do texto puro
+            const jsonMatch = planMsg.content.match(/```json\n?([\s\S]*?)\n?```/) ||
+                              planMsg.content.match(/```\n?([\s\S]*?)\n?```/);
+            const jsonStr = jsonMatch ? jsonMatch[1] : planMsg.content;
+            if (jsonStr) {
+              let plan: any;
+              try {
+                plan = JSON.parse(jsonStr);
+              } catch {
+                // Tentar extrair apenas o objeto JSON do texto
+                const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+                if (objMatch) plan = JSON.parse(objMatch[0]);
+                else throw new Error("JSON inválido no plano da IA");
+              }
+
+              // Tipos válidos para posts e eventos
+              const validPostTypes = ["reels", "carrossel", "video", "story", "imagem"];
+              const validEventTypes = ["caminhada", "reuniao", "panfletagem", "visita", "debate", "entrevista", "show", "outro"];
 
               // Cadastrar posts
               for (const post of (plan.posts || [])) {
-                const scheduledDate = new Date(post.scheduledDate);
+                // Garantir data válida
+                let scheduledDate = new Date(post.scheduledDate);
+                if (isNaN(scheduledDate.getTime())) scheduledDate = new Date();
+                // Garantir tipo válido
+                const postType = validPostTypes.includes(post.type) ? post.type : "reels";
                 const [r] = await db.insert(instagramPosts).values({
-                  title: post.title,
+                  title: String(post.title || "Post sem título").slice(0, 255),
                   scheduledDate,
                   scheduledTime: post.scheduledTime || "12:00",
-                  type: post.type || "reels",
+                  type: postType,
                   status: "draft",
-                  objective: post.objective,
-                  description: post.description,
-                  caption: post.caption,
-                  hashtags: post.hashtags,
-                  notes: post.notes,
-                  expectedReach: post.expectedReach || 0,
-                  expectedLikes: post.expectedLikes || 0,
-                  expectedComments: post.expectedComments || 0,
-                  slideCount: post.slideCount || 1,
+                  objective: post.objective ? String(post.objective).slice(0, 255) : null,
+                  description: post.description ? String(post.description) : null,
+                  caption: post.caption ? String(post.caption) : null,
+                  hashtags: post.hashtags ? String(post.hashtags) : null,
+                  notes: post.notes ? String(post.notes) : null,
+                  expectedReach: Number(post.expectedReach) || 0,
+                  expectedLikes: Number(post.expectedLikes) || 0,
+                  expectedComments: Number(post.expectedComments) || 0,
+                  slideCount: Number(post.slideCount) || 1,
                 });
                 createdItems.posts.push((r as any).insertId);
               }
 
               // Cadastrar eventos
               for (const event of (plan.events || [])) {
-                const eventDate = new Date(event.eventDate);
+                let eventDate = new Date(event.eventDate);
+                if (isNaN(eventDate.getTime())) eventDate = new Date();
+                const eventType = validEventTypes.includes(event.type) ? event.type : "outro";
                 const [r] = await db.insert(streetEvents).values({
-                  title: event.title,
-                  description: event.description,
-                  type: event.type || "outro",
+                  title: String(event.title || "Evento sem título").slice(0, 255),
+                  description: event.description ? String(event.description) : null,
+                  type: eventType,
                   status: "planejado",
                   eventDate,
                   eventTime: event.eventTime || "09:00",
-                  endTime: event.endTime,
-                  location: event.location,
-                  neighborhood: event.neighborhood,
+                  endTime: event.endTime || null,
+                  location: event.location ? String(event.location).slice(0, 255) : null,
+                  neighborhood: event.neighborhood ? String(event.neighborhood).slice(0, 255) : null,
                   city: "Brasília",
-                  expectedAttendees: event.expectedAttendees || 0,
-                  notes: event.notes,
+                  expectedAttendees: Number(event.expectedAttendees) || 0,
+                  notes: event.notes ? String(event.notes) : null,
                 });
                 createdItems.events.push((r as any).insertId);
               }
@@ -289,8 +310,10 @@ Você pode revisar e editar tudo diretamente nas agendas. Boa semana de campanha
 
 _Quando quiser planejar a próxima semana, clique em "Nova Sessão"._`;
             }
-          } catch (e) {
-            assistantReply = "Houve um erro ao cadastrar o plano. Por favor, tente novamente ou cadastre manualmente nas agendas.";
+          } catch (e: any) {
+            console.error("[WeeklyPlanning] Erro ao cadastrar plano:", e?.message ?? e);
+            const errMsg = e?.message ?? "erro desconhecido";
+            assistantReply = `Houve um erro ao cadastrar o plano: ${errMsg}. Por favor, tente novamente ou cadastre manualmente nas agendas.`;
           }
         }
       } else {
