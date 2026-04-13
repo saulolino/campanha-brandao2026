@@ -321,6 +321,12 @@ export default function SettingsPage() {
                 </TabsTrigger>
               )}
               {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+                <TabsTrigger value="facebook" className="flex items-center gap-2">
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/></svg>
+                  <span className="hidden sm:inline">Facebook</span>
+                </TabsTrigger>
+              )}
+              {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
                 <TabsTrigger value="notifications" className="flex items-center gap-2 relative">
                   <Bell className="w-4 h-4" />
                   <span className="hidden sm:inline">Notificações</span>
@@ -965,8 +971,14 @@ export default function SettingsPage() {
               </TabsContent>
             )}
 
-            {/* ─── Aba Notificações ─────────────────────────────────────────── */}
+            {/* ─── Aba Facebook ─────────────────────────────────────────────── */}
             {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+              <TabsContent value="facebook">
+                <FacebookSettingsTab />
+              </TabsContent>
+            )}
+
+            {/* ─── Aba Notificações ─────────────────────────────────────────────── */}         {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
               <TabsContent value="notifications">
                 <NotificationsTab isSuperAdmin={isSuperAdmin} />
               </TabsContent>
@@ -1579,6 +1591,145 @@ function WhatsAppSettingsTab() {
                 })}
               </div>
             </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Aba Facebook ─────────────────────────────────────────────────────────────
+function FacebookSettingsTab() {
+  const utils = trpc.useUtils();
+  const { data: fbMetrics, isLoading } = trpc.facebook.getMetrics.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+  const [pageUrl, setPageUrl] = useState(fbMetrics?.pageUrl ?? "https://www.facebook.com/brandaopv");
+
+  const setPageUrlMutation = trpc.facebook.setPageUrl.useMutation({
+    onSuccess: () => {
+      utils.facebook.getMetrics.invalidate();
+      toast.success("URL da página salva com sucesso");
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const syncMutation = trpc.facebook.syncPage.useMutation({
+    onSuccess: () => {
+      utils.facebook.getMetrics.invalidate();
+      toast.success("Dados do Facebook sincronizados com sucesso!");
+    },
+    onError: (err: any) => toast.error(`Erro ao sincronizar: ${err.message}`),
+  });
+
+  // Atualizar o campo quando os dados chegarem
+  useEffect(() => {
+    if (fbMetrics?.pageUrl) setPageUrl(fbMetrics.pageUrl);
+  }, [fbMetrics?.pageUrl]);
+
+  return (
+    <div className="space-y-6">
+      {/* Card de configuração */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/>
+            </svg>
+            Configurações do Facebook
+          </CardTitle>
+          <CardDescription>
+            Configure a URL da página do Facebook para sincronizar dados de seguidores e curtidas via Apify.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="fb-page-url">URL da Página do Facebook</Label>
+            <div className="flex gap-2">
+              <Input
+                id="fb-page-url"
+                value={pageUrl}
+                onChange={(e) => setPageUrl(e.target.value)}
+                placeholder="https://www.facebook.com/brandaopv"
+                className="flex-1"
+              />
+              <Button
+                onClick={() => setPageUrlMutation.mutate({ pageUrl })}
+                disabled={setPageUrlMutation.isPending || !pageUrl.trim()}
+                variant="outline"
+              >
+                {setPageUrlMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Ex: https://www.facebook.com/brandaopv
+            </p>
+          </div>
+
+          <Button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="w-full"
+          >
+            {syncMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Buscando via Apify... (pode levar até 2 min)
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Sincronizar Dados do Facebook
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Card de métricas atuais */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Dados Atuais</CardTitle>
+          <CardDescription>
+            Última sincronização:{" "}
+            {fbMetrics?.lastSync
+              ? new Date(fbMetrics.lastSync).toLocaleString("pt-BR")
+              : "Nunca sincronizado"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Carregando...
+            </div>
+          ) : fbMetrics?.followers ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-2xl font-bold text-blue-400">{fbMetrics.followers.toLocaleString("pt-BR")}</p>
+                <p className="text-xs text-muted-foreground mt-1">Seguidores</p>
+              </div>
+              {fbMetrics.likes != null && (
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-400">{fbMetrics.likes.toLocaleString("pt-BR")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Curtidas na página</p>
+                </div>
+              )}
+              {fbMetrics.pageName && (
+                <div className="p-4 bg-muted/30 border border-border/50 rounded-lg">
+                  <p className="text-sm font-semibold text-foreground truncate">{fbMetrics.pageName}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Nome da página</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center py-8 text-center text-muted-foreground">
+              <svg className="w-10 h-10 mb-3 opacity-30" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/>
+              </svg>
+              <p className="text-sm font-medium">Nenhum dado sincronizado ainda</p>
+              <p className="text-xs mt-1">Clique em "Sincronizar Dados do Facebook" acima para buscar os dados da página.</p>
+            </div>
           )}
         </CardContent>
       </Card>

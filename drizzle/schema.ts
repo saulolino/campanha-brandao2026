@@ -147,6 +147,14 @@ export const campaignSettings = mysqlTable("campaign_settings", {
   whapiChannelPhone: varchar("whapiChannelPhone", { length: 30 }),      // Número de telefone do canal
   whapiChannelStatus: varchar("whapiChannelStatus", { length: 64 }),    // Status: connected / disconnected / etc.
   whapiDefaultGroups: text("whapiDefaultGroups"),                       // JSON: [{ id, name, participantsCount }]
+  // Facebook da campanha (Eduardo Brandão)
+  facebookPageUrl: text("facebookPageUrl"),                            // URL da página (ex: facebook.com/brandaopv)
+  facebookPageName: varchar("facebookPageName", { length: 255 }),       // Nome da página
+  facebookFollowers: int("facebookFollowers"),                          // Seguidores
+  facebookLikes: int("facebookLikes"),                                  // Curtidas na página
+  facebookBio: text("facebookBio"),                                     // Descrição da página
+  facebookProfilePic: text("facebookProfilePic"),                       // URL da foto de perfil
+  facebookLastSync: timestamp("facebookLastSync"),                      // Última sincronização
   // Controle
   isActive: tinyint("isActive").default(1).notNull(),
   lastUpdatedBy: int("lastUpdatedBy"),

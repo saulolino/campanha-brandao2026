@@ -381,6 +381,15 @@ function TeamHome() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Facebook metrics
+  const { data: fbMetrics, isLoading: fbLoading } = trpc.facebook.getMetrics.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const fbSyncMutation = trpc.facebook.syncPage.useMutation({
+    onSuccess: () => utils.facebook.getMetrics.invalidate(),
+  });
+
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {
       if (result.success) {
@@ -482,11 +491,12 @@ function TeamHome() {
 
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Instagram Seguidores */}
             <Card className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Seguidores
+                  Seguidores Instagram
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -494,6 +504,51 @@ function TeamHome() {
                   {metricsLoading ? '...' : currentFollowers.toLocaleString('pt-BR')}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Seguindo: {metricsLoading ? '...' : (metrics?.following || 0).toLocaleString('pt-BR')}</p>
+              </CardContent>
+            </Card>
+
+            {/* Facebook Card */}
+            <Card className="border border-blue-500/30 bg-blue-500/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/></svg>
+                    Facebook
+                  </span>
+                  <button
+                    onClick={() => fbSyncMutation.mutate()}
+                    disabled={fbSyncMutation.isPending}
+                    className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                    title={fbSyncMutation.isPending ? 'Sincronizando via Apify...' : 'Sincronizar dados do Facebook (até 2 min)'}
+                  >
+                    <RefreshCw className={`w-3 h-3 ${fbSyncMutation.isPending ? 'animate-spin' : ''}`} />
+                  </button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {fbLoading ? (
+                  <div className="text-3xl font-bold text-blue-400">...</div>
+                ) : fbMetrics?.followers ? (
+                  <>
+                    <div className="text-3xl font-bold text-blue-400">{fbMetrics.followers.toLocaleString('pt-BR')}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {fbMetrics.likes ? `${fbMetrics.likes.toLocaleString('pt-BR')} curtidas` : 'Seguidores na página'}
+                  {fbMetrics.pageName && <span className="block text-xs text-muted-foreground/60 truncate">{fbMetrics.pageName}</span>}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-muted-foreground">{fbSyncMutation.isPending ? 'Buscando via Apify...' : 'Sem dados'}</div>
+                    {!fbSyncMutation.isPending && (
+                      <button
+                        onClick={() => fbSyncMutation.mutate()}
+                        className="text-xs text-blue-400 hover:underline mt-1"
+                      >
+                        Sincronizar agora
+                      </button>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 
