@@ -155,6 +155,7 @@ export default function PlanejamentoSemanal() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Queries
   const { data: sessions, refetch: refetchSessions } = trpc.weeklyPlanning.list.useQuery(
@@ -213,9 +214,16 @@ export default function PlanejamentoSemanal() {
     },
   });
 
-  // Scroll automático
+  // Scroll automático — usa o viewport interno do Radix ScrollArea
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
   }, [messages, isTyping]);
 
   // Carregar sessão existente
@@ -402,7 +410,7 @@ export default function PlanejamentoSemanal() {
                 )}
 
                 {/* Mensagens */}
-                <ScrollArea className="flex-1 p-4">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
                   <div className="space-y-1">
                     {messages.map((msg, i) => (
                       <ChatMessage key={msg.id ?? i} message={msg} />

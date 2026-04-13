@@ -207,7 +207,7 @@ ${QUESTIONS_FLOW[0].pergunta}`;
       // Montar mensagens para o LLM
       const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         { role: "system", content: SYSTEM_PROMPT },
-        ...history.map(m => ({
+        ...history.map((m: typeof history[number]) => ({
           role: m.role as "user" | "assistant",
           content: m.content as string,
         })),
@@ -215,14 +215,14 @@ ${QUESTIONS_FLOW[0].pergunta}`;
 
       // Verificar se o usuário está aprovando o plano
       const isApproving = /\b(aprovo|aprovado|confirmo|confirmado|pode cadastrar|cadastra|sim|ok|certo|perfeito|ótimo|vamos|pode ir|vai em frente)\b/i.test(input.message);
-      const hasPlan = history.some(m => m.role === "assistant" && m.content.includes("```json"));
+      const hasPlan = history.some((m: typeof history[number]) => m.role === "assistant" && (m.content ?? "").includes("```json"));
 
       let assistantReply = "";
       let createdItems: { posts: number[]; events: number[] } = { posts: [], events: [] };
 
       if (isApproving && hasPlan) {
         // Usuário aprovou — extrair JSON e cadastrar
-        const planMsg = [...history].reverse().find(m => m.role === "assistant" && m.content.includes("```json"));
+        const planMsg = [...history].reverse().find((m: typeof history[number]) => m.role === "assistant" && (m.content ?? "").includes("```json"));
         if (planMsg) {
           try {
             // Tentar extrair JSON do bloco ```json ... ``` ou do texto puro
@@ -275,6 +275,12 @@ ${QUESTIONS_FLOW[0].pergunta}`;
                 let eventDate = new Date(event.eventDate);
                 if (isNaN(eventDate.getTime())) eventDate = new Date();
                 const eventType = validEventTypes.includes(event.type) ? event.type : "outro";
+                // location é NOT NULL no banco — usar neighborhood ou fallback
+                const locationStr = event.location
+                  ? String(event.location).slice(0, 255)
+                  : event.neighborhood
+                  ? String(event.neighborhood).slice(0, 255)
+                  : "A definir";
                 const [r] = await db.insert(streetEvents).values({
                   title: String(event.title || "Evento sem título").slice(0, 255),
                   description: event.description ? String(event.description) : null,
@@ -283,7 +289,7 @@ ${QUESTIONS_FLOW[0].pergunta}`;
                   eventDate,
                   eventTime: event.eventTime || "09:00",
                   endTime: event.endTime || null,
-                  location: event.location ? String(event.location).slice(0, 255) : null,
+                  location: locationStr,
                   neighborhood: event.neighborhood ? String(event.neighborhood).slice(0, 255) : null,
                   city: "Brasília",
                   expectedAttendees: Number(event.expectedAttendees) || 0,
@@ -332,10 +338,13 @@ _Quando quiser planejar a próxima semana, clique em "Nova Sessão"._`;
         messageType: msgType,
       });
 
+      // Determinar status real: só conclui se aprovou E tinha plano E cadastrou com sucesso
+      const reallyConcluded = isApproving && hasPlan && createdItems.posts.length + createdItems.events.length > 0;
+
       return {
         reply: assistantReply,
-        sessionStatus: isApproving && hasPlan ? "concluida" : "em_andamento",
-        createdItems: isApproving && hasPlan ? createdItems : null,
+        sessionStatus: reallyConcluded ? "concluida" : "em_andamento",
+        createdItems: reallyConcluded ? createdItems : null,
       };
     }),
 
