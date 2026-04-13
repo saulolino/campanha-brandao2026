@@ -110,7 +110,8 @@ export const facebookRouter = router({
     requireCoordinatorOrAbove(ctx.user?.role);
     const { db, settings } = await getOrCreateSettings();
 
-    const pageUrl = settings.facebookPageUrl ?? "https://www.facebook.com/brandaopv";
+    // Prioridade: candidateFacebook (Configurações do Candidato) > facebookPageUrl (aba Facebook) > fallback
+    const pageUrl = settings.candidateFacebook ?? settings.facebookPageUrl ?? "https://www.facebook.com/eduardobrandaopv";
 
     let data;
     try {
