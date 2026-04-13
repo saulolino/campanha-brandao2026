@@ -289,7 +289,7 @@ export const competitorsRouter = router({
     }),
 
   /**
-   * Sincronizar todos os concorrentes (Instagram + Facebook) via Apify
+   * Sincronizar todos os concorrentes (Instagram + Facebook) via Apify — em paralelo
    */
   syncAll: coordinatorProcedure.mutation(async () => {
     const _dbRaw = await getDb();
@@ -305,96 +305,99 @@ export const competitorsRouter = router({
       .from(competitors)
       .where(eq(competitors.isActive, 1));
 
-    const results: {
-      id: number;
-      name: string;
-      instagram?: string;
-      facebook?: string;
-    }[] = [];
-
-    for (const c of allCompetitors) {
-      const result: {
-        id: number;
-        name: string;
-        instagram?: string;
-        facebook?: string;
-      } = {
-        id: c.id,
-        name: c.name,
-      };
-
-      // Sync Instagram via Apify
-      if (c.instagramUsername) {
-        try {
-          const igData = await scrapeInstagramProfile(c.instagramUsername);
-          if (igData) {
-            const updateData = {
-              instagramId: igData.id ?? null,
-              instagramFollowers: igData.followersCount ?? null,
-              instagramFollowing: igData.followsCount ?? null,
-              instagramPosts: igData.postsCount ?? null,
-              instagramBio: igData.biography ?? null,
-              instagramProfilePic: igData.profilePicUrl ?? null,
-              instagramLastSync: new Date(),
-            };
-            await db
-              .update(competitors)
-              .set(updateData)
-              .where(eq(competitors.id, c.id));
-            if (updateData.instagramFollowers !== null) {
-              await db.insert(competitorSnapshots).values({
-                competitorId: c.id,
-                platform: "instagram",
-                followers: updateData.instagramFollowers,
-                following: updateData.instagramFollowing ?? null,
-                posts: updateData.instagramPosts ?? null,
-              });
-            }
-            result.instagram = "ok";
-          } else {
-            result.instagram = "perfil não encontrado";
-          }
-        } catch (e: any) {
-          result.instagram = `erro: ${e.message}`;
-        }
-      }
-
-      // Sync Facebook via Apify
-      if (c.facebookPageId) {
-        try {
-          const fbData = await scrapeFacebookPage(c.facebookPageId);
-          if (fbData) {
-            const updateData = {
-              facebookPageName: fbData.title ?? fbData.pageName ?? null,
-              facebookFollowers: fbData.followers ?? null,
-              facebookLikes: fbData.likes ?? null,
-              facebookBio: fbData.about ?? null,
-              facebookProfilePic: fbData.profilePicUrl ?? null,
-              facebookLastSync: new Date(),
-            };
-            await db
-              .update(competitors)
-              .set(updateData)
-              .where(eq(competitors.id, c.id));
-            if (updateData.facebookFollowers !== null) {
-              await db.insert(competitorSnapshots).values({
-                competitorId: c.id,
-                platform: "facebook",
-                followers: updateData.facebookFollowers,
-                likes: updateData.facebookLikes ?? null,
-              });
-            }
-            result.facebook = "ok";
-          } else {
-            result.facebook = "página não encontrada";
-          }
-        } catch (e: any) {
-          result.facebook = `erro: ${e.message}`;
-        }
-      }
-
-      results.push(result);
+    if (allCompetitors.length === 0) {
+      return { success: true, results: [] };
     }
+
+    // Processar todos em paralelo para evitar timeout
+    const results = await Promise.all(
+      allCompetitors.map(async (c) => {
+        const result: {
+          id: number;
+          name: string;
+          instagram?: string;
+          facebook?: string;
+        } = { id: c.id, name: c.name };
+
+        // Sync Instagram via Apify
+        if (c.instagramUsername) {
+          try {
+            const igData = await scrapeInstagramProfile(c.instagramUsername);
+            if (igData) {
+              const updateData = {
+                instagramId: igData.id ?? null,
+                instagramFollowers: igData.followersCount ?? null,
+                instagramFollowing: igData.followsCount ?? null,
+                instagramPosts: igData.postsCount ?? null,
+                instagramBio: igData.biography ?? null,
+                instagramProfilePic: igData.profilePicUrl ?? null,
+                instagramLastSync: new Date(),
+              };
+              await db
+                .update(competitors)
+                .set(updateData)
+                .where(eq(competitors.id, c.id));
+              if (updateData.instagramFollowers !== null) {
+                await db.insert(competitorSnapshots).values({
+                  competitorId: c.id,
+                  platform: "instagram",
+                  followers: updateData.instagramFollowers,
+                  following: updateData.instagramFollowing ?? null,
+                  posts: updateData.instagramPosts ?? null,
+                });
+              }
+              result.instagram = "ok";
+            } else {
+              result.instagram = "perfil não encontrado";
+            }
+          } catch (e: any) {
+            result.instagram = `erro: ${e.message}`;
+          }
+        }
+
+        // Sync Facebook via Apify
+        if (c.facebookPageId) {
+          try {
+            const fbData = await scrapeFacebookPage(c.facebookPageId);
+            if (fbData) {
+              // O facebook-pages-scraper retorna campos diferentes para perfis pessoais vs páginas
+              const profilePic =
+                (fbData as any).personalProfile?.profilePhoto ??
+                (fbData as any).coverPhotoUrl ??
+                fbData.profilePicUrl ??
+                null;
+              const updateData = {
+                facebookPageName: fbData.title ?? fbData.pageName ?? null,
+                facebookFollowers: fbData.followers ?? null,
+                facebookLikes: fbData.likes ?? null,
+                facebookBio: fbData.about ?? null,
+                facebookProfilePic: profilePic,
+                facebookLastSync: new Date(),
+              };
+              await db
+                .update(competitors)
+                .set(updateData)
+                .where(eq(competitors.id, c.id));
+              if (updateData.facebookFollowers !== null) {
+                await db.insert(competitorSnapshots).values({
+                  competitorId: c.id,
+                  platform: "facebook",
+                  followers: updateData.facebookFollowers,
+                  likes: updateData.facebookLikes ?? null,
+                });
+              }
+              result.facebook = "ok";
+            } else {
+              result.facebook = "página não encontrada";
+            }
+          } catch (e: any) {
+            result.facebook = `erro: ${e.message}`;
+          }
+        }
+
+        return result;
+      })
+    );
 
     return { success: true, results };
   }),
