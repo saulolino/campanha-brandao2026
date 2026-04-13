@@ -130,16 +130,16 @@ export default function SidebarNav({ activeSection }: SidebarNavProps) {
   const canSeePending = isSuperAdmin || isCoordinator;
   const { data: pendingData } = trpc.users.countPending.useQuery(undefined, {
     enabled: canSeePending,
-    refetchInterval: 60_000, // Atualizar a cada 60 segundos
-    staleTime: 30_000,
+    refetchInterval: 5 * 60_000, // Atualizar a cada 5 minutos
+    staleTime: 3 * 60_000,
   });
   const pendingCount = pendingData?.count ?? 0;
 
   // Buscar contagem de propostas pendentes (apenas para coordinator e superadmin)
   const { data: proposalPendingData } = trpc.proposals.countPending.useQuery(undefined, {
     enabled: canSeePending,
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 5 * 60_000,
+    staleTime: 3 * 60_000,
   });
   const proposalPendingCount = proposalPendingData?.count ?? 0;
 

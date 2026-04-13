@@ -263,7 +263,7 @@ Não inclua texto na imagem.`;
       // Gerar prompts individuais para cada slide com a IA
       let planResponse;
       try {
-      planResponse = await invokeLLM({
+        planResponse = await invokeLLM({
         messages: [
           {
             role: "system" as const,

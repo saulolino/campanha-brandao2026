@@ -1036,7 +1036,8 @@ const NOTIF_TYPE_ICONS: Record<string, React.ReactNode> = {
 // ─── Badge de não lidas (usado no TabsTrigger) ────────────────────────────────
 function NotifBadge() {
   const { data } = trpc.notifications.countUnread.useQuery(undefined, {
-    refetchInterval: 60_000,
+    refetchInterval: 5 * 60_000,
+    staleTime: 3 * 60_000,
   });
   const count = data?.count ?? 0;
   if (count === 0) return null;
@@ -1066,7 +1067,7 @@ function NotificationsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const { data: notifs, isLoading } = trpc.notifications.list.useQuery(
     { limit: 100, offset: 0, onlyUnread, type: filterType },
-    { refetchInterval: 30_000 }
+    { refetchInterval: 5 * 60_000, staleTime: 3 * 60_000 }
   );
 
   const markRead = trpc.notifications.markRead.useMutation({
