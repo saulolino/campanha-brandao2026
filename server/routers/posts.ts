@@ -165,30 +165,42 @@ Retorne SOMENTE um JSON com os campos:
         });
       }
 
-      const response = await invokeLLM({
-        messages: [
-          { role: "system" as const, content: systemPrompt },
-          { role: "user" as const, content: contentParts as any },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "caption_result",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                caption: { type: "string" },
-                hashtags: { type: "string" },
+      let response;
+      try {
+        response = await invokeLLM({
+          messages: [
+            { role: "system" as const, content: systemPrompt },
+            { role: "user" as const, content: contentParts as any },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "caption_result",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  caption: { type: "string" },
+                  hashtags: { type: "string" },
+                },
+                required: ["caption", "hashtags"],
+                additionalProperties: false,
               },
-              required: ["caption", "hashtags"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
+      } catch (err: any) {
+        const msg = err?.message ?? "Erro desconhecido";
+        const isRateLimit = msg.toLowerCase().includes("limite") || msg.toLowerCase().includes("rate") || msg.toLowerCase().includes("exceeded");
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: isRateLimit
+            ? "Limite de requisições da IA atingido. Aguarde alguns segundos e tente novamente."
+            : `Erro ao gerar legenda com IA: ${msg}`,
+        });
+      }
 
-       const rawContent = response.choices?.[0]?.message?.content;
+      const rawContent = response.choices?.[0]?.message?.content;
       if (!rawContent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IA não retornou resposta" });
       const content = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent);
       try {
@@ -249,7 +261,9 @@ Não inclua texto na imagem.`;
       const objectiveLabel = objectiveLabels[input.objective || ""] || input.objective || "engajamento";
 
       // Gerar prompts individuais para cada slide com a IA
-      const planResponse = await invokeLLM({
+      let planResponse;
+      try {
+      planResponse = await invokeLLM({
         messages: [
           {
             role: "system" as const,
@@ -304,8 +318,18 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
           },
         },
       });
+      } catch (err: any) {
+        const msg = err?.message ?? "Erro desconhecido";
+        const isRateLimit = msg.toLowerCase().includes("limite") || msg.toLowerCase().includes("rate") || msg.toLowerCase().includes("exceeded");
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: isRateLimit
+            ? "Limite de requisições da IA atingido. Aguarde alguns segundos e tente novamente."
+            : `Erro ao gerar slides com IA: ${msg}`,
+        });
+      }
 
-      const planContent = planResponse.choices?.[0]?.message?.content;
+      const planContent = planResponse!.choices?.[0]?.message?.content;
       if (!planContent) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "IA não retornou plano de slides" });
 
       const planText = typeof planContent === "string" ? planContent : JSON.stringify(planContent);

@@ -323,10 +323,24 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
+    // Detectar rate limit (429) e lançar mensagem amigável
+    if (response.status === 429 || errorText.toLowerCase().includes("rate") || errorText.toLowerCase().includes("exceeded")) {
+      throw new Error(
+        "Limite de requisições da IA atingido. Aguarde alguns segundos e tente novamente."
+      );
+    }
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `Erro na IA (${response.status}): ${errorText.slice(0, 200)}`
     );
   }
 
-  return (await response.json()) as InvokeResult;
+  // Garantir que a resposta é JSON válido antes de parsear
+  const responseText = await response.text();
+  try {
+    return JSON.parse(responseText) as InvokeResult;
+  } catch {
+    throw new Error(
+      `IA retornou resposta inválida (não-JSON): ${responseText.slice(0, 200)}`
+    );
+  }
 }
