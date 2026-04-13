@@ -297,7 +297,7 @@ export default function SettingsPage() {
           <InstagramTokenAlert />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-8">
+            <TabsList className="grid w-full grid-cols-7 mb-8">
               <TabsTrigger value="instagram" className="flex items-center gap-2">
                 <Key className="w-4 h-4" />
                 <span className="hidden sm:inline">Instagram</span>
@@ -324,6 +324,12 @@ export default function SettingsPage() {
                 <TabsTrigger value="facebook" className="flex items-center gap-2">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/></svg>
                   <span className="hidden sm:inline">Facebook</span>
+                </TabsTrigger>
+              )}
+              {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+                <TabsTrigger value="candidato" className="flex items-center gap-2">
+                  <UserCog className="w-4 h-4" />
+                  <span className="hidden sm:inline">Candidato</span>
                 </TabsTrigger>
               )}
               {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
@@ -975,6 +981,13 @@ export default function SettingsPage() {
             {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
               <TabsContent value="facebook">
                 <FacebookSettingsTab />
+              </TabsContent>
+            )}
+
+            {/* ─── Aba Candidato ────────────────────────────────────────────── */}
+            {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+              <TabsContent value="candidato">
+                <CandidateSettingsTab />
               </TabsContent>
             )}
 
@@ -1733,6 +1746,351 @@ function FacebookSettingsTab() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ─── Aba Candidato ────────────────────────────────────────────────────────────
+function CandidateSettingsTab() {
+  const utils = trpc.useUtils();
+  const { data: profile, isLoading } = trpc.candidateSettings.getProfile.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Campos do formulário
+  const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [party, setParty] = useState("");
+  const [number, setNumber] = useState("");
+  const [role, setRole] = useState("");
+  const [bio, setBio] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [profilePic, setProfilePic] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [facebook, setFacebook] = useState("");
+  const [youtube, setYoutube] = useState("");
+  const [tiktok, setTiktok] = useState("");
+  const [website, setWebsite] = useState("");
+  const [electionDate, setElectionDate] = useState("");
+
+  // Preencher formulário quando os dados chegarem
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.candidateName ?? "");
+    setNickname(profile.candidateNickname ?? "");
+    setParty(profile.candidateParty ?? "");
+    setNumber(profile.candidateNumber ?? "");
+    setRole(profile.candidateRole ?? "");
+    setBio(profile.candidateBio ?? "");
+    setEmail(profile.candidateEmail ?? "");
+    setPhone(profile.candidatePhone ?? "");
+    setProfilePic(profile.candidateProfilePic ?? "");
+    setInstagram(profile.candidateInstagram ?? "");
+    setFacebook(profile.candidateFacebook ?? "");
+    setYoutube(profile.candidateYoutube ?? "");
+    setTiktok(profile.candidateTiktok ?? "");
+    setWebsite(profile.candidateWebsite ?? "");
+    setElectionDate(profile.candidateElectionDate ?? "");
+  }, [profile]);
+
+  const saveMutation = trpc.candidateSettings.saveProfile.useMutation({
+    onSuccess: () => {
+      utils.candidateSettings.getProfile.invalidate();
+      toast.success("Dados do candidato salvos com sucesso!");
+    },
+    onError: (err: any) => toast.error(`Erro ao salvar: ${err.message}`),
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate({
+      candidateName: name,
+      candidateNickname: nickname,
+      candidateParty: party,
+      candidateNumber: number,
+      candidateRole: role,
+      candidateBio: bio,
+      candidateEmail: email,
+      candidatePhone: phone,
+      candidateProfilePic: profilePic,
+      candidateInstagram: instagram,
+      candidateFacebook: facebook,
+      candidateYoutube: youtube,
+      candidateTiktok: tiktok,
+      candidateWebsite: website,
+      candidateElectionDate: electionDate,
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Identidade do Candidato */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="w-5 h-5 text-primary" />
+            Identidade do Candidato
+          </CardTitle>
+          <CardDescription>
+            Informações básicas do candidato principal exibidas no painel.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cand-name">Nome Completo</Label>
+              <Input
+                id="cand-name"
+                placeholder="Eduardo Brandão"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-nickname">Nome de Urna</Label>
+              <Input
+                id="cand-nickname"
+                placeholder="Eduardo Brandão"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-party">Partido</Label>
+              <Input
+                id="cand-party"
+                placeholder="Partido Verde"
+                value={party}
+                onChange={(e) => setParty(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-number">Número Eleitoral</Label>
+              <Input
+                id="cand-number"
+                placeholder="43000"
+                value={number}
+                onChange={(e) => setNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-role">Cargo Disputado</Label>
+              <Input
+                id="cand-role"
+                placeholder="Deputado Distrital DF 2026"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-election-date">Data da Eleição</Label>
+              <Input
+                id="cand-election-date"
+                type="date"
+                value={electionDate}
+                onChange={(e) => setElectionDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cand-bio">Biografia / Apresentação</Label>
+            <textarea
+              id="cand-bio"
+              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              placeholder="Breve apresentação do candidato para exibição no painel..."
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cand-profile-pic">URL da Foto de Perfil</Label>
+            <Input
+              id="cand-profile-pic"
+              placeholder="https://exemplo.com/foto.jpg"
+              value={profilePic}
+              onChange={(e) => setProfilePic(e.target.value)}
+            />
+            {profilePic && (
+              <div className="flex items-center gap-3 mt-2">
+                <img
+                  src={profilePic}
+                  alt="Preview"
+                  className="w-12 h-12 rounded-full object-cover border border-border"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                <span className="text-xs text-muted-foreground">Preview da foto de perfil</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contato */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Contato Público
+          </CardTitle>
+          <CardDescription>
+            E-mail e telefone de contato exibidos publicamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cand-email">E-mail de Contato</Label>
+              <Input
+                id="cand-email"
+                type="email"
+                placeholder="contato@eduardobrandao.com.br"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-phone">Telefone / WhatsApp</Label>
+              <Input
+                id="cand-phone"
+                placeholder="+55 61 9 9999-9999"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Redes Sociais */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            Redes Sociais e Site
+          </CardTitle>
+          <CardDescription>
+            Contas oficiais do candidato nas redes sociais.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cand-instagram" className="flex items-center gap-1.5">
+                <Instagram className="w-4 h-4 text-pink-500" />
+                Instagram
+              </Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">@</span>
+                <Input
+                  id="cand-instagram"
+                  className="rounded-l-none"
+                  placeholder="eduardobrandaopv"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value.replace("@", ""))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-facebook" className="flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/>
+                </svg>
+                Facebook
+              </Label>
+              <Input
+                id="cand-facebook"
+                placeholder="brandaopv"
+                value={facebook}
+                onChange={(e) => setFacebook(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-youtube" className="flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                YouTube
+              </Label>
+              <Input
+                id="cand-youtube"
+                placeholder="https://youtube.com/@eduardobrandao"
+                value={youtube}
+                onChange={(e) => setYoutube(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cand-tiktok" className="flex items-center gap-1.5">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+                </svg>
+                TikTok
+              </Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">@</span>
+                <Input
+                  id="cand-tiktok"
+                  className="rounded-l-none"
+                  placeholder="eduardobrandao"
+                  value={tiktok}
+                  onChange={(e) => setTiktok(e.target.value.replace("@", ""))}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cand-website" className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              Site Oficial
+            </Label>
+            <Input
+              id="cand-website"
+              placeholder="https://eduardobrandao.com.br"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Botão Salvar */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={saveMutation.isPending}
+          className="min-w-[160px]"
+        >
+          {saveMutation.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Salvar Dados do Candidato
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -155,6 +155,22 @@ export const campaignSettings = mysqlTable("campaign_settings", {
   facebookBio: text("facebookBio"),                                     // Descrição da página
   facebookProfilePic: text("facebookProfilePic"),                       // URL da foto de perfil
   facebookLastSync: timestamp("facebookLastSync"),                      // Última sincronização
+  // Dados do Candidato Principal
+  candidateName: varchar("candidateName", { length: 255 }),              // Nome completo
+  candidateNickname: varchar("candidateNickname", { length: 100 }),      // Nome de urna / apelido
+  candidateParty: varchar("candidateParty", { length: 100 }),            // Partido (ex: Partido Verde)
+  candidateNumber: varchar("candidateNumber", { length: 20 }),           // Número eleitoral
+  candidateRole: varchar("candidateRole", { length: 255 }),              // Cargo disputado
+  candidateBio: text("candidateBio"),                                    // Biografia / apresentação
+  candidateEmail: varchar("candidateEmail", { length: 320 }),            // E-mail de contato público
+  candidatePhone: varchar("candidatePhone", { length: 30 }),             // Telefone / WhatsApp público
+  candidateProfilePic: text("candidateProfilePic"),                      // URL da foto de perfil
+  candidateInstagram: varchar("candidateInstagram", { length: 255 }),    // @username do Instagram
+  candidateFacebook: varchar("candidateFacebook", { length: 255 }),      // URL ou username do Facebook
+  candidateYoutube: varchar("candidateYoutube", { length: 255 }),        // URL do canal YouTube
+  candidateTiktok: varchar("candidateTiktok", { length: 255 }),          // @username do TikTok
+  candidateWebsite: varchar("candidateWebsite", { length: 500 }),        // Site oficial
+  candidateElectionDate: varchar("candidateElectionDate", { length: 10 }), // Data da eleição (YYYY-MM-DD)
   // Controle
   isActive: tinyint("isActive").default(1).notNull(),
   lastUpdatedBy: int("lastUpdatedBy"),

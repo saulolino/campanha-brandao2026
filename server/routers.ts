@@ -13,6 +13,7 @@ import { whatsappRouter } from "./routers/whatsapp";
 import { whatsappSettingsRouter } from "./routers/whatsappSettings";
 import { competitorsRouter } from "./routers/competitors";
 import { facebookRouter } from "./routers/facebook";
+import { candidateSettingsRouter } from "./routers/candidateSettings";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -39,6 +40,7 @@ export const appRouter = router({
   whatsappSettings: whatsappSettingsRouter,
   competitors: competitorsRouter,
   facebook: facebookRouter,
+  candidateSettings: candidateSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;
