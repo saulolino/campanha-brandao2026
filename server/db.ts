@@ -2,20 +2,54 @@ import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import mysql from "mysql2/promise";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _db: any = null;
+let _pool: mysql.Pool | null = null;
+let _lastConnectAttempt = 0;
+const RECONNECT_COOLDOWN_MS = 10_000; // Aguardar 10s antes de tentar reconectar
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
+// Lazily create the drizzle instance com pool mysql2 para reconexão automática.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+
+  const now = Date.now();
+  if (!process.env.DATABASE_URL) return null;
+  // Evitar tentativas repetidas em rápida sucessão
+  if (now - _lastConnectAttempt < RECONNECT_COOLDOWN_MS) return null;
+  _lastConnectAttempt = now;
+
+  try {
+    // Usar pool mysql2 com reconexão automática e keep-alive
+    _pool = mysql.createPool({
+      uri: process.env.DATABASE_URL,
+      waitForConnections: true,
+      connectionLimit: 5,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+      connectTimeout: 15000,
+    });
+    _db = drizzle(_pool);
+    console.log("[Database] Pool MySQL criado com sucesso.");
+  } catch (error) {
+    console.warn("[Database] Failed to create pool:", error);
+    _pool = null;
+    _db = null;
   }
   return _db;
+}
+
+// Resetar a conexão em caso de erro grave (chamado pelos helpers)
+export function resetDb() {
+  if (_pool) {
+    _pool.end().catch(() => {});
+    _pool = null;
+  }
+  _db = null;
+  _lastConnectAttempt = 0;
+  console.warn("[Database] Conexão resetada — próxima query tentará reconectar.");
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { getDb } from "./db";
+import { getDb, resetDb } from "./db";
 import { instagramPosts, streetEvents } from "../drizzle/schema";
 import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
@@ -240,6 +240,10 @@ export function initializeScheduler(): void {
       await processScheduledPosts();
     } catch (err: any) {
       console.error("[Scheduler] Erro no ciclo de verificação:", err.message);
+      // Se for erro de banco, resetar a conexão para reconectar na próxima tentativa
+      if (err.message?.includes("Failed query") || err.message?.includes("ECONNREFUSED") || err.message?.includes("ETIMEDOUT") || err.code === "ECONNRESET") {
+        resetDb();
+      }
     }
   });
 
