@@ -513,10 +513,12 @@ function CompetitorForm({
 function ComparisonChart({
   competitors,
   eduFollowers,
+  eduFacebookFollowers,
   eduName,
 }: {
   competitors: Competitor[];
   eduFollowers: number;
+  eduFacebookFollowers: number | null;
   eduName: string;
 }) {
   const data = useMemo(() => {
@@ -524,7 +526,7 @@ function ComparisonChart({
       {
         name: eduName.split(" ")[0],
         instagram: eduFollowers,
-        facebook: null as number | null,
+        facebook: eduFacebookFollowers,
         isEdu: true,
       },
       ...competitors.map((c) => ({
@@ -596,7 +598,11 @@ export default function Concorrentes() {
   const { data: eduMetrics } = trpc.instagram.getMetrics.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
+  const { data: fbMetrics } = trpc.facebook.getMetrics.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
   const eduFollowers = eduMetrics?.followers ?? 0;
+  const eduFacebookFollowers = fbMetrics?.followers ?? null;
   const eduName = eduMetrics?.name ?? "Eduardo Brandão";
 
   const deleteMutation = trpc.competitors.remove.useMutation({
@@ -755,8 +761,19 @@ export default function Concorrentes() {
                         <Instagram className="w-3.5 h-3.5 text-pink-400" />
                         <span className="text-lg font-bold text-white">{formatNum(eduFollowers)}</span>
                       </div>
-                      <p className="text-[10px] text-gray-500">seguidores</p>
+                      <p className="text-[10px] text-gray-500">Instagram</p>
                     </div>
+                    {eduFacebookFollowers != null && (
+                      <div className="text-center">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3.5 h-3.5 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12.073h2.54V9.845c0-2.503 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.875h2.773l-.443 2.89h-2.33v6.988C20.343 21.201 24 17.064 24 12.073z"/>
+                          </svg>
+                          <span className="text-lg font-bold text-white">{formatNum(eduFacebookFollowers)}</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500">Facebook</p>
+                      </div>
+                    )}
                     <div className="text-center">
                       <div className="flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5 text-gray-400" />
@@ -789,6 +806,7 @@ export default function Concorrentes() {
           <ComparisonChart
             competitors={competitorsList as Competitor[]}
             eduFollowers={eduFollowers}
+            eduFacebookFollowers={eduFacebookFollowers}
             eduName={eduName}
           />
         )}
