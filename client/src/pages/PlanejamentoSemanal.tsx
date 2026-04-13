@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea removida — usando div nativo para scroll confiável
 import { Separator } from "@/components/ui/separator";
 import {
   Bot,
@@ -155,7 +155,7 @@ export default function PlanejamentoSemanal() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Queries
   const { data: sessions, refetch: refetchSessions } = trpc.weeklyPlanning.list.useQuery(
@@ -214,14 +214,12 @@ export default function PlanejamentoSemanal() {
     },
   });
 
-  // Scroll automático — usa o viewport interno do Radix ScrollArea
+  // Scroll automático — rola o container nativo para o final
   useEffect(() => {
     requestAnimationFrame(() => {
-      const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
-      if (viewport) {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-      } else {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const container = chatContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
       }
     });
   }, [messages, isTyping]);
@@ -387,7 +385,7 @@ export default function PlanejamentoSemanal() {
               </div>
             ) : (
               /* Chat ativo */
-              <div className="flex flex-col flex-1 bg-[#111e11] rounded-2xl border border-[#2d4a2d]/50 overflow-hidden">
+              <div className="flex flex-col flex-1 min-h-0 bg-[#111e11] rounded-2xl border border-[#2d4a2d]/50 overflow-hidden">
                 {/* Status da sessão */}
                 {sessionStatus !== "em_andamento" && (
                   <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${
@@ -410,7 +408,7 @@ export default function PlanejamentoSemanal() {
                 )}
 
                 {/* Mensagens */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+                <div ref={chatContainerRef} className="flex-1 min-h-0 p-4 overflow-y-auto">
                   <div className="space-y-1">
                     {messages.map((msg, i) => (
                       <ChatMessage key={msg.id ?? i} message={msg} />
@@ -470,7 +468,7 @@ export default function PlanejamentoSemanal() {
 
                     <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Input */}
                 <div className="border-t border-[#2d4a2d]/50 p-3">
