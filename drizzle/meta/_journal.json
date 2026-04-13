@@ -204,6 +204,13 @@
       "when": 1776089543997,
       "tag": "0028_unknown_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1776091001463,
+      "tag": "0029_modern_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }

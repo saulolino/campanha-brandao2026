@@ -51,6 +51,7 @@ export const competitorsRouter = router({
     .input(
       z.object({
         name: z.string().min(1, "Nome obrigatório"),
+        nickname: z.string().optional(),
         party: z.string().optional(),
         role: z.string().optional(),
         notes: z.string().optional(),
@@ -68,6 +69,7 @@ export const competitorsRouter = router({
       const db = _dbRaw;
       const [result] = await db.insert(competitors).values({
         name: input.name,
+        nickname: input.nickname ?? null,
         party: input.party ?? null,
         role: input.role ?? null,
         notes: input.notes ?? null,
@@ -86,6 +88,7 @@ export const competitorsRouter = router({
       z.object({
         id: z.number(),
         name: z.string().min(1).optional(),
+        nickname: z.string().optional(),
         party: z.string().optional(),
         role: z.string().optional(),
         notes: z.string().optional(),

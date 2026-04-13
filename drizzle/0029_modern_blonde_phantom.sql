@@ -1,0 +1,1 @@
+ALTER TABLE `competitors` ADD `nickname` varchar(255);

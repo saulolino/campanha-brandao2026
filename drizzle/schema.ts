@@ -402,6 +402,7 @@ export const competitors = mysqlTable("competitors", {
   id: int("id").autoincrement().primaryKey(),
   // Identificação do candidato
   name: varchar("name", { length: 255 }).notNull(),
+  nickname: varchar("nickname", { length: 255 }), // segundo nome / apelido / nome de urna
   party: varchar("party", { length: 100 }),
   role: varchar("role", { length: 255 }), // cargo disputado
   notes: text("notes"), // observações livres

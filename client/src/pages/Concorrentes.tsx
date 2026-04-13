@@ -53,7 +53,9 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   BarChart,
   Bar,
@@ -70,6 +72,7 @@ import {
 type Competitor = {
   id: number;
   name: string;
+  nickname?: string | null;
   party?: string | null;
   role?: string | null;
   notes?: string | null;
@@ -156,6 +159,9 @@ function CompetitorCard({
             <CardTitle className="text-base font-semibold text-white truncate">
               {competitor.name}
             </CardTitle>
+            {competitor.nickname && (
+              <p className="text-xs text-gray-400 mt-0.5 truncate">{competitor.nickname}</p>
+            )}
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {competitor.party && (
                 <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/25 text-xs">
@@ -338,6 +344,7 @@ function CompetitorForm({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
+  const [nickname, setNickname] = useState(initial?.nickname ?? "");
   const [party, setParty] = useState(initial?.party ?? "");
   const [role, setRole] = useState(initial?.role ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -379,6 +386,7 @@ function CompetitorForm({
     }
     const payload = {
       name: name.trim(),
+      nickname: nickname.trim() || undefined,
       party: party.trim() || undefined,
       role: role.trim() || undefined,
       notes: notes.trim() || undefined,
@@ -408,6 +416,15 @@ function CompetitorForm({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Rodrigo Sobral"
+                className="bg-[#111827] border-[#1a2332] text-white placeholder:text-gray-600"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label className="text-gray-300 text-xs mb-1 block">Segundo Nome / Apelido / Nome de Urna</Label>
+              <Input
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                placeholder="Ex: Rodrigo do Povo, Sobral Vereador..."
                 className="bg-[#111827] border-[#1a2332] text-white placeholder:text-gray-600"
               />
             </div>
@@ -559,6 +576,7 @@ function ComparisonChart({
 export default function Concorrentes() {
   const { user } = useAuth();
   const isCoordinator = ["coordinator", "superadmin"].includes((user as any)?.role ?? "");
+  const [, navigate] = useLocation();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Competitor | null>(null);
@@ -665,14 +683,27 @@ export default function Concorrentes() {
       {/* Header */}
       <div className="border-b border-[#1a2332] bg-[#0a1628]/80 px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-400" />
-              Benchmarking de Candidatos
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Compare Eduardo Brandão com candidatos concorrentes no Instagram e Facebook
-            </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/home")}
+              className="text-gray-400 hover:text-white hover:bg-white/5 -ml-1 h-8 px-2"
+              title="Voltar ao painel principal"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Voltar
+            </Button>
+            <div className="w-px h-6 bg-[#1a2332]" />
+            <div>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-blue-400" />
+                Benchmarking de Candidatos
+              </h1>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Compare Eduardo Brandão com candidatos concorrentes no Instagram e Facebook
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {isCoordinator && competitorsList.length > 0 && (
