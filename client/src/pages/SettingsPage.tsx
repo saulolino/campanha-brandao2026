@@ -1618,6 +1618,10 @@ function FacebookSettingsTab() {
     staleTime: 5 * 60 * 1000,
   });
   const [pageUrl, setPageUrl] = useState(fbMetrics?.pageUrl ?? "https://www.facebook.com/brandaopv");
+  const [manualFollowers, setManualFollowers] = useState("");
+  const [manualLikes, setManualLikes] = useState("");
+  const [manualBio, setManualBio] = useState("");
+  const [manualProfilePic, setManualProfilePic] = useState("");
 
   const setPageUrlMutation = trpc.facebook.setPageUrl.useMutation({
     onSuccess: () => {
@@ -1628,17 +1632,34 @@ function FacebookSettingsTab() {
   });
 
   const syncMutation = trpc.facebook.syncPage.useMutation({
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       utils.facebook.getMetrics.invalidate();
-      toast.success("Dados do Facebook sincronizados com sucesso!");
+      if (result.isPersonalProfile) {
+        toast.success(`Perfil sincronizado: ${result.pageName}. Foto atualizada. Seguidores/amigos devem ser inseridos manualmente.`);
+      } else {
+        toast.success("Dados do Facebook sincronizados com sucesso!");
+      }
     },
     onError: (err: any) => toast.error(`Erro ao sincronizar: ${err.message}`),
   });
 
-  // Atualizar o campo quando os dados chegarem
+  const setManualMutation = trpc.facebook.setManualMetrics.useMutation({
+    onSuccess: () => {
+      utils.facebook.getMetrics.invalidate();
+      toast.success("Números atualizados manualmente com sucesso!");
+    },
+    onError: (err: any) => toast.error(`Erro: ${err.message}`),
+  });
+
+  // Atualizar os campos quando os dados chegarem
   useEffect(() => {
-    if (fbMetrics?.pageUrl) setPageUrl(fbMetrics.pageUrl);
-  }, [fbMetrics?.pageUrl]);
+    if (!fbMetrics) return;
+    if (fbMetrics.pageUrl) setPageUrl(fbMetrics.pageUrl);
+    if (fbMetrics.followers != null) setManualFollowers(String(fbMetrics.followers));
+    if (fbMetrics.likes != null) setManualLikes(String(fbMetrics.likes));
+    if (fbMetrics.bio) setManualBio(fbMetrics.bio);
+    if (fbMetrics.profilePic) setManualProfilePic(fbMetrics.profilePic);
+  }, [fbMetrics]);
 
   return (
     <div className="space-y-6">
@@ -1694,6 +1715,93 @@ function FacebookSettingsTab() {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Sincronizar Dados do Facebook
               </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Card de entrada manual de números */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Inserir Números Manualmente
+          </CardTitle>
+          <CardDescription>
+            O Facebook não permite que scrapers extraiam seguidores de perfis pessoais.
+            Insira os números manualmente consultando o perfil diretamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              <strong>Perfil pessoal detectado:</strong> O perfil <code className="font-mono">brandaopv</code> é um perfil pessoal do Facebook.
+              Scrapers não conseguem extrair seguidores/amigos por restrições do Facebook.
+              O botão "Sincronizar" atualiza apenas nome e foto. Os números devem ser inseridos manualmente.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="fb-followers">Seguidores / Amigos</Label>
+              <Input
+                id="fb-followers"
+                type="number"
+                min="0"
+                placeholder="Ex: 5000"
+                value={manualFollowers}
+                onChange={(e) => setManualFollowers(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fb-likes">Curtidas na Página</Label>
+              <Input
+                id="fb-likes"
+                type="number"
+                min="0"
+                placeholder="Ex: 4800 (se houver página)"
+                value={manualLikes}
+                onChange={(e) => setManualLikes(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fb-bio">Bio / Descrição</Label>
+            <Input
+              id="fb-bio"
+              placeholder="Descrição do perfil..."
+              value={manualBio}
+              onChange={(e) => setManualBio(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="fb-profile-pic">URL da Foto de Perfil</Label>
+            <Input
+              id="fb-profile-pic"
+              placeholder="https://..."
+              value={manualProfilePic}
+              onChange={(e) => setManualProfilePic(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              A sincronização via Apify já preenche este campo automaticamente.
+            </p>
+          </div>
+          <Button
+            onClick={() => setManualMutation.mutate({
+              followers: manualFollowers ? parseInt(manualFollowers) : undefined,
+              likes: manualLikes ? parseInt(manualLikes) : undefined,
+              bio: manualBio || undefined,
+              profilePic: manualProfilePic || undefined,
+            })}
+            disabled={setManualMutation.isPending}
+            variant="outline"
+            className="w-full"
+          >
+            {setManualMutation.isPending ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</>
+            ) : (
+              <><CheckCircle2 className="w-4 h-4 mr-2" />Salvar Números Manualmente</>
             )}
           </Button>
         </CardContent>

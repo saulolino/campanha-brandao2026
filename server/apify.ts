@@ -71,8 +71,24 @@ export async function scrapeInstagramProfile(
 }
 
 export interface FacebookPageData {
-  title?: string;
-  pageName?: string;
+  // Campos comuns
+  title?: string;              // Nome do perfil/página
+  pageName?: string;           // Username (ex: brandaopv)
+  pageUrl?: string;            // URL do perfil
+  facebookUrl?: string;        // URL alternativa
+  facebookId?: string;         // ID do perfil
+  // Perfil pessoal (quando não é uma Página)
+  personalProfile?: {
+    name?: string;
+    gender?: string;
+    profilePhoto?: string;
+    profilePicLarge?: string;
+    profilePicMedium?: string;
+    profilePicSmall?: string;
+  };
+  coverPhotoUrl?: string;
+  profilePhoto?: string;
+  // Campos de Página
   likes?: number;
   followers?: number;
   about?: string;
@@ -80,6 +96,7 @@ export interface FacebookPageData {
   profilePicUrl?: string;
   url?: string;
   categories?: string[];
+  info?: string[];
 }
 
 /**

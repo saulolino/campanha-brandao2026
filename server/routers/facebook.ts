@@ -75,6 +75,33 @@ export const facebookRouter = router({
     }),
 
   /**
+   * Salva manualmente os números de seguidores e amigos do Facebook.
+   * Útil para perfis pessoais onde o Apify não consegue extrair esses dados.
+   * Apenas coordenadores e superadmins.
+   */
+  setManualMetrics: protectedProcedure
+    .input(z.object({
+      followers: z.number().int().min(0).optional(),
+      likes: z.number().int().min(0).optional(),
+      bio: z.string().max(1000).optional(),
+      profilePic: z.string().url().optional().or(z.literal("")),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      requireCoordinatorOrAbove(ctx.user?.role);
+      const { db, settings } = await getOrCreateSettings();
+      const updates: Record<string, unknown> = {};
+      if (input.followers !== undefined) updates.facebookFollowers = input.followers;
+      if (input.likes !== undefined) updates.facebookLikes = input.likes;
+      if (input.bio !== undefined) updates.facebookBio = input.bio || null;
+      if (input.profilePic !== undefined) updates.facebookProfilePic = input.profilePic || null;
+      await db
+        .update(campaignSettings)
+        .set(updates)
+        .where(eq(campaignSettings.id, settings.id));
+      return { success: true };
+    }),
+
+  /**
    * Sincroniza dados da página do Facebook via Apify.
    * Apenas coordenadores e superadmins.
    * Pode levar até 2 minutos (Apify scraping).
@@ -102,27 +129,51 @@ export const facebookRouter = router({
       });
     }
 
+    // Detectar se é perfil pessoal ou Página
+    // Perfil pessoal: tem `personalProfile`, sem `followers`/`likes` numéricos
+    const isPersonalProfile = !!(data.personalProfile);
+
+    // Nome: Página usa pageName/title, perfil pessoal usa title
+    const pageName = data.title ?? data.pageName ?? null;
+
+    // Foto de perfil: Página usa profilePicUrl, perfil pessoal usa personalProfile.profilePicLarge
+    const profilePic = data.profilePicUrl
+      ?? data.personalProfile?.profilePicLarge
+      ?? data.personalProfile?.profilePicMedium
+      ?? null;
+
+    // Bio: Página pode ter `about` ou `info`; perfil pessoal geralmente não expõe
+    const bio = data.about
+      ?? (data.info && data.info.length > 0 ? data.info.join(" | ") : null)
+      ?? null;
+
+    // Seguidores/curtidas: apenas disponíveis em Páginas
+    // Para perfis pessoais, preservar os valores já salvos manualmente
+    const followers = isPersonalProfile ? settings.facebookFollowers : (data.followers ?? null);
+    const likes = isPersonalProfile ? settings.facebookLikes : (data.likes ?? null);
+
     const now = new Date();
     await db
       .update(campaignSettings)
       .set({
         facebookPageUrl: pageUrl,
-        facebookPageName: data.pageName ?? data.title ?? null,
-        facebookFollowers: data.followers ?? null,
-        facebookLikes: data.likes ?? null,
-        facebookBio: data.about ?? null,
-        facebookProfilePic: data.profilePicUrl ?? null,
+        facebookPageName: pageName,
+        facebookFollowers: followers,
+        facebookLikes: likes,
+        facebookBio: bio,
+        facebookProfilePic: profilePic,
         facebookLastSync: now,
       })
       .where(eq(campaignSettings.id, settings.id));
 
     return {
       success: true,
-      pageName: data.pageName ?? data.title ?? null,
-      followers: data.followers ?? null,
-      likes: data.likes ?? null,
-      bio: data.about ?? null,
-      profilePic: data.profilePicUrl ?? null,
+      pageName,
+      followers,
+      likes,
+      bio,
+      profilePic,
+      isPersonalProfile,
       syncedAt: now,
     };
   }),
