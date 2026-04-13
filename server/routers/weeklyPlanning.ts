@@ -6,7 +6,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { weeklyPlanningSessions, planningMessages, instagramPosts, streetEvents } from "../../drizzle/schema";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "../_core/llm";
 
@@ -26,9 +26,13 @@ function getWeekBounds(referenceDate: Date = new Date()) {
   return { weekStart, weekEnd };
 }
 
+function fmtISO(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
 // ─── Prompts do sistema ───────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Você é o assistente de planejamento semanal da campanha Eduardo Brandão — Brasília Cidade Parque.
+const BASE_SYSTEM_PROMPT = `Você é o assistente de planejamento semanal da campanha Eduardo Brandão — Brasília Cidade Parque.
 
 Sua função é conduzir uma conversa estruturada para planejar a semana de conteúdo digital e ações de rua da campanha.
 
@@ -56,12 +60,61 @@ REGRAS:
 3. Cada post deve ter: título, formato, objetivo, roteiro/descrição, legenda, hashtags e notas de produção
 4. Cada ação de rua deve ter: título, tipo, data, horário, local, bairro, público esperado e roteiro
 5. Conectar ações de rua com posts (a visita de terça gera o Reel de segunda)
+6. CRÍTICO: As datas dos posts e eventos DEVEM estar dentro do período da semana planejada
 
 Quando o usuário responder as perguntas, você deve:
 1. Confirmar as respostas
 2. Propor um plano coerente com 5 posts e 2 ações de rua
 3. Aguardar aprovação antes de cadastrar
-4. Ao receber aprovação, retornar um JSON estruturado com os dados para cadastro`;
+4. Ao receber aprovação, retornar APENAS um bloco JSON no seguinte formato EXATO (sem texto antes ou depois do bloco):
+
+\`\`\`json
+{
+  "posts": [
+    {
+      "title": "Título descritivo do post",
+      "type": "reels",
+      "scheduledDate": "YYYY-MM-DD",
+      "scheduledTime": "12:00",
+      "objective": "Objetivo do post",
+      "description": "Roteiro detalhado do post",
+      "caption": "Legenda completa para Instagram",
+      "hashtags": "#hashtag1 #hashtag2",
+      "notes": "Notas de produção",
+      "expectedReach": 1000,
+      "expectedLikes": 100,
+      "expectedComments": 10
+    }
+  ],
+  "events": [
+    {
+      "title": "Título do evento",
+      "type": "caminhada",
+      "eventDate": "YYYY-MM-DD",
+      "eventTime": "09:00",
+      "endTime": "11:00",
+      "location": "Endereço completo do local",
+      "neighborhood": "Nome da RA/bairro",
+      "description": "Descrição do evento",
+      "expectedAttendees": 50,
+      "notes": "Notas adicionais"
+    }
+  ]
+}
+\`\`\`
+
+CRÍTICO: scheduledDate e eventDate DEVEM usar o formato YYYY-MM-DD e DEVEM estar dentro do período da semana planejada informado no contexto.`;
+
+function buildSystemPrompt(weekStart: Date, weekEnd: Date): string {
+  const fmtBR = (d: Date) => d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const days: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    days.push(`- ${d.toLocaleDateString("pt-BR", { weekday: "long" })}: ${fmtISO(d)}`);
+  }
+  return BASE_SYSTEM_PROMPT + `\n\nSEMANA PLANEJADA:\n- Início: ${fmtBR(weekStart)} (${fmtISO(weekStart)})\n- Fim: ${fmtBR(weekEnd)} (${fmtISO(weekEnd)})\n- Datas disponíveis para posts e eventos:\n${days.join("\n")}\n\nATENÇÃO: Todas as datas de posts (scheduledDate) e eventos (eventDate) DEVEM ser uma das datas listadas acima. NÃO use datas fora deste intervalo.`;
+}
 
 const QUESTIONS_FLOW = [
   {
@@ -136,7 +189,7 @@ export const weeklyPlanningRouter = router({
     .mutation(async ({ ctx }) => {
       const role = ctx.user.role ?? "visitor";
       if (!["coordinator", "superadmin"].includes(role)) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a coordenadores" });
+        throw new TRPCError({ code: "FORBIDDEN" });
       }
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -204,9 +257,10 @@ ${QUESTIONS_FLOW[0].pergunta}`;
         .where(eq(planningMessages.sessionId, input.sessionId))
         .orderBy(planningMessages.createdAt);
 
-      // Montar mensagens para o LLM
+      // Montar mensagens para o LLM — usa prompt com datas reais da sessão
+      const systemPrompt = buildSystemPrompt(new Date(session.weekStart), new Date(session.weekEnd));
       const llmMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         ...history.map((m: typeof history[number]) => ({
           role: m.role as "user" | "assistant",
           content: m.content as string,
@@ -244,15 +298,26 @@ ${QUESTIONS_FLOW[0].pergunta}`;
               const validPostTypes = ["reels", "carrossel", "video", "story", "imagem"];
               const validEventTypes = ["caminhada", "reuniao", "panfletagem", "visita", "debate", "entrevista", "show", "outro"];
 
+              // Datas válidas da sessão para validação
+              const sessionWeekStart = new Date(session.weekStart);
+              const sessionWeekEnd = new Date(session.weekEnd);
+              sessionWeekStart.setHours(0, 0, 0, 0);
+              sessionWeekEnd.setHours(23, 59, 59, 999);
+
               // Cadastrar posts
               for (const post of (plan.posts || [])) {
-                // Garantir data válida
+                // Garantir data válida e dentro do range da sessão
                 let scheduledDate = new Date(post.scheduledDate);
-                if (isNaN(scheduledDate.getTime())) scheduledDate = new Date();
+                if (isNaN(scheduledDate.getTime()) || scheduledDate < sessionWeekStart || scheduledDate > sessionWeekEnd) {
+                  // Usar o primeiro dia da semana como fallback
+                  scheduledDate = new Date(sessionWeekStart);
+                }
                 // Garantir tipo válido
                 const postType = validPostTypes.includes(post.type) ? post.type : "reels";
+                // Garantir título não vazio
+                const postTitle = String(post.title || "").trim() || `Post ${fmtISO(scheduledDate)}`;
                 const [r] = await db.insert(instagramPosts).values({
-                  title: String(post.title || "Post sem título").slice(0, 255),
+                  title: postTitle.slice(0, 255),
                   scheduledDate,
                   scheduledTime: post.scheduledTime || "12:00",
                   type: postType,
@@ -273,7 +338,10 @@ ${QUESTIONS_FLOW[0].pergunta}`;
               // Cadastrar eventos
               for (const event of (plan.events || [])) {
                 let eventDate = new Date(event.eventDate);
-                if (isNaN(eventDate.getTime())) eventDate = new Date();
+                if (isNaN(eventDate.getTime()) || eventDate < sessionWeekStart || eventDate > sessionWeekEnd) {
+                  // Usar o primeiro dia da semana como fallback
+                  eventDate = new Date(sessionWeekStart);
+                }
                 const eventType = validEventTypes.includes(event.type) ? event.type : "outro";
                 // location é NOT NULL no banco — usar neighborhood ou fallback
                 const locationStr = event.location
@@ -281,8 +349,9 @@ ${QUESTIONS_FLOW[0].pergunta}`;
                   : event.neighborhood
                   ? String(event.neighborhood).slice(0, 255)
                   : "A definir";
+                const eventTitle = String(event.title || "").trim() || `Evento ${fmtISO(eventDate)}`;
                 const [r] = await db.insert(streetEvents).values({
-                  title: String(event.title || "Evento sem título").slice(0, 255),
+                  title: eventTitle.slice(0, 255),
                   description: event.description ? String(event.description) : null,
                   type: eventType,
                   status: "planejado",
