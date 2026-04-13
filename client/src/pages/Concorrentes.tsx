@@ -209,13 +209,21 @@ function CompetitorCard({
                 className="h-6 px-2 text-xs text-gray-400 hover:text-white"
                 onClick={onSyncIG}
                 disabled={syncingIG}
+                title="Busca via Apify — pode levar até 2 minutos"
               >
                 <RefreshCw className={`w-3 h-3 mr-1 ${syncingIG ? "animate-spin" : ""}`} />
-                Sync
+                {syncingIG ? "Buscando..." : "Sync"}
               </Button>
             )}
           </div>
-          {competitor.instagramFollowers != null ? (
+          {syncingIG ? (
+            <div className="text-center py-3">
+              <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                <span>Buscando via Apify... pode levar até 2 min</span>
+              </div>
+            </div>
+          ) : competitor.instagramFollowers != null ? (
             <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
                 <div className="text-lg font-bold text-white">{formatNum(competitor.instagramFollowers)}</div>
@@ -265,13 +273,21 @@ function CompetitorCard({
                 className="h-6 px-2 text-xs text-gray-400 hover:text-white"
                 onClick={onSyncFB}
                 disabled={syncingFB}
+                title="Busca via Apify — pode levar até 2 minutos"
               >
                 <RefreshCw className={`w-3 h-3 mr-1 ${syncingFB ? "animate-spin" : ""}`} />
-                Sync
+                {syncingFB ? "Buscando..." : "Sync"}
               </Button>
             )}
           </div>
-          {competitor.facebookFollowers != null ? (
+          {syncingFB ? (
+            <div className="text-center py-3">
+              <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                <span>Buscando via Apify... pode levar até 2 min</span>
+              </div>
+            </div>
+          ) : competitor.facebookFollowers != null ? (
             <div className="grid grid-cols-2 gap-2">
               <div className="text-center">
                 <div className="text-lg font-bold text-white">{formatNum(competitor.facebookFollowers)}</div>

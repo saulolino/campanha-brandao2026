@@ -7,86 +7,17 @@ import {
   competitorSnapshots,
 } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
-import { ENV } from "../_core/env";
-
-// ─── Helpers da Graph API ────────────────────────────────────────────────────
-
-const GRAPH_BASE = "https://graph.facebook.com/v19.0";
-
-async function fetchInstagramProfile(username: string, token: string) {
-  // Buscar via Instagram Basic Display API / Graph API
-  // Para perfis públicos, usamos o endpoint de busca de usuário
-  const url = `${GRAPH_BASE}/ig_hashtag_search?user_id=${ENV.instagramAccountId}&q=${username}&access_token=${token}`;
-
-  // Abordagem alternativa: buscar pelo username via Business Discovery API
-  // Requer que nossa conta seja Business e o perfil alvo seja público
-  const discoveryUrl = `${GRAPH_BASE}/${ENV.instagramAccountId}?fields=business_discovery.fields(id,name,username,biography,followers_count,follows_count,media_count,profile_picture_url)&business_discovery_user_id=${username}&access_token=${token}`;
-
-  // Tentativa com Business Discovery API
-  const res = await fetch(
-    `${GRAPH_BASE}/${ENV.instagramAccountId}?fields=business_discovery.fields(id,name,username,biography,followers_count,follows_count,media_count,profile_picture_url)&username=${username}&access_token=${token}`
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `Instagram API error: ${res.status} — ${JSON.stringify(err)}`
-    );
-  }
-
-  const data = await res.json();
-  const bd = data?.business_discovery;
-
-  if (!bd) {
-    throw new Error(
-      `Perfil @${username} não encontrado ou não é uma conta Business/Creator pública.`
-    );
-  }
-
-  return {
-    instagramId: bd.id ?? null,
-    instagramFollowers: bd.followers_count ?? null,
-    instagramFollowing: bd.follows_count ?? null,
-    instagramPosts: bd.media_count ?? null,
-    instagramBio: bd.biography ?? null,
-    instagramProfilePic: bd.profile_picture_url ?? null,
-  };
-}
-
-async function fetchFacebookPage(pageIdOrUsername: string, token: string) {
-  const res = await fetch(
-    `${GRAPH_BASE}/${pageIdOrUsername}?fields=id,name,fan_count,followers_count,about,picture.type(large)&access_token=${token}`
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      `Facebook API error: ${res.status} — ${JSON.stringify(err)}`
-    );
-  }
-
-  const data = await res.json();
-
-  if (data.error) {
-    throw new Error(`Facebook API: ${data.error.message}`);
-  }
-
-  return {
-    facebookPageId: data.id ?? pageIdOrUsername,
-    facebookPageName: data.name ?? null,
-    facebookFollowers: data.followers_count ?? data.fan_count ?? null,
-    facebookLikes: data.fan_count ?? null,
-    facebookBio: data.about ?? null,
-    facebookProfilePic: data.picture?.data?.url ?? null,
-  };
-}
+import { scrapeInstagramProfile, scrapeFacebookPage } from "../apify";
 
 // ─── Middleware de role ───────────────────────────────────────────────────────
 
 const coordinatorProcedure = protectedProcedure.use(({ ctx, next }) => {
   const role = (ctx.user as any)?.role;
   if (!["coordinator", "superadmin"].includes(role)) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Apenas coordenadores podem gerenciar concorrentes." });
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Apenas coordenadores podem gerenciar concorrentes.",
+    });
   }
   return next({ ctx });
 });
@@ -99,8 +30,12 @@ export const competitorsRouter = router({
    */
   list: protectedProcedure.query(async () => {
     const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
-      const db = _dbRaw;
+    if (!_dbRaw)
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível",
+      });
+    const db = _dbRaw;
     const rows = await db
       .select()
       .from(competitors)
@@ -125,7 +60,11 @@ export const competitorsRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
+      if (!_dbRaw)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
+        });
       const db = _dbRaw;
       const [result] = await db.insert(competitors).values({
         name: input.name,
@@ -156,14 +95,19 @@ export const competitorsRouter = router({
     )
     .mutation(async ({ input }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
+      if (!_dbRaw)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
+        });
       const db = _dbRaw;
       const { id, instagramUsername, ...rest } = input;
       await db
         .update(competitors)
         .set({
           ...rest,
-          instagramUsername: instagramUsername?.replace("@", "") ?? undefined,
+          instagramUsername:
+            instagramUsername?.replace("@", "") ?? undefined,
         })
         .where(eq(competitors.id, id));
       return { success: true };
@@ -176,7 +120,11 @@ export const competitorsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
+      if (!_dbRaw)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
+        });
       const db = _dbRaw;
       await db
         .update(competitors)
@@ -186,64 +134,77 @@ export const competitorsRouter = router({
     }),
 
   /**
-   * Sincronizar dados do Instagram de um concorrente
+   * Sincronizar dados do Instagram de um concorrente via Apify
    */
   syncInstagram: coordinatorProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
-      const db = _dbRaw;
-      const token = ENV.instagramToken;
-
-      if (!token) {
+      if (!_dbRaw)
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Token do Instagram não configurado.",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
         });
-      }
+      const db = _dbRaw;
 
-      // Buscar o concorrente
       const [competitor] = await db
         .select()
         .from(competitors)
         .where(eq(competitors.id, input.id));
 
       if (!competitor) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Concorrente não encontrado." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Concorrente não encontrado.",
+        });
       }
 
       if (!competitor.instagramUsername) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Username do Instagram não cadastrado para este concorrente.",
+          message:
+            "Username do Instagram não cadastrado para este concorrente.",
         });
       }
 
       try {
-        const igData = await fetchInstagramProfile(competitor.instagramUsername, token);
+        const igData = await scrapeInstagramProfile(
+          competitor.instagramUsername
+        );
 
-        // Atualizar o concorrente
+        if (!igData) {
+          throw new Error(
+            `Perfil @${competitor.instagramUsername} não encontrado no Instagram.`
+          );
+        }
+
+        const updateData = {
+          instagramId: igData.id ?? null,
+          instagramFollowers: igData.followersCount ?? null,
+          instagramFollowing: igData.followsCount ?? null,
+          instagramPosts: igData.postsCount ?? null,
+          instagramBio: igData.biography ?? null,
+          instagramProfilePic: igData.profilePicUrl ?? null,
+          instagramLastSync: new Date(),
+        };
+
         await db
           .update(competitors)
-          .set({
-            ...igData,
-            instagramLastSync: new Date(),
-          })
+          .set(updateData)
           .where(eq(competitors.id, input.id));
 
         // Salvar snapshot histórico
-        if (igData.instagramFollowers !== null) {
+        if (updateData.instagramFollowers !== null) {
           await db.insert(competitorSnapshots).values({
             competitorId: input.id,
             platform: "instagram",
-            followers: igData.instagramFollowers,
-            following: igData.instagramFollowing ?? null,
-            posts: igData.instagramPosts ?? null,
+            followers: updateData.instagramFollowers,
+            following: updateData.instagramFollowing ?? null,
+            posts: updateData.instagramPosts ?? null,
           });
         }
 
-        return { success: true, data: igData };
+        return { success: true, data: updateData };
       } catch (error: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -253,22 +214,18 @@ export const competitorsRouter = router({
     }),
 
   /**
-   * Sincronizar dados do Facebook de um concorrente
+   * Sincronizar dados do Facebook de um concorrente via Apify
    */
   syncFacebook: coordinatorProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
-      const db = _dbRaw;
-      const token = ENV.instagramToken; // mesmo token (Facebook + Instagram Graph API)
-
-      if (!token) {
+      if (!_dbRaw)
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: "Token da Graph API não configurado.",
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
         });
-      }
+      const db = _dbRaw;
 
       const [competitor] = await db
         .select()
@@ -276,7 +233,10 @@ export const competitorsRouter = router({
         .where(eq(competitors.id, input.id));
 
       if (!competitor) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Concorrente não encontrado." });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Concorrente não encontrado.",
+        });
       }
 
       if (!competitor.facebookPageId) {
@@ -287,27 +247,39 @@ export const competitorsRouter = router({
       }
 
       try {
-        const fbData = await fetchFacebookPage(competitor.facebookPageId, token);
+        const fbData = await scrapeFacebookPage(competitor.facebookPageId);
+
+        if (!fbData) {
+          throw new Error(
+            `Página do Facebook "${competitor.facebookPageId}" não encontrada.`
+          );
+        }
+
+        const updateData = {
+          facebookPageName: fbData.title ?? fbData.pageName ?? null,
+          facebookFollowers: fbData.followers ?? null,
+          facebookLikes: fbData.likes ?? null,
+          facebookBio: fbData.about ?? null,
+          facebookProfilePic: fbData.profilePicUrl ?? null,
+          facebookLastSync: new Date(),
+        };
 
         await db
           .update(competitors)
-          .set({
-            ...fbData,
-            facebookLastSync: new Date(),
-          })
+          .set(updateData)
           .where(eq(competitors.id, input.id));
 
         // Salvar snapshot histórico
-        if (fbData.facebookFollowers !== null) {
+        if (updateData.facebookFollowers !== null) {
           await db.insert(competitorSnapshots).values({
             competitorId: input.id,
             platform: "facebook",
-            followers: fbData.facebookFollowers,
-            likes: fbData.facebookLikes ?? null,
+            followers: updateData.facebookFollowers,
+            likes: updateData.facebookLikes ?? null,
           });
         }
 
-        return { success: true, data: fbData };
+        return { success: true, data: updateData };
       } catch (error: any) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -317,68 +289,105 @@ export const competitorsRouter = router({
     }),
 
   /**
-   * Sincronizar todos os concorrentes (Instagram + Facebook)
+   * Sincronizar todos os concorrentes (Instagram + Facebook) via Apify
    */
   syncAll: coordinatorProcedure.mutation(async () => {
     const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
-      const db = _dbRaw;
-    const token = ENV.instagramToken;
-
-    if (!token) {
+    if (!_dbRaw)
       throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Token da Graph API não configurado.",
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Banco indisponível",
       });
-    }
+    const db = _dbRaw;
 
     const allCompetitors = await db
       .select()
       .from(competitors)
       .where(eq(competitors.isActive, 1));
 
-    const results: { id: number; name: string; instagram?: string; facebook?: string }[] = [];
+    const results: {
+      id: number;
+      name: string;
+      instagram?: string;
+      facebook?: string;
+    }[] = [];
 
     for (const c of allCompetitors) {
-      const result: { id: number; name: string; instagram?: string; facebook?: string } = {
+      const result: {
+        id: number;
+        name: string;
+        instagram?: string;
+        facebook?: string;
+      } = {
         id: c.id,
         name: c.name,
       };
 
-      // Sync Instagram
+      // Sync Instagram via Apify
       if (c.instagramUsername) {
         try {
-          const igData = await fetchInstagramProfile(c.instagramUsername, token);
-          await db.update(competitors).set({ ...igData, instagramLastSync: new Date() }).where(eq(competitors.id, c.id));
-          if (igData.instagramFollowers !== null) {
-            await db.insert(competitorSnapshots).values({
-              competitorId: c.id,
-              platform: "instagram",
-              followers: igData.instagramFollowers,
-              following: igData.instagramFollowing ?? null,
-              posts: igData.instagramPosts ?? null,
-            });
+          const igData = await scrapeInstagramProfile(c.instagramUsername);
+          if (igData) {
+            const updateData = {
+              instagramId: igData.id ?? null,
+              instagramFollowers: igData.followersCount ?? null,
+              instagramFollowing: igData.followsCount ?? null,
+              instagramPosts: igData.postsCount ?? null,
+              instagramBio: igData.biography ?? null,
+              instagramProfilePic: igData.profilePicUrl ?? null,
+              instagramLastSync: new Date(),
+            };
+            await db
+              .update(competitors)
+              .set(updateData)
+              .where(eq(competitors.id, c.id));
+            if (updateData.instagramFollowers !== null) {
+              await db.insert(competitorSnapshots).values({
+                competitorId: c.id,
+                platform: "instagram",
+                followers: updateData.instagramFollowers,
+                following: updateData.instagramFollowing ?? null,
+                posts: updateData.instagramPosts ?? null,
+              });
+            }
+            result.instagram = "ok";
+          } else {
+            result.instagram = "perfil não encontrado";
           }
-          result.instagram = "ok";
         } catch (e: any) {
           result.instagram = `erro: ${e.message}`;
         }
       }
 
-      // Sync Facebook
+      // Sync Facebook via Apify
       if (c.facebookPageId) {
         try {
-          const fbData = await fetchFacebookPage(c.facebookPageId, token);
-          await db.update(competitors).set({ ...fbData, facebookLastSync: new Date() }).where(eq(competitors.id, c.id));
-          if (fbData.facebookFollowers !== null) {
-            await db.insert(competitorSnapshots).values({
-              competitorId: c.id,
-              platform: "facebook",
-              followers: fbData.facebookFollowers,
-              likes: fbData.facebookLikes ?? null,
-            });
+          const fbData = await scrapeFacebookPage(c.facebookPageId);
+          if (fbData) {
+            const updateData = {
+              facebookPageName: fbData.title ?? fbData.pageName ?? null,
+              facebookFollowers: fbData.followers ?? null,
+              facebookLikes: fbData.likes ?? null,
+              facebookBio: fbData.about ?? null,
+              facebookProfilePic: fbData.profilePicUrl ?? null,
+              facebookLastSync: new Date(),
+            };
+            await db
+              .update(competitors)
+              .set(updateData)
+              .where(eq(competitors.id, c.id));
+            if (updateData.facebookFollowers !== null) {
+              await db.insert(competitorSnapshots).values({
+                competitorId: c.id,
+                platform: "facebook",
+                followers: updateData.facebookFollowers,
+                likes: updateData.facebookLikes ?? null,
+              });
+            }
+            result.facebook = "ok";
+          } else {
+            result.facebook = "página não encontrada";
           }
-          result.facebook = "ok";
         } catch (e: any) {
           result.facebook = `erro: ${e.message}`;
         }
@@ -394,12 +403,23 @@ export const competitorsRouter = router({
    * Buscar histórico de snapshots de um concorrente
    */
   getSnapshots: protectedProcedure
-    .input(z.object({ competitorId: z.number(), platform: z.enum(["instagram", "facebook"]).optional() }))
+    .input(
+      z.object({
+        competitorId: z.number(),
+        platform: z.enum(["instagram", "facebook"]).optional(),
+      })
+    )
     .query(async ({ input }) => {
       const _dbRaw = await getDb();
-      if (!_dbRaw) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Banco indisponível" });
+      if (!_dbRaw)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Banco indisponível",
+        });
       const db = _dbRaw;
-      const conditions = [eq(competitorSnapshots.competitorId, input.competitorId)];
+      const conditions = [
+        eq(competitorSnapshots.competitorId, input.competitorId),
+      ];
       if (input.platform) {
         conditions.push(eq(competitorSnapshots.platform, input.platform));
       }
@@ -408,6 +428,6 @@ export const competitorsRouter = router({
         .from(competitorSnapshots)
         .where(and(...conditions))
         .orderBy(desc(competitorSnapshots.snapshotDate))
-        .limit(90); // últimos 90 snapshots
+        .limit(90);
     }),
 });

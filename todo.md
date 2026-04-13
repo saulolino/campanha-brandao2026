@@ -686,10 +686,10 @@
 - [x] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado)
 - [x] MonthlyGoalCard: baseFollowers dinâmico lido do banco (instagramMetrics.followers)
 - [x] Disparos: botão "Selecionar todos" / "Desmarcar todos" no card de grupos favoritos
-- [ ] Benchmarking: tabela competitors no banco (schema + migração)
-- [ ] Benchmarking: router tRPC competitors (CRUD + sync Instagram Graph API + sync Facebook Graph API)
-- [ ] Benchmarking: página /concorrentes com cadastro de perfis e dashboard comparativo
-- [ ] Benchmarking: item no SidebarNav e rota em App.tsx
+- [x] Benchmarking: tabela competitors no banco (schema + migração)
+- [x] Benchmarking: router tRPC competitors (CRUD + sync Instagram Graph API + sync Facebook Graph API)
+- [x] Benchmarking: página /concorrentes com cadastro de perfis e dashboard comparativo
+- [x] Benchmarking: item no SidebarNav e rota em App.tsx
 - [x] Benchmarking: tabela competitors + competitor_snapshots no banco (migração 0026 aplicada)
 - [x] Benchmarking: router tRPC competitors (list, create, update, remove, syncInstagram, syncFacebook, syncAll, getSnapshots)
 - [x] Benchmarking: página /concorrentes com card do Eduardo (referência), gráfico comparativo e cards por candidato
@@ -698,3 +698,9 @@
 - [x] Benchmarking: item "Concorrentes" no SidebarNav (coordinator/superadmin)
 - [x] Benchmarking: rota /concorrentes registrada em App.tsx
 - [x] Benchmarking: 10 testes passando (68 testes totais no projeto)
+- [x] Bug: sync Instagram em /concorrentes retorna erro 400 — Business Discovery API requer token diferente; migrado para Apify
+- [x] Concorrentes: integrar Apify para scraping de perfis públicos (Instagram + Facebook)
+- [x] Concorrentes: helper apify.ts com scrapeInstagramProfile e scrapeFacebookPage
+- [x] Concorrentes: router competitors atualizado para usar Apify (syncInstagram, syncFacebook, syncAll)
+- [x] Concorrentes: indicador de progresso "Buscando via Apify... pode levar até 2 min" durante sync
+- [x] Concorrentes: 75 testes passando (7 novos no apify.test.ts)

@@ -9,4 +9,5 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   instagramToken: process.env.INSTAGRAM_GRAPH_API_TOKEN ?? "",
   instagramAccountId: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID ?? "",
+  apifyToken: process.env.APIFY_TOKEN ?? "",
 };
