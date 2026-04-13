@@ -686,3 +686,15 @@
 - [x] Propostas: filtros rápidos por tipo (conteúdo/evento) e status (pendente/aprovado/rejeitado)
 - [x] MonthlyGoalCard: baseFollowers dinâmico lido do banco (instagramMetrics.followers)
 - [x] Disparos: botão "Selecionar todos" / "Desmarcar todos" no card de grupos favoritos
+- [ ] Benchmarking: tabela competitors no banco (schema + migração)
+- [ ] Benchmarking: router tRPC competitors (CRUD + sync Instagram Graph API + sync Facebook Graph API)
+- [ ] Benchmarking: página /concorrentes com cadastro de perfis e dashboard comparativo
+- [ ] Benchmarking: item no SidebarNav e rota em App.tsx
+- [x] Benchmarking: tabela competitors + competitor_snapshots no banco (migração 0026 aplicada)
+- [x] Benchmarking: router tRPC competitors (list, create, update, remove, syncInstagram, syncFacebook, syncAll, getSnapshots)
+- [x] Benchmarking: página /concorrentes com card do Eduardo (referência), gráfico comparativo e cards por candidato
+- [x] Benchmarking: formulário de cadastro/edição de candidatos (nome, partido, cargo, @instagram, ID Facebook, notas)
+- [x] Benchmarking: botão Sync por candidato (Instagram e Facebook separados) e Sync Todos
+- [x] Benchmarking: item "Concorrentes" no SidebarNav (coordinator/superadmin)
+- [x] Benchmarking: rota /concorrentes registrada em App.tsx
+- [x] Benchmarking: 10 testes passando (68 testes totais no projeto)

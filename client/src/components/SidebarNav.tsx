@@ -1,4 +1,4 @@
-import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin, Sparkles, Inbox, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Calendar, Lightbulb, BarChart3, TrendingUp, Settings, LogOut, Menu, X, FileText, MapPin, Sparkles, Inbox, MessageSquare, Users } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useLocalAuth } from "@/hooks/useLocalAuth";
@@ -89,6 +89,13 @@ const NAV_ITEMS: Array<{
     icon: MessageSquare,
     route: "/disparos",
     allowedRoles: ["team", "coordinator", "superadmin"],
+  },
+  {
+    id: "concorrentes",
+    label: "Concorrentes",
+    icon: Users,
+    route: "/concorrentes",
+    allowedRoles: ["coordinator", "superadmin"],
   },
   {
     id: "planejamento-semanal",

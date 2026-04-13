@@ -371,3 +371,52 @@ export const whatsappDispatches = mysqlTable("whatsapp_dispatches", {
 });
 export type WhatsappDispatch = typeof whatsappDispatches.$inferSelect;
 export type InsertWhatsappDispatch = typeof whatsappDispatches.$inferInsert;
+
+// ─── Competitors (Benchmarking de Candidatos) ────────────────────────────────
+// Perfis de candidatos concorrentes para análise comparativa
+export const competitors = mysqlTable("competitors", {
+  id: int("id").autoincrement().primaryKey(),
+  // Identificação do candidato
+  name: varchar("name", { length: 255 }).notNull(),
+  party: varchar("party", { length: 100 }),
+  role: varchar("role", { length: 255 }), // cargo disputado
+  notes: text("notes"), // observações livres
+  // Instagram
+  instagramUsername: varchar("instagramUsername", { length: 100 }),
+  instagramId: varchar("instagramId", { length: 64 }), // ID numérico da conta
+  instagramFollowers: int("instagramFollowers"),
+  instagramFollowing: int("instagramFollowing"),
+  instagramPosts: int("instagramPosts"),
+  instagramBio: text("instagramBio"),
+  instagramProfilePic: text("instagramProfilePic"),
+  instagramLastSync: timestamp("instagramLastSync"),
+  // Facebook
+  facebookPageId: varchar("facebookPageId", { length: 100 }), // ID ou username da página
+  facebookPageName: varchar("facebookPageName", { length: 255 }),
+  facebookFollowers: int("facebookFollowers"),
+  facebookLikes: int("facebookLikes"),
+  facebookBio: text("facebookBio"),
+  facebookProfilePic: text("facebookProfilePic"),
+  facebookLastSync: timestamp("facebookLastSync"),
+  // Controle
+  isActive: tinyint("isActive").default(1).notNull(),
+  createdById: int("createdById"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Competitor = typeof competitors.$inferSelect;
+export type InsertCompetitor = typeof competitors.$inferInsert;
+
+// Histórico de métricas dos concorrentes (snapshot diário)
+export const competitorSnapshots = mysqlTable("competitor_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  competitorId: int("competitorId").notNull(),
+  platform: mysqlEnum("platform", ["instagram", "facebook"]).notNull(),
+  followers: int("followers"),
+  following: int("following"),
+  posts: int("posts"),
+  likes: int("likes"),
+  snapshotDate: timestamp("snapshotDate").defaultNow().notNull(),
+});
+export type CompetitorSnapshot = typeof competitorSnapshots.$inferSelect;
+export type InsertCompetitorSnapshot = typeof competitorSnapshots.$inferInsert;

@@ -28,6 +28,7 @@ import AgendaRua from "./pages/AgendaRua";
 import PlanejamentoSemanal from "./pages/PlanejamentoSemanal";
 import Propostas from "./pages/Propostas";
 import Disparos from "./pages/Disparos";
+import Concorrentes from "./pages/Concorrentes";
 
 // Páginas exclusivas do Superadmin
 import SettingsPage from "./pages/SettingsPage";
@@ -166,6 +167,18 @@ function Router() {
             rotaTentada="/disparos"
           >
             <Disparos />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      {/* ===== BENCHMARKING DE CONCORRENTES — Coordenador e Superadmin ===== */}
+      <Route path="/concorrentes">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["coordinator", "superadmin"]}
+            rotaTentada="/concorrentes"
+          >
+            <Concorrentes />
           </ProtectedRoute>
         )}
       </Route>
