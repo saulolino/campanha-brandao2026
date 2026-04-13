@@ -156,6 +156,10 @@ export default function PlanejamentoSemanal() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const chatWrapperRef = useRef<HTMLDivElement>(null);
+  const inputAreaRef = useRef<HTMLDivElement>(null);
+  const statusBarRef = useRef<HTMLDivElement>(null);
+  const [messagesHeight, setMessagesHeight] = useState<number | undefined>(undefined);
 
   // Queries
   const { data: sessions, refetch: refetchSessions } = trpc.weeklyPlanning.list.useQuery(
@@ -213,6 +217,26 @@ export default function PlanejamentoSemanal() {
       toast.info("Sessão cancelada.");
     },
   });
+
+  // Calcular altura do container de mensagens dinamicamente
+  useEffect(() => {
+    const calcHeight = () => {
+      const wrapper = chatWrapperRef.current;
+      const input = inputAreaRef.current;
+      const status = statusBarRef.current;
+      if (wrapper) {
+        const wrapperH = wrapper.getBoundingClientRect().height;
+        const inputH = input ? input.getBoundingClientRect().height : 0;
+        const statusH = status ? status.getBoundingClientRect().height : 0;
+        setMessagesHeight(wrapperH - inputH - statusH);
+      }
+    };
+    calcHeight();
+    const ro = new ResizeObserver(calcHeight);
+    if (chatWrapperRef.current) ro.observe(chatWrapperRef.current);
+    if (inputAreaRef.current) ro.observe(inputAreaRef.current);
+    return () => ro.disconnect();
+  }, [activeSessionId, sessionStatus]);
 
   // Scroll automático — rola o container nativo para o final
   useEffect(() => {
@@ -318,7 +342,7 @@ export default function PlanejamentoSemanal() {
           </div>
         </div>
 
-        <div className="flex flex-1 w-full px-4 py-4 gap-4 overflow-hidden">
+        <div className="flex w-full px-4 py-4 gap-4 overflow-hidden" style={{ flex: '1 1 0', minHeight: 0 }}>
           {/* Sidebar — sessões anteriores */}
           <div className="w-64 flex-shrink-0 hidden lg:block overflow-y-auto">
             <div className="sticky top-0">
@@ -342,7 +366,7 @@ export default function PlanejamentoSemanal() {
           </div>
 
           {/* Área principal do chat */}
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex flex-col" style={{ flex: '1 1 0', minHeight: 0 }}>
             {!activeSessionId ? (
               /* Estado vazio */
               <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
@@ -385,10 +409,10 @@ export default function PlanejamentoSemanal() {
               </div>
             ) : (
               /* Chat ativo */
-              <div className="flex flex-col flex-1 min-h-0 bg-[#111e11] rounded-2xl border border-[#2d4a2d]/50 overflow-hidden">
+              <div ref={chatWrapperRef} className="flex flex-col bg-[#111e11] rounded-2xl border border-[#2d4a2d]/50 overflow-hidden" style={{ flex: '1 1 0', minHeight: 0 }}>
                 {/* Status da sessão */}
                 {sessionStatus !== "em_andamento" && (
-                  <div className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${
+                  <div ref={statusBarRef} className={`px-4 py-2 text-xs font-medium flex items-center gap-2 ${
                     sessionStatus === "concluida"
                       ? "bg-green-900/30 text-green-400 border-b border-green-900/30"
                       : "bg-red-900/30 text-red-400 border-b border-red-900/30"
@@ -408,7 +432,11 @@ export default function PlanejamentoSemanal() {
                 )}
 
                 {/* Mensagens */}
-                <div ref={chatContainerRef} className="flex-1 min-h-0 p-4 overflow-y-auto">
+                <div
+                  ref={chatContainerRef}
+                  className="p-4 overflow-y-auto"
+                  style={messagesHeight ? { height: messagesHeight, flexShrink: 0 } : { flex: '1 1 0', minHeight: 0 }}
+                >
                   <div className="space-y-1">
                     {messages.map((msg, i) => (
                       <ChatMessage key={msg.id ?? i} message={msg} />
@@ -471,7 +499,7 @@ export default function PlanejamentoSemanal() {
                 </div>
 
                 {/* Input */}
-                <div className="border-t border-[#2d4a2d]/50 p-3">
+                <div ref={inputAreaRef} className="border-t border-[#2d4a2d]/50 p-3">
                   {sessionStatus === "em_andamento" ? (
                     <div className="flex gap-2 items-end">
                       <Textarea
