@@ -91,12 +91,19 @@ export interface FacebookPageData {
   // Campos de Página
   likes?: number;
   followers?: number;
+  followings?: number;
   about?: string;
   website?: string;
+  // Foto de perfil: pode vir como profilePicUrl OU profilePictureUrl dependendo do tipo de conta
   profilePicUrl?: string;
+  profilePictureUrl?: string;
   url?: string;
+  category?: string;
   categories?: string[];
   info?: string[];
+  creation_date?: string;
+  ad_status?: string;
+  email?: string;
 }
 
 /**

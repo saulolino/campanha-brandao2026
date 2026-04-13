@@ -136,16 +136,24 @@ export const facebookRouter = router({
     // Nome: Página usa pageName/title, perfil pessoal usa title
     const pageName = data.title ?? data.pageName ?? null;
 
-    // Foto de perfil: Página usa profilePicUrl, perfil pessoal usa personalProfile.profilePicLarge
+    // Foto de perfil: pode vir como profilePicUrl OU profilePictureUrl dependendo do tipo de conta
     const profilePic = data.profilePicUrl
+      ?? data.profilePictureUrl
       ?? data.personalProfile?.profilePicLarge
       ?? data.personalProfile?.profilePicMedium
       ?? null;
 
-    // Bio: Página pode ter `about` ou `info`; perfil pessoal geralmente não expõe
-    const bio = data.about
-      ?? (data.info && data.info.length > 0 ? data.info.join(" | ") : null)
-      ?? null;
+    // Bio: Página pode ter `about` ou `info[]`
+    // O campo `info` pode conter frases como "Eduardo Brandão. 1,744 likes" e a bio real
+    // Filtramos entradas que parecem ser a bio (não contém apenas números/likes)
+    let bio: string | null = data.about ?? null;
+    if (!bio && data.info && data.info.length > 0) {
+      // Pegar a entrada mais longa do info[] que não seja apenas contagem de likes
+      const bioCandidate = data.info
+        .filter(s => s.length > 20 && !s.match(/^\d+[\s,\.]+\d*\s*(likes|seguidores)/i))
+        .sort((a, b) => b.length - a.length)[0] ?? null;
+      bio = bioCandidate;
+    }
 
     // Seguidores/curtidas: apenas disponíveis em Páginas
     // Para perfis pessoais, preservar os valores já salvos manualmente
