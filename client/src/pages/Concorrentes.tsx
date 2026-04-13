@@ -566,6 +566,7 @@ export default function Concorrentes() {
   const [syncingIG, setSyncingIG] = useState<number | null>(null);
   const [syncingFB, setSyncingFB] = useState<number | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingEdu, setSyncingEdu] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -613,6 +614,18 @@ export default function Concorrentes() {
     },
   });
 
+  const syncEduMutation = trpc.instagram.syncFromAPI.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Instagram do Eduardo atualizado! ${data.followers?.toLocaleString('pt-BR') ?? ''} seguidores.`);
+      utils.instagram.getMetrics.invalidate();
+      setSyncingEdu(false);
+    },
+    onError: (e) => {
+      toast.error(`Erro ao sincronizar: ${e.message}`);
+      setSyncingEdu(false);
+    },
+  });
+
   const syncAllMutation = trpc.competitors.syncAll.useMutation({
     onSuccess: (data) => {
       const ok = data.results.filter((r) => r.instagram === "ok" || r.facebook === "ok").length;
@@ -635,6 +648,11 @@ export default function Concorrentes() {
   function handleSyncFB(id: number) {
     setSyncingFB(id);
     syncFBMutation.mutate({ id });
+  }
+
+  function handleSyncEdu() {
+    setSyncingEdu(true);
+    syncEduMutation.mutate();
   }
 
   function handleSyncAll() {
@@ -699,21 +717,36 @@ export default function Concorrentes() {
                   <p className="font-semibold text-white">{eduName}</p>
                   <p className="text-xs text-gray-500">Partido Verde · Deputado Distrital DF 2026</p>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <div className="flex items-center gap-1.5">
-                      <Instagram className="w-3.5 h-3.5 text-pink-400" />
-                      <span className="text-lg font-bold text-white">{formatNum(eduFollowers)}</span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-6">
+                    <div className="text-center">
+                      <div className="flex items-center gap-1.5">
+                        <Instagram className="w-3.5 h-3.5 text-pink-400" />
+                        <span className="text-lg font-bold text-white">{formatNum(eduFollowers)}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500">seguidores</p>
                     </div>
-                    <p className="text-[10px] text-gray-500">seguidores</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-lg font-bold text-white">{formatNum(eduMetrics?.posts)}</span>
+                    <div className="text-center">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-lg font-bold text-white">{formatNum(eduMetrics?.posts)}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500">posts</p>
                     </div>
-                    <p className="text-[10px] text-gray-500">posts</p>
                   </div>
+                  {isCoordinator && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSyncEdu}
+                      disabled={syncingEdu}
+                      className="bg-transparent border-blue-500/30 text-blue-300 hover:text-white hover:border-blue-400 text-xs h-8"
+                      title="Sincronizar dados do Instagram de Eduardo Brandão"
+                    >
+                      <RefreshCw className={`w-3 h-3 mr-1.5 ${syncingEdu ? 'animate-spin' : ''}`} />
+                      {syncingEdu ? 'Sincronizando...' : 'Sync'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
