@@ -382,6 +382,13 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
       caption: z.string().optional(),
       hashtags: z.string().optional(),
       slideCount: z.number().optional(),
+      // Metodologia
+      contentCategory: z.enum(["autoridade", "bastidor", "opiniao", "vida_pessoal", "proposta"]).optional(),
+      trafficType: z.enum(["organico", "teste_pago", "escala"]).optional().default("organico"),
+      isABTest: z.number().optional().default(0),
+      conversionGoal: z.enum(["engajamento", "crescimento", "conversao"]).optional(),
+      ctaType: z.enum(["grupo_whatsapp", "whatsapp_direto", "formulario", "link_bio", "nenhum"]).optional().default("nenhum"),
+      ctaLink: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -404,6 +411,12 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
         caption: input.caption,
         hashtags: input.hashtags,
         slideCount: input.slideCount ?? 1,
+        contentCategory: input.contentCategory,
+        trafficType: input.trafficType,
+        isABTest: input.isABTest,
+        conversionGoal: input.conversionGoal,
+        ctaType: input.ctaType,
+        ctaLink: input.ctaLink,
       });
 
       return { id: (result as any).insertId || 0 };
@@ -429,6 +442,24 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
       caption: z.string().optional(),
       hashtags: z.string().optional(),
       slideCount: z.number().optional(),
+      // Metodologia
+      contentCategory: z.enum(["autoridade", "bastidor", "opiniao", "vida_pessoal", "proposta"]).nullable().optional(),
+      trafficType: z.enum(["organico", "teste_pago", "escala"]).optional(),
+      isABTest: z.number().optional(),
+      conversionGoal: z.enum(["engajamento", "crescimento", "conversao"]).nullable().optional(),
+      ctaType: z.enum(["grupo_whatsapp", "whatsapp_direto", "formulario", "link_bio", "nenhum"]).optional(),
+      ctaLink: z.string().nullable().optional(),
+      // Métricas reais pós-publicação
+      realReach: z.number().optional(),
+      realLikes: z.number().optional(),
+      realComments: z.number().optional(),
+      realShares: z.number().optional(),
+      realSaves: z.number().optional(),
+      retentionRate: z.string().optional(),
+      // Análise IA
+      aiAnalysis: z.enum(["top", "fraco", "neutro"]).nullable().optional(),
+      aiSuggestion: z.enum(["replicar", "ajustar", "descartar"]).nullable().optional(),
+      aiSuggestionNote: z.string().nullable().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
@@ -692,6 +723,217 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
           code: "INTERNAL_SERVER_ERROR",
           message: err.message || "Erro ao publicar no Instagram.",
         });
+      }
+    }),
+
+  // ─── Análise de Performance com IA ───────────────────────────────────────────
+  // Analisa posts publicados, classifica top/fraco e gera sugestões
+  analyzePerformance: publicProcedure
+    .input(z.object({
+      period: z.enum(["week", "month"]).default("week"),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Buscar posts publicados no período
+      const now = new Date();
+      const since = new Date();
+      if (input.period === "week") since.setDate(now.getDate() - 7);
+      else since.setMonth(now.getMonth() - 1);
+
+      const posts = await db.select().from(instagramPosts)
+        .where(and(
+          eq(instagramPosts.status, "published"),
+          gte(instagramPosts.publishedAt, since)
+        ))
+        .orderBy(desc(instagramPosts.publishedAt))
+        .limit(30);
+
+      if (posts.length === 0) return { analyzed: 0, alerts: [], topPosts: [], weakPosts: [] };
+
+      // Calcular score de engajamento para cada post
+      type ScoredPost = { id: number; title: string; type: string | null; contentCategory: string | null; publishedAt: Date | null; likes: number; comments: number; shares: number; saves: number; reach: number; score: number };
+      type DbPost = typeof posts[number];
+      const scored: ScoredPost[] = posts.map((p: DbPost) => ({
+        id: p.id,
+        title: p.title,
+        type: p.type,
+        contentCategory: p.contentCategory,
+        publishedAt: p.publishedAt,
+        likes: p.realLikes ?? p.expectedLikes ?? 0,
+        comments: p.realComments ?? p.expectedComments ?? 0,
+        shares: p.realShares ?? 0,
+        saves: p.realSaves ?? 0,
+        reach: p.realReach ?? p.expectedReach ?? 0,
+        score: (p.realLikes ?? p.expectedLikes ?? 0) * 1
+          + (p.realComments ?? p.expectedComments ?? 0) * 3
+          + (p.realShares ?? 0) * 5
+          + (p.realSaves ?? 0) * 4,
+      }));
+
+      const avgScore = scored.reduce((s: number, p: ScoredPost) => s + p.score, 0) / scored.length;
+      const topPosts = scored.filter((p: ScoredPost) => p.score >= avgScore * 1.3).slice(0, 5);
+      const weakPosts = scored.filter((p: ScoredPost) => p.score < avgScore * 0.7).slice(0, 5);
+
+      // Pedir análise à IA
+      const postsJson = JSON.stringify(scored.slice(0, 15).map((p: ScoredPost) => ({
+        id: p.id, title: p.title, type: p.type, category: p.contentCategory,
+        likes: p.likes, comments: p.comments, shares: p.shares, saves: p.saves, score: p.score
+      })));
+
+      const aiResp = await invokeLLM({
+        messages: [
+          { role: "system", content: `Você é um analista de marketing político digital. Analise os posts abaixo e retorne JSON com:
+- "topIds": array de IDs dos 3 melhores posts
+- "weakIds": array de IDs dos 3 piores posts
+- "suggestions": array de objetos {id, action: 'replicar'|'ajustar'|'descartar', note: string explicando o motivo em 1 frase}
+- "alerts": array de strings com alertas estratégicos (ex: 'Poucos posts de Bastidor esta semana', 'Narrativa não reforçada')
+Retorne APENAS JSON válido.` },
+          { role: "user", content: postsJson }
+        ],
+        response_format: { type: "json_object" } as any,
+      });
+
+      let aiResult: any = {};
+      try {
+        const content = (aiResp as any).choices?.[0]?.message?.content || "{}";
+        aiResult = JSON.parse(content);
+      } catch { aiResult = {}; }
+
+      // Salvar análise no banco
+      for (const post of scored) {
+        const isTop = (aiResult.topIds || []).includes(post.id);
+        const isWeak = (aiResult.weakIds || []).includes(post.id);
+        const suggestion = (aiResult.suggestions || []).find((s: any) => s.id === post.id);
+        if (isTop || isWeak || suggestion) {
+          await db.update(instagramPosts).set({
+            aiAnalysis: isTop ? "top" : isWeak ? "fraco" : "neutro",
+            aiSuggestion: suggestion?.action ?? null,
+            aiSuggestionNote: suggestion?.note ?? null,
+          }).where(eq(instagramPosts.id, post.id));
+        }
+      }
+
+      return {
+        analyzed: posts.length,
+        avgScore: Math.round(avgScore),
+        topPosts,
+        weakPosts,
+        alerts: aiResult.alerts || [],
+        suggestions: aiResult.suggestions || [],
+      };
+    }),
+
+  // ─── Alertas automáticos de volume e diversidade ───────────────────────────
+  getAlerts: publicProcedure
+    .query(async () => {
+      const db = await getDb();
+      if (!db) return { alerts: [] };
+
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const weekPosts = await db.select().from(instagramPosts)
+        .where(and(
+          gte(instagramPosts.scheduledDate, weekStart),
+          lte(instagramPosts.scheduledDate, weekEnd)
+        ));
+
+      const alerts: { type: "warning" | "info" | "error"; message: string }[] = [];
+
+      // Alerta: baixo volume
+      const daysInWeek = 7;
+      const minExpected = daysInWeek * 2; // mínimo 2 posts/dia
+      if (weekPosts.length < minExpected) {
+        alerts.push({ type: "warning", message: `⚠️ Baixo volume esta semana: ${weekPosts.length} posts (mínimo recomendado: ${minExpected})` });
+      }
+
+      // Alerta: falta de diversidade de categorias
+      type WkPost = typeof weekPosts[number];
+      type CatVal = NonNullable<WkPost["contentCategory"]>;
+      const categories = weekPosts.map((p: WkPost) => p.contentCategory).filter((c: WkPost["contentCategory"]): c is CatVal => Boolean(c));
+      const uniqueCategories = new Set(categories).size;
+      if (weekPosts.length > 3 && uniqueCategories < 3) {
+        alerts.push({ type: "warning", message: `⚠️ Falta de diversidade: apenas ${uniqueCategories} categoria(s) de conteúdo esta semana` });
+      }
+
+      // Alerta: sem posts de Autoridade
+      const hasAutoridade = weekPosts.some((p: WkPost) => p.contentCategory === "autoridade");
+      if (weekPosts.length > 0 && !hasAutoridade) {
+        alerts.push({ type: "info", message: `💡 Nenhum post de Autoridade planejado esta semana` });
+      }
+
+      // Alerta: sem Reels
+      const hasReels = weekPosts.some((p: WkPost) => p.type === "reels");
+      if (weekPosts.length > 0 && !hasReels) {
+        alerts.push({ type: "info", message: `💡 Nenhum Reel planejado esta semana — Reels têm maior alcance orgânico` });
+      }
+
+      // Alerta: posts sem categoria definida
+      const semCategoria = weekPosts.filter((p: WkPost) => !p.contentCategory).length;
+      if (semCategoria > 0) {
+        alerts.push({ type: "info", message: `📋 ${semCategoria} post(s) sem categoria definida esta semana` });
+      }
+
+      return { alerts, weekPostCount: weekPosts.length, categoryCounts: categories.reduce((acc: Record<string, number>, c: string) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {}) };
+    }),
+
+  // ─── Sugestão de horário ideal ─────────────────────────────────────────────
+  suggestBestTime: publicProcedure
+    .input(z.object({ type: z.enum(["reels", "carrossel", "video", "story", "imagem"]) }))
+    .query(({ input }) => {
+      // Horários baseados em benchmarks de engajamento político no Instagram Brasil
+      const bestTimes: Record<string, { time: string; reason: string }[]> = {
+        reels:    [{ time: "19:00", reason: "Pico de visualizações à noite" }, { time: "12:00", reason: "Pausa do almoço" }],
+        carrossel:[{ time: "08:00", reason: "Manhã — alto salvamento" }, { time: "20:00", reason: "Noite — mais compartilhamentos" }],
+        video:    [{ time: "19:00", reason: "Pico de visualizações à noite" }, { time: "21:00", reason: "Após jantar" }],
+        story:    [{ time: "07:30", reason: "Início do dia" }, { time: "12:00", reason: "Almoço" }, { time: "21:00", reason: "Noite" }],
+        imagem:   [{ time: "09:00", reason: "Manhã" }, { time: "18:00", reason: "Fim do expediente" }],
+      };
+      return { suggestions: bestTimes[input.type] || bestTimes.imagem };
+    }),
+
+  // ─── Sugestão de conteúdo baseada na narrativa ─────────────────────────────
+  suggestContent: publicProcedure
+    .input(z.object({
+      category: z.enum(["autoridade", "bastidor", "opiniao", "vida_pessoal", "proposta"]),
+      type: z.enum(["reels", "carrossel", "video", "story", "imagem"]).optional().default("reels"),
+      narrativeCentralPhrase: z.string().optional(),
+      narrativePillars: z.array(z.string()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const categoryLabels: Record<string, string> = {
+        autoridade: "Autoridade (demonstrar competência e credibilidade)",
+        bastidor: "Bastidor (mostrar o dia a dia da campanha, humanizar)",
+        opiniao: "Opinião (posicionamento claro sobre um tema)",
+        vida_pessoal: "Vida Pessoal Leve (humanização, família, hobbies)",
+        proposta: "Proposta (apresentar uma proposta concreta)",
+      };
+
+      const narrativeContext = input.narrativeCentralPhrase
+        ? `Frase central da campanha: "${input.narrativeCentralPhrase}". Pilares: ${(input.narrativePillars || []).join(", ")}.`
+        : "Candidato Eduardo Brandão, Partido Verde DF, foco em Brasília Cidade Parque.";
+
+      const resp = await invokeLLM({
+        messages: [
+          { role: "system", content: `Você é um estrategista de conteúdo político digital. ${narrativeContext} Gere 3 ideias de conteúdo para Instagram no formato ${input.type} na categoria ${categoryLabels[input.category]}. Retorne JSON: {"ideas": [{"title": string, "description": string, "caption": string, "hashtags": string, "roteiro": string}]}` },
+          { role: "user", content: `Gere 3 ideias de ${input.type} para a categoria ${input.category}` }
+        ],
+        response_format: { type: "json_object" } as any,
+      });
+
+      try {
+        const content = (resp as any).choices?.[0]?.message?.content || "{}";
+        const parsed = JSON.parse(content);
+        return { ideas: parsed.ideas || [] };
+      } catch {
+        return { ideas: [] };
       }
     }),
 

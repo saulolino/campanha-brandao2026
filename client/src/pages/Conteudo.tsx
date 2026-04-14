@@ -43,13 +43,27 @@ import {
   ExternalLink,
   ShieldAlert,
   Instagram,
+  Zap,
+  GripVertical,
 } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 
 // Tipos
 type PostType = "reels" | "carrossel" | "video" | "story" | "imagem";
 type PostStatus = "draft" | "design" | "caption" | "review" | "scheduled" | "published" | "failed";
-type ViewMode = "semanal" | "mensal";
+type ViewMode = "semanal" | "mensal" | "kanban";
+type ContentCategory = "autoridade" | "bastidor" | "opiniao" | "vida_pessoal" | "proposta";
+type TrafficType = "organico" | "teste_pago" | "escala";
+type ConversionGoal = "engajamento" | "crescimento" | "conversao";
+type CtaType = "grupo_whatsapp" | "whatsapp_direto" | "formulario" | "link_bio" | "nenhum";
+
+const CATEGORY_CONFIG: Record<ContentCategory, { label: string; color: string; bg: string; emoji: string }> = {
+  autoridade:   { label: "Autoridade",    color: "text-blue-400",   bg: "bg-blue-500/20 border-blue-500/40",   emoji: "🎓" },
+  bastidor:     { label: "Bastidor",      color: "text-purple-400", bg: "bg-purple-500/20 border-purple-500/40", emoji: "🎬" },
+  opiniao:      { label: "Opinião",       color: "text-orange-400", bg: "bg-orange-500/20 border-orange-500/40", emoji: "💬" },
+  vida_pessoal: { label: "Vida Pessoal",  color: "text-pink-400",   bg: "bg-pink-500/20 border-pink-500/40",   emoji: "❤️" },
+  proposta:     { label: "Proposta",      color: "text-green-400",  bg: "bg-green-500/20 border-green-500/40",  emoji: "📋" },
+};
 
 interface PostForm {
   title: string;
@@ -69,6 +83,13 @@ interface PostForm {
   mediaUrls: string; // JSON array de URLs
   slideCount: number; // Número de slides (carrossel)
   scheduledPublishAt: string; // ISO string para agendamento automático
+  // Metodologia
+  contentCategory: ContentCategory | "";
+  trafficType: TrafficType;
+  isABTest: number;
+  conversionGoal: ConversionGoal | "";
+  ctaType: CtaType;
+  ctaLink: string;
 }
 
 const defaultForm: PostForm = {
@@ -89,6 +110,13 @@ const defaultForm: PostForm = {
   hashtags: "",
   mediaUrls: "",
   scheduledPublishAt: "",
+  // Metodologia
+  contentCategory: "",
+  trafficType: "organico",
+  isABTest: 0,
+  conversionGoal: "",
+  ctaType: "nenhum",
+  ctaLink: "",
 };
 
 // Helpers
@@ -424,6 +452,12 @@ export default function Conteudo() {
       mediaUrls: post.mediaUrls || "",
       slideCount: post.slideCount || 5,
       scheduledPublishAt: post.scheduledPublishAt ? new Date(post.scheduledPublishAt).toISOString().slice(0, 16) : "",
+      contentCategory: (post.contentCategory as ContentCategory) || "",
+      trafficType: (post.trafficType as TrafficType) || "organico",
+      isABTest: post.isABTest || 0,
+      conversionGoal: (post.conversionGoal as ConversionGoal) || "",
+      ctaType: (post.ctaType as CtaType) || "nenhum",
+      ctaLink: post.ctaLink || "",
     });
     setModalOpen(true);
   }
@@ -448,6 +482,13 @@ export default function Conteudo() {
       hashtags: form.hashtags || undefined,
       mediaUrls: form.mediaUrls || undefined,
       slideCount: form.type === "carrossel" ? form.slideCount : undefined,
+      // Metodologia
+      contentCategory: form.contentCategory || undefined,
+      trafficType: form.trafficType,
+      isABTest: form.isABTest,
+      conversionGoal: form.conversionGoal || undefined,
+      ctaType: form.ctaType,
+      ctaLink: form.ctaLink || undefined,
     };
     if (editingPost) {
       updatePost.mutate({ id: editingPost.id, ...payload, status: form.status });
@@ -490,7 +531,7 @@ export default function Conteudo() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {/* Toggle Semanal / Mensal */}
+              {/* Toggle Semanal / Mensal / Kanban */}
               <div className="flex bg-white/10 rounded-lg p-1 gap-1">
                 <button
                   onClick={() => setViewMode("semanal")}
@@ -507,6 +548,14 @@ export default function Conteudo() {
                   }`}
                 >
                   <CalendarDays className="w-3.5 h-3.5" /> Mensal
+                </button>
+                <button
+                  onClick={() => setViewMode("kanban")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                    viewMode === "kanban" ? "bg-[#4ade80] text-black" : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" /> Kanban
                 </button>
               </div>
               {canEditContent && (
@@ -892,6 +941,92 @@ export default function Conteudo() {
               </div>
             </div>
           )}
+
+          {/* ===== VISUALIZAÇÃO KANBAN ===== */}
+          {viewMode === "kanban" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white/50">Arraste os cards entre colunas para atualizar o status de produção</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(Object.keys(CATEGORY_CONFIG) as ContentCategory[]).map((cat) => (
+                    <span key={cat} className={`text-[10px] px-2 py-0.5 rounded-full border ${CATEGORY_CONFIG[cat].bg} ${CATEGORY_CONFIG[cat].color}`}>
+                      {CATEGORY_CONFIG[cat].emoji} {CATEGORY_CONFIG[cat].label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-5 gap-3 overflow-x-auto pb-2">
+                {PRODUCTION_STATUSES.map((status) => {
+                  const cfg = STATUS_CONFIG[status];
+                  const colPosts = posts
+                    .filter((p: any) => (p.status || "draft") === status)
+                    .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
+                  return (
+                    <div key={status} className="flex flex-col gap-2 min-w-[200px]">
+                      {/* Cabeçalho da coluna */}
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${cfg.color} bg-white/5`}>
+                        <span className="text-xs font-semibold">{cfg.label}</span>
+                        <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full text-white/60">{colPosts.length}</span>
+                      </div>
+                      {/* Cards */}
+                      <div className="flex flex-col gap-2 min-h-[200px]">
+                        {colPosts.map((post: any) => {
+                          const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
+                          const catCfg = post.contentCategory ? CATEGORY_CONFIG[post.contentCategory as ContentCategory] : null;
+                          const d = new Date(post.scheduledDate);
+                          return (
+                            <div
+                              key={post.id}
+                              className="bg-[#0f1724] border border-white/10 rounded-lg p-3 cursor-pointer hover:border-[#4ade80]/40 transition-all group"
+                              onClick={() => canEditContent ? openEditPost(post) : undefined}
+                            >
+                              {/* Tipo + Categoria */}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${typeCfg.bg} ${typeCfg.color}`}>
+                                  {typeCfg.label}
+                                </span>
+                                {catCfg && (
+                                  <span className={`text-[10px] ${catCfg.color}`}>
+                                    {catCfg.emoji}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Título */}
+                              <p className="text-xs font-medium text-white line-clamp-2 mb-2">{post.title}</p>
+                              {/* Data */}
+                              <p className="text-[10px] text-white/40">
+                                {DAYS_PT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1} · {post.scheduledTime || "12:00"}
+                              </p>
+                              {/* Indicadores */}
+                              <div className="flex items-center gap-1.5 mt-2">
+                                {post.trafficType && post.trafficType !== "organico" && (
+                                  <span className="text-[9px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                    {post.trafficType === "teste_pago" ? "🧪 Teste" : "🚀 Escala"}
+                                  </span>
+                                )}
+                                {post.isABTest ? (
+                                  <span className="text-[9px] px-1 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">A/B</span>
+                                ) : null}
+                                {post.ctaType && post.ctaType !== "nenhum" && (
+                                  <span className="text-[9px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">CTA</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {colPosts.length === 0 && (
+                          <div className="flex items-center justify-center h-20 border border-dashed border-white/10 rounded-lg">
+                            <p className="text-[10px] text-white/20">Nenhum post</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -1136,6 +1271,112 @@ export default function Conteudo() {
                   <Label className="text-white/70 text-xs">Observações</Label>
                   <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Notas adicionais..." className="bg-white/10 border-white/20 text-white placeholder:text-white/30" />
                 </div>
+
+                {/* ─── METODOLOGIA ─── */}
+                <div className="col-span-2 pt-2 border-t border-white/10">
+                  <p className="text-xs font-semibold text-[#4ade80] mb-3 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" /> Metodologia de Conteúdo
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+
+                    {/* Categoria */}
+                    <div className="space-y-1.5">
+                      <Label className="text-white/70 text-xs">Categoria do Conteúdo</Label>
+                      <Select value={form.contentCategory} onValueChange={(v) => setForm({ ...form, contentCategory: v as ContentCategory })}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0f1724] border-white/20">
+                          {(Object.keys(CATEGORY_CONFIG) as ContentCategory[]).map((cat) => (
+                            <SelectItem key={cat} value={cat} className="text-white hover:bg-white/10">
+                              {CATEGORY_CONFIG[cat].emoji} {CATEGORY_CONFIG[cat].label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Tipo de Tráfego */}
+                    <div className="space-y-1.5">
+                      <Label className="text-white/70 text-xs">Tipo de Distribuição</Label>
+                      <Select value={form.trafficType} onValueChange={(v) => setForm({ ...form, trafficType: v as TrafficType })}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0f1724] border-white/20">
+                          <SelectItem value="organico" className="text-white hover:bg-white/10">🌱 Orgânico</SelectItem>
+                          <SelectItem value="teste_pago" className="text-white hover:bg-white/10">🧪 Teste Pago</SelectItem>
+                          <SelectItem value="escala" className="text-white hover:bg-white/10">🚀 Escala (Impulsionado)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Objetivo de Conversão */}
+                    <div className="space-y-1.5">
+                      <Label className="text-white/70 text-xs">Objetivo de Conversão</Label>
+                      <Select value={form.conversionGoal} onValueChange={(v) => setForm({ ...form, conversionGoal: v as ConversionGoal })}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0f1724] border-white/20">
+                          <SelectItem value="engajamento" className="text-white hover:bg-white/10">❤️ Engajamento</SelectItem>
+                          <SelectItem value="crescimento" className="text-white hover:bg-white/10">📈 Crescimento de Seguidores</SelectItem>
+                          <SelectItem value="conversao" className="text-white hover:bg-white/10">🎯 Conversão (WhatsApp/Formulário)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="space-y-1.5">
+                      <Label className="text-white/70 text-xs">Call to Action (CTA)</Label>
+                      <Select value={form.ctaType} onValueChange={(v) => setForm({ ...form, ctaType: v as CtaType })}>
+                        <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0f1724] border-white/20">
+                          <SelectItem value="nenhum" className="text-white hover:bg-white/10">— Nenhum</SelectItem>
+                          <SelectItem value="grupo_whatsapp" className="text-white hover:bg-white/10">💬 Entrar no Grupo WhatsApp</SelectItem>
+                          <SelectItem value="whatsapp_direto" className="text-white hover:bg-white/10">📱 WhatsApp Direto</SelectItem>
+                          <SelectItem value="formulario" className="text-white hover:bg-white/10">📋 Formulário</SelectItem>
+                          <SelectItem value="link_bio" className="text-white hover:bg-white/10">🔗 Link na Bio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Link do CTA */}
+                    {form.ctaType !== "nenhum" && (
+                      <div className="col-span-2 space-y-1.5">
+                        <Label className="text-white/70 text-xs">Link do CTA</Label>
+                        <Input
+                          value={form.ctaLink}
+                          onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
+                          placeholder="https://..."
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/30"
+                        />
+                      </div>
+                    )}
+
+                    {/* Teste A/B */}
+                    <div className="col-span-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, isABTest: form.isABTest ? 0 : 1 })}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${
+                          form.isABTest ? "bg-[#4ade80]" : "bg-white/20"
+                        }`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
+                          form.isABTest ? "left-5" : "left-0.5"
+                        }`} />
+                      </button>
+                      <Label className="text-white/70 text-xs cursor-pointer" onClick={() => setForm({ ...form, isABTest: form.isABTest ? 0 : 1 })}>
+                        Este post é parte de um Teste A/B
+                      </Label>
+                    </div>
+
+                  </div>
+                </div>
+
               </div>
             )}
 

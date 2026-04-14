@@ -53,6 +53,28 @@ export const instagramPosts = mysqlTable("instagram_posts", {
   expectedReach: int("expectedReach").default(0),
   expectedLikes: int("expectedLikes").default(0),
   expectedComments: int("expectedComments").default(0),
+  // ─── Metodologia: Categoria de Conteúdo ───────────────────────────────────
+  // Autoridade | Bastidor | Opinião | Vida Pessoal | Proposta
+  contentCategory: mysqlEnum("contentCategory", ["autoridade", "bastidor", "opiniao", "vida_pessoal", "proposta"]),
+  // ─── Metodologia: Distribuição / Tráfego ────────────────────────────────────
+  trafficType: mysqlEnum("trafficType", ["organico", "teste_pago", "escala"]).default("organico"),
+  isABTest: tinyint("isABTest").default(0), // 1 = criativo em teste A/B
+  // ─── Metodologia: Objetivo de Conversão ─────────────────────────────────────
+  conversionGoal: mysqlEnum("conversionGoal", ["engajamento", "crescimento", "conversao"]),
+  // ─── Metodologia: CTA ────────────────────────────────────────────────────────
+  ctaType: mysqlEnum("ctaType", ["grupo_whatsapp", "whatsapp_direto", "formulario", "link_bio", "nenhum"]).default("nenhum"),
+  ctaLink: varchar("ctaLink", { length: 500 }),
+  // ─── Metodologia: Métricas reais (pós-publicação) ────────────────────────────
+  realReach: int("realReach"),
+  realLikes: int("realLikes"),
+  realComments: int("realComments"),
+  realShares: int("realShares"),
+  realSaves: int("realSaves"),
+  retentionRate: decimal("retentionRate", { precision: 5, scale: 2 }), // % retenção vídeo
+  // ─── Metodologia: Análise IA ─────────────────────────────────────────────────
+  aiAnalysis: mysqlEnum("aiAnalysis", ["top", "fraco", "neutro"]), // classificação automática
+  aiSuggestion: mysqlEnum("aiSuggestion", ["replicar", "ajustar", "descartar"]), // sugestão da IA
+  aiSuggestionNote: text("aiSuggestionNote"), // explicação da sugestão
   // Orçamento
   budget: decimal("budget", { precision: 10, scale: 2 }),
   // Observações
@@ -155,6 +177,10 @@ export const campaignSettings = mysqlTable("campaign_settings", {
   facebookBio: text("facebookBio"),                                     // Descrição da página
   facebookProfilePic: text("facebookProfilePic"),                       // URL da foto de perfil
   facebookLastSync: timestamp("facebookLastSync"),                      // Última sincronização
+  // ─── Metodologia: Narrativa da Campanha ─────────────────────────────────────
+  narrativeCentralPhrase: varchar("narrativeCentralPhrase", { length: 120 }), // Frase central (máx 120 chars)
+  narrativePillars: text("narrativePillars"),   // JSON: ["pilar1", "pilar2", "pilar3"]
+  narrativeStrategicThemes: text("narrativeStrategicThemes"), // JSON: ["tema1", "tema2", ...]
   // Dados do Candidato Principal
   candidateName: varchar("candidateName", { length: 255 }),              // Nome completo
   candidateNickname: varchar("candidateNickname", { length: 100 }),      // Nome de urna / apelido

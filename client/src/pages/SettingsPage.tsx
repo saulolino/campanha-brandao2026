@@ -1882,6 +1882,12 @@ function CandidateSettingsTab() {
   const [tiktok, setTiktok] = useState("");
   const [website, setWebsite] = useState("");
   const [electionDate, setElectionDate] = useState("");
+  // Narrativa
+  const [narrativeCentralPhrase, setNarrativeCentralPhrase] = useState("");
+  const [narrativePillar1, setNarrativePillar1] = useState("");
+  const [narrativePillar2, setNarrativePillar2] = useState("");
+  const [narrativePillar3, setNarrativePillar3] = useState("");
+  const [narrativeStrategicThemes, setNarrativeStrategicThemes] = useState(""); // string com \n como separador
 
   // Preencher formulário quando os dados chegarem
   useEffect(() => {
@@ -1901,6 +1907,13 @@ function CandidateSettingsTab() {
     setTiktok(profile.candidateTiktok ?? "");
     setWebsite(profile.candidateWebsite ?? "");
     setElectionDate(profile.candidateElectionDate ?? "");
+    setNarrativeCentralPhrase((profile as any).narrativeCentralPhrase ?? "");
+    const pillars: string[] = (profile as any).narrativePillars ?? [];
+    setNarrativePillar1(pillars[0] ?? "");
+    setNarrativePillar2(pillars[1] ?? "");
+    setNarrativePillar3(pillars[2] ?? "");
+    const themes: string[] = (profile as any).narrativeStrategicThemes ?? [];
+    setNarrativeStrategicThemes(themes.join("\n"));
   }, [profile]);
 
   const saveMutation = trpc.candidateSettings.saveProfile.useMutation({
@@ -1928,6 +1941,11 @@ function CandidateSettingsTab() {
       candidateTiktok: tiktok,
       candidateWebsite: website,
       candidateElectionDate: electionDate,
+      narrativeCentralPhrase: narrativeCentralPhrase || undefined,
+      narrativePillars: [narrativePillar1, narrativePillar2, narrativePillar3].filter(Boolean),
+      narrativeStrategicThemes: narrativeStrategicThemes
+        ? narrativeStrategicThemes.split("\n").map(t => t.trim()).filter(Boolean)
+        : [],
     });
   };
 
@@ -2177,6 +2195,103 @@ function CandidateSettingsTab() {
               onChange={(e) => setWebsite(e.target.value)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Narrativa da Campanha */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            Narrativa da Campanha
+          </CardTitle>
+          <CardDescription>
+            Define a mensagem central e os pilares que guiam toda a produção de conteúdo. Usada pela IA para gerar legendas e sugestões alinhadas com a campanha.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Frase Central */}
+          <div className="space-y-2">
+            <Label htmlFor="narrative-phrase" className="flex items-center gap-1.5 font-semibold">
+              Frase Central da Campanha
+              <span className="text-[10px] text-muted-foreground font-normal">(obrigatório para geração de conteúdo)</span>
+            </Label>
+            <Input
+              id="narrative-phrase"
+              placeholder="Ex: Brasília merece um vereador que cuida da cidade como quem cuida de casa"
+              value={narrativeCentralPhrase}
+              onChange={(e) => setNarrativeCentralPhrase(e.target.value)}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">Esta frase deve aparecer implicitamente em todo conteúdo produzido.</p>
+          </div>
+
+          {/* 3 Pilares */}
+          <div className="space-y-3">
+            <Label className="font-semibold">3 Pilares da Narrativa</Label>
+            <p className="text-xs text-muted-foreground -mt-1">Cada pilar define um eixo temático que sustenta a narrativa da campanha.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pillar1" className="text-xs text-muted-foreground">Pilar 1</Label>
+                <Input
+                  id="pillar1"
+                  placeholder="Ex: Mobilidade Urbana"
+                  value={narrativePillar1}
+                  onChange={(e) => setNarrativePillar1(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pillar2" className="text-xs text-muted-foreground">Pilar 2</Label>
+                <Input
+                  id="pillar2"
+                  placeholder="Ex: Brasília Cidade Parque"
+                  value={narrativePillar2}
+                  onChange={(e) => setNarrativePillar2(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pillar3" className="text-xs text-muted-foreground">Pilar 3</Label>
+                <Input
+                  id="pillar3"
+                  placeholder="Ex: Gestão Fiscal Responsável"
+                  value={narrativePillar3}
+                  onChange={(e) => setNarrativePillar3(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Temas Estratégicos */}
+          <div className="space-y-2">
+            <Label htmlFor="strategic-themes" className="font-semibold">Temas Estratégicos da Semana / Mês</Label>
+            <p className="text-xs text-muted-foreground">Liste os temas prioritários do momento (um por linha). A IA usará esses temas para sugerir conteúdo relevante.</p>
+            <textarea
+              id="strategic-themes"
+              className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y"
+              placeholder="Ex:\nVia W3 — buraco na pista\nParque Olhos D'água — limpeza\nProposta de lei de ciclovias"
+              value={narrativeStrategicThemes}
+              onChange={(e) => setNarrativeStrategicThemes(e.target.value)}
+            />
+          </div>
+
+          {/* Preview da Narrativa */}
+          {(narrativeCentralPhrase || narrativePillar1) && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+              <p className="text-xs font-semibold text-primary">Preview da Narrativa (como a IA vê)</p>
+              {narrativeCentralPhrase && (
+                <p className="text-sm text-foreground">“{narrativeCentralPhrase}”</p>
+              )}
+              {(narrativePillar1 || narrativePillar2 || narrativePillar3) && (
+                <div className="flex gap-2 flex-wrap">
+                  {[narrativePillar1, narrativePillar2, narrativePillar3].filter(Boolean).map((p, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">{p}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

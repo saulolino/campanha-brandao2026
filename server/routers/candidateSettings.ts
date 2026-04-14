@@ -37,6 +37,13 @@ async function getOrCreateSettings() {
 
 // ─── Schema de validação ───────────────────────────────────────────────────────
 
+// Schema de narrativa separado para clareza
+const narrativeSchema = z.object({
+  narrativeCentralPhrase:   z.string().max(120).optional(),
+  narrativePillars:         z.array(z.string().max(100)).max(3).optional(),
+  narrativeStrategicThemes: z.array(z.string().max(100)).optional(),
+});
+
 const profileSchema = z.object({
   candidateName:         z.string().max(255).optional(),
   candidateNickname:     z.string().max(100).optional(),
@@ -64,6 +71,11 @@ export const candidateSettingsRouter = router({
    */
   getProfile: protectedProcedure.query(async () => {
     const { settings } = await getOrCreateSettings();
+    // Parse JSON fields para arrays
+    let pillars: string[] = [];
+    let themes: string[] = [];
+    try { pillars = settings.narrativePillars ? JSON.parse(settings.narrativePillars) : []; } catch {}
+    try { themes = settings.narrativeStrategicThemes ? JSON.parse(settings.narrativeStrategicThemes) : []; } catch {}
     return {
       candidateName:         settings.candidateName         ?? "Eduardo Brandão",
       candidateNickname:     settings.candidateNickname     ?? "Eduardo Brandão",
@@ -80,8 +92,44 @@ export const candidateSettingsRouter = router({
       candidateTiktok:       settings.candidateTiktok       ?? "",
       candidateWebsite:      settings.candidateWebsite      ?? "",
       candidateElectionDate: settings.candidateElectionDate ?? "2026-10-04",
+      // Narrativa
+      narrativeCentralPhrase:   settings.narrativeCentralPhrase ?? "",
+      narrativePillars:         pillars,
+      narrativeStrategicThemes: themes,
     };
   }),
+
+  /**
+   * Retorna apenas os campos de narrativa (público para uso nos geradores de conteúdo).
+   */
+  getNarrative: protectedProcedure.query(async () => {
+    const { settings } = await getOrCreateSettings();
+    let pillars: string[] = [];
+    let themes: string[] = [];
+    try { pillars = settings.narrativePillars ? JSON.parse(settings.narrativePillars) : []; } catch {}
+    try { themes = settings.narrativeStrategicThemes ? JSON.parse(settings.narrativeStrategicThemes) : []; } catch {}
+    return {
+      narrativeCentralPhrase:   settings.narrativeCentralPhrase ?? "",
+      narrativePillars:         pillars,
+      narrativeStrategicThemes: themes,
+    };
+  }),
+
+  /**
+   * Salva apenas os campos de narrativa.
+   */
+  saveNarrative: protectedProcedure
+    .input(narrativeSchema)
+    .mutation(async ({ ctx, input }) => {
+      requireCoordinatorOrAbove((ctx.user as any)?.role);
+      const { db, settings } = await getOrCreateSettings();
+      const updates: Record<string, unknown> = {};
+      if (input.narrativeCentralPhrase !== undefined) updates.narrativeCentralPhrase = input.narrativeCentralPhrase || null;
+      if (input.narrativePillars !== undefined) updates.narrativePillars = JSON.stringify(input.narrativePillars);
+      if (input.narrativeStrategicThemes !== undefined) updates.narrativeStrategicThemes = JSON.stringify(input.narrativeStrategicThemes);
+      await db.update(campaignSettings).set({ ...updates, lastUpdatedBy: (ctx.user as any)?.id ?? null }).where(eq(campaignSettings.id, settings.id));
+      return { success: true };
+    }),
 
   /**
    * Salva os dados do candidato principal.

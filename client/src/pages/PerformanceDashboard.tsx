@@ -27,7 +27,17 @@ import {
   TrendingUp,
   Calendar,
   RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Zap,
+  Sparkles,
+  Clock,
+  ThumbsUp,
+  ThumbsDown,
+  Lightbulb,
+  Loader2,
 } from "lucide-react";
+import SidebarNav from "@/components/SidebarNav";
 
 export default function PerformanceDashboard() {
   const { user } = useAuth();
@@ -40,6 +50,26 @@ export default function PerformanceDashboard() {
     status: "published",
     limit: 100,
   });
+
+  // Alertas de metodologia
+  const { data: alertsData, isLoading: alertsLoading } = trpc.posts.getAlerts.useQuery(undefined, {
+    staleTime: 5 * 60 * 1000,
+  });
+  const alerts = alertsData?.alerts ?? [];
+
+  // Análise IA de performance
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const analyzePerformanceMutation = trpc.posts.analyzePerformance.useMutation({
+    onSuccess: (data) => { setAiAnalysis(data); setAiLoading(false); },
+    onError: () => setAiLoading(false),
+  });
+
+  const handleAnalyzeAI = () => {
+    setAiLoading(true);
+    const period: "week" | "month" = selectedPeriod === 'week' ? 'week' : 'month';
+    analyzePerformanceMutation.mutate({ period });
+  };
 
   const handleRefreshMetrics = async () => {
     setIsRefreshing(true);
@@ -106,8 +136,10 @@ export default function PerformanceDashboard() {
   const COLORS = ["#ef4444", "#3b82f6"];
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="flex h-screen bg-background">
+      <SidebarNav activeSection="performance" />
+      <main className="flex-1 overflow-auto">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -327,7 +359,122 @@ export default function PerformanceDashboard() {
             )}
           </div>
         </Card>
+
+        {/* ─── ALERTAS DE METODOLOGIA ─── */}
+        {alerts && alerts.length > 0 && (
+          <div className="mb-8 space-y-3">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" /> Alertas de Produção
+            </h2>
+            {alerts.map((alert: any, i: number) => (
+              <div key={i} className={`flex items-start gap-3 p-4 rounded-lg border ${
+                alert.severity === 'high' ? 'bg-red-500/10 border-red-500/30 text-red-300' :
+                alert.severity === 'medium' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' :
+                'bg-blue-500/10 border-blue-500/30 text-blue-300'
+              }`}>
+                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">{alert.title}</p>
+                  <p className="text-xs opacity-80 mt-0.5">{alert.message}</p>
+                  {alert.suggestion && (
+                    <p className="text-xs mt-1 opacity-70 italic">💡 {alert.suggestion}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {alerts && alerts.length === 0 && (
+          <div className="mb-8 flex items-center gap-3 p-4 rounded-lg border bg-green-500/10 border-green-500/30 text-green-300">
+            <CheckCircle2 className="w-5 h-5" />
+            <p className="text-sm font-medium">Nenhum alerta de produção — sua máquina de conteúdo está saudável!</p>
+          </div>
+        )}
+
+        {/* ─── ANÁLISE IA ─── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" /> Análise de Performance com IA
+            </h2>
+            <Button onClick={handleAnalyzeAI} disabled={aiLoading} variant="outline" size="sm">
+              {aiLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</> : <><Zap className="w-4 h-4 mr-2" /> Analisar com IA</>}
+            </Button>
+          </div>
+          {!aiAnalysis && !aiLoading && (
+            <div className="p-8 rounded-lg border border-dashed border-border text-center">
+              <Lightbulb className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">Clique em "Analisar com IA" para obter insights sobre seus posts publicados: quais replicar, ajustar ou descartar.</p>
+            </div>
+          )}
+          {aiAnalysis && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Top Posts */}
+              <Card className="p-5 border-green-500/30 bg-green-500/5">
+                <h3 className="text-sm font-semibold text-green-400 flex items-center gap-1.5 mb-3">
+                  <ThumbsUp className="w-4 h-4" /> Replicar ({aiAnalysis.topPosts?.length || 0})
+                </h3>
+                <div className="space-y-2">
+                  {aiAnalysis.topPosts?.map((p: any) => (
+                    <div key={p.id} className="text-xs">
+                      <p className="font-medium text-foreground line-clamp-1">{p.title}</p>
+                      <p className="text-muted-foreground">{p.reason}</p>
+                    </div>
+                  ))}
+                  {(!aiAnalysis.topPosts || aiAnalysis.topPosts.length === 0) && (
+                    <p className="text-xs text-muted-foreground">Nenhum post de destaque no período</p>
+                  )}
+                </div>
+              </Card>
+              {/* Posts para Ajustar */}
+              <Card className="p-5 border-amber-500/30 bg-amber-500/5">
+                <h3 className="text-sm font-semibold text-amber-400 flex items-center gap-1.5 mb-3">
+                  <Lightbulb className="w-4 h-4" /> Ajustar ({aiAnalysis.adjustPosts?.length || 0})
+                </h3>
+                <div className="space-y-2">
+                  {aiAnalysis.adjustPosts?.map((p: any) => (
+                    <div key={p.id} className="text-xs">
+                      <p className="font-medium text-foreground line-clamp-1">{p.title}</p>
+                      <p className="text-muted-foreground">{p.suggestion}</p>
+                    </div>
+                  ))}
+                  {(!aiAnalysis.adjustPosts || aiAnalysis.adjustPosts.length === 0) && (
+                    <p className="text-xs text-muted-foreground">Nenhum post para ajustar</p>
+                  )}
+                </div>
+              </Card>
+              {/* Posts para Descartar */}
+              <Card className="p-5 border-red-500/30 bg-red-500/5">
+                <h3 className="text-sm font-semibold text-red-400 flex items-center gap-1.5 mb-3">
+                  <ThumbsDown className="w-4 h-4" /> Descartar ({aiAnalysis.discardPosts?.length || 0})
+                </h3>
+                <div className="space-y-2">
+                  {aiAnalysis.discardPosts?.map((p: any) => (
+                    <div key={p.id} className="text-xs">
+                      <p className="font-medium text-foreground line-clamp-1">{p.title}</p>
+                      <p className="text-muted-foreground">{p.reason}</p>
+                    </div>
+                  ))}
+                  {(!aiAnalysis.discardPosts || aiAnalysis.discardPosts.length === 0) && (
+                    <p className="text-xs text-muted-foreground">Nenhum post para descartar</p>
+                  )}
+                </div>
+              </Card>
+              {/* Insights Gerais */}
+              {aiAnalysis.insights && (
+                <Card className="md:col-span-3 p-5 border-primary/30 bg-primary/5">
+                  <h3 className="text-sm font-semibold text-primary flex items-center gap-1.5 mb-2">
+                    <Sparkles className="w-4 h-4" /> Insights Gerais
+                  </h3>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{aiAnalysis.insights}</p>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
+      </main>
     </div>
   );
 }
