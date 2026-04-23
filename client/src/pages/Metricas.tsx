@@ -6,8 +6,13 @@ import SidebarNav from "@/components/SidebarNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users } from "lucide-react";
+import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users, Pencil, ExternalLink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -16,6 +21,19 @@ export default function Metricas() {
   const [period, setPeriod] = useState("semanal");
   const [contentType, setContentType] = useState("todos");
   const [sortBy, setSortBy] = useState<"engagement" | "shares" | "saves" | "likes">("engagement");
+
+  // Estado do modal de atualização de métricas
+  const [editingPost, setEditingPost] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    realLikes: 0,
+    realComments: 0,
+    realShares: 0,
+    realSaves: 0,
+    realReach: 0,
+    aiAnalysis: "neutro" as "top" | "fraco" | "neutro",
+    aiSuggestion: "ajustar" as "replicar" | "ajustar" | "descartar",
+    aiSuggestionNote: "",
+  });
 
   const utils = trpc.useUtils();
 
@@ -45,6 +63,53 @@ export default function Metricas() {
     },
     onError: () => toast.error('Falha ao sincronizar com Instagram.'),
   });
+
+  // Buscar posts publicados da agenda (para atualização manual de métricas)
+  const { data: publishedPosts, isLoading: publishedLoading } = trpc.posts.list.useQuery(
+    { status: "published", limit: 50 },
+    { staleTime: 0 }
+  );
+
+  // Mutation de atualização de métricas reais
+  const updateMetricsMutation = trpc.posts.update.useMutation({
+    onSuccess: () => {
+      toast.success("Métricas atualizadas com sucesso!");
+      utils.posts.list.invalidate();
+      setEditingPost(null);
+    },
+    onError: () => toast.error("Erro ao atualizar métricas."),
+  });
+
+  // Abrir modal de edição de métricas
+  const openEditMetrics = (post: any) => {
+    setEditingPost(post);
+    setEditForm({
+      realLikes: post.realLikes ?? post.expectedLikes ?? 0,
+      realComments: post.realComments ?? post.expectedComments ?? 0,
+      realShares: post.realShares ?? 0,
+      realSaves: post.realSaves ?? 0,
+      realReach: post.realReach ?? post.expectedReach ?? 0,
+      aiAnalysis: (post.aiAnalysis as "top" | "fraco" | "neutro") ?? "neutro",
+      aiSuggestion: (post.aiSuggestion as "replicar" | "ajustar" | "descartar") ?? "ajustar",
+      aiSuggestionNote: post.aiSuggestionNote ?? "",
+    });
+  };
+
+  // Salvar métricas atualizadas
+  const saveMetrics = () => {
+    if (!editingPost) return;
+    updateMetricsMutation.mutate({
+      id: editingPost.id,
+      realLikes: editForm.realLikes,
+      realComments: editForm.realComments,
+      realShares: editForm.realShares,
+      realSaves: editForm.realSaves,
+      realReach: editForm.realReach,
+      aiAnalysis: editForm.aiAnalysis,
+      aiSuggestion: editForm.aiSuggestion,
+      aiSuggestionNote: editForm.aiSuggestionNote || null,
+    });
+  };
 
   // Preparar dados para gráficos — o backend retorna engagement/posts por semana (não followers)
   const growthData = growth?.daily?.map((item: any) => ({
@@ -104,6 +169,7 @@ export default function Metricas() {
   ];
 
   return (
+    <>
     <div className="flex h-screen bg-background">
       <SidebarNav activeSection="metricas" />
       <main className={`flex-1 overflow-auto ${animationClass}`}>
@@ -475,12 +541,14 @@ export default function Metricas() {
                   </Select>
                 </div>
               </div>
+
+              {/* Posts do Instagram (via API) */}
               <Card>
                 <CardHeader>
                   <CardTitle>
                     Top Posts por {sortBy === 'engagement' ? 'Engajamento' : sortBy === 'shares' ? 'Compartilhamentos' : sortBy === 'saves' ? 'Salvos' : 'Curtidas'}
                   </CardTitle>
-                  <CardDescription>Posts com melhor performance — {filteredPosts.length} resultado{filteredPosts.length !== 1 ? 's' : ''}</CardDescription>
+                  <CardDescription>Posts com melhor performance via API do Instagram — {filteredPosts.length} resultado{filteredPosts.length !== 1 ? 's' : ''}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {topLoading ? (
@@ -505,6 +573,12 @@ export default function Metricas() {
                                 {new Date(post.timestamp).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
+                            {post.permalink && (
+                              <a href={post.permalink} target="_blank" rel="noopener noreferrer"
+                                className="ml-2 text-muted-foreground hover:text-primary transition-colors">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
                           </div>
                           <div className="grid grid-cols-3 md:grid-cols-6 gap-3 pt-3 border-t border-border/30">
                             <div>
@@ -542,10 +616,249 @@ export default function Metricas() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Posts da Agenda — Atualização Manual de Métricas */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Pencil className="w-5 h-5 text-primary" />
+                        Atualizar Métricas dos Posts da Agenda
+                      </CardTitle>
+                      <CardDescription>
+                        Posts publicados pela equipe — insira as métricas reais coletadas manualmente do Instagram
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {publishedLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (publishedPosts || []).length > 0 ? (
+                    <div className="space-y-3">
+                      {(publishedPosts as any[] || []).map((post: any) => {
+                        const hasRealMetrics = post.realLikes != null || post.realReach != null;
+                        const totalEngagement = (post.realLikes ?? 0) + (post.realComments ?? 0) + (post.realShares ?? 0) + (post.realSaves ?? 0);
+                        return (
+                          <div key={post.id} className="border border-border/50 rounded-lg p-4 hover:border-primary/30 transition-colors">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <h4 className="font-semibold text-sm">{post.title}</h4>
+                                  <Badge variant="outline" className="text-xs capitalize">{post.type}</Badge>
+                                  {post.contentCategory && (
+                                    <Badge variant="secondary" className="text-xs capitalize">{post.contentCategory.replace('_', ' ')}</Badge>
+                                  )}
+                                  {hasRealMetrics && (
+                                    <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+                                      <CheckCircle2 className="w-3 h-3 mr-1" /> Métricas inseridas
+                                    </Badge>
+                                  )}
+                                  {post.aiSuggestion && (
+                                    <Badge className={`text-xs ${
+                                      post.aiSuggestion === 'replicar' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                      post.aiSuggestion === 'descartar' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                    }`}>
+                                      {post.aiSuggestion === 'replicar' ? '✅ Replicar' : post.aiSuggestion === 'descartar' ? '❌ Descartar' : '⚡ Ajustar'}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Publicado em {new Date(post.scheduledDate).toLocaleDateString('pt-BR')}
+                                  {post.publishedBy && ` · por ${post.publishedBy}`}
+                                </p>
+                                {hasRealMetrics && (
+                                  <div className="flex gap-4 mt-2 text-xs">
+                                    <span className="text-red-400">❤️ {(post.realLikes ?? 0).toLocaleString()}</span>
+                                    <span className="text-blue-400">💬 {(post.realComments ?? 0).toLocaleString()}</span>
+                                    <span className="text-green-400">🔁 {(post.realShares ?? 0).toLocaleString()}</span>
+                                    <span className="text-yellow-400">🔖 {(post.realSaves ?? 0).toLocaleString()}</span>
+                                    <span className="text-purple-400">👁️ {(post.realReach ?? 0).toLocaleString()}</span>
+                                    <span className="text-primary font-semibold">⚡ {totalEngagement.toLocaleString()} eng.</span>
+                                  </div>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0"
+                                onClick={() => openEditMetrics(post)}
+                              >
+                                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                                {hasRealMetrics ? 'Editar' : 'Inserir Métricas'}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <TrendingUp className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                      <p className="text-sm">Nenhum post publicado na agenda ainda.</p>
+                      <p className="text-xs mt-1">Posts com status "Publicado" aparecerão aqui para atualização de métricas.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
       </main>
     </div>
+
+    {/* Modal de Atualizacao de Metricas */}
+    <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" />
+            Atualizar Métricas Reais
+          </DialogTitle>
+        </DialogHeader>
+        {editingPost && (
+          <div className="space-y-4">
+            <div className="bg-muted/40 rounded-lg p-3">
+              <p className="font-medium text-sm">{editingPost.title}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {new Date(editingPost.scheduledDate).toLocaleDateString('pt-BR')} · {editingPost.type}
+              </p>
+            </div>
+
+            {/* Métricas de Engajamento */}
+            <div>
+              <p className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Métricas de Engajamento</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">❤️ Curtidas</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realLikes}
+                    onChange={(e) => setEditForm(f => ({ ...f, realLikes: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">💬 Comentários</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realComments}
+                    onChange={(e) => setEditForm(f => ({ ...f, realComments: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">🔁 Compartilhamentos</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realShares}
+                    onChange={(e) => setEditForm(f => ({ ...f, realShares: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">🔖 Salvos</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realSaves}
+                    onChange={(e) => setEditForm(f => ({ ...f, realSaves: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <Label className="text-xs">👁️ Alcance</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realReach}
+                    onChange={(e) => setEditForm(f => ({ ...f, realReach: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Classificação IA */}
+            <div>
+              <p className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wide">Classificação da Metodologia</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Análise</Label>
+                  <Select
+                    value={editForm.aiAnalysis}
+                    onValueChange={(v) => setEditForm(f => ({ ...f, aiAnalysis: v as any }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="top">🏆 Top</SelectItem>
+                      <SelectItem value="neutro">⚡ Neutro</SelectItem>
+                      <SelectItem value="fraco">📉 Fraco</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Sugestão</Label>
+                  <Select
+                    value={editForm.aiSuggestion}
+                    onValueChange={(v) => setEditForm(f => ({ ...f, aiSuggestion: v as any }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="replicar">✅ Replicar</SelectItem>
+                      <SelectItem value="ajustar">⚡ Ajustar</SelectItem>
+                      <SelectItem value="descartar">❌ Descartar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1 mt-3">
+                <Label className="text-xs">Observação (opcional)</Label>
+                <Input
+                  placeholder="Ex: Alto alcance, baixo engajamento. Testar outro horário."
+                  value={editForm.aiSuggestionNote}
+                  onChange={(e) => setEditForm(f => ({ ...f, aiSuggestionNote: e.target.value }))}
+                  className="h-9"
+                />
+              </div>
+            </div>
+
+            {/* Resumo de engajamento calculado */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1">Engajamento Total Calculado</p>
+              <p className="text-2xl font-bold text-primary">
+                {(editForm.realLikes + editForm.realComments + editForm.realShares + editForm.realSaves).toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Taxa de engajamento: {editForm.realReach > 0
+                  ? ((editForm.realLikes + editForm.realComments + editForm.realShares + editForm.realSaves) / editForm.realReach * 100).toFixed(2)
+                  : '0.00'}%
+              </p>
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setEditingPost(null)}>Cancelar</Button>
+          <Button
+            onClick={saveMetrics}
+            disabled={updateMetricsMutation.isPending}
+            className="bg-primary text-primary-foreground"
+          >
+            {updateMetricsMutation.isPending ? (
+              <><Loader className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+            ) : (
+              <><CheckCircle2 className="w-4 h-4 mr-2" /> Salvar Métricas</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
