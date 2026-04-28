@@ -167,6 +167,44 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core
+          "vendor-react": ["react", "react-dom", "react/jsx-runtime"],
+          // Routing
+          "vendor-router": ["wouter"],
+          // tRPC + React Query
+          "vendor-trpc": ["@trpc/client", "@trpc/react-query", "@tanstack/react-query", "superjson"],
+          // UI components (radix + shadcn)
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-select",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-scroll-area",
+            "@radix-ui/react-checkbox",
+            "@radix-ui/react-switch",
+            "@radix-ui/react-label",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-avatar",
+            "@radix-ui/react-progress",
+          ],
+          // Charts
+          "vendor-charts": ["recharts"],
+          // Icons
+          "vendor-icons": ["lucide-react"],
+          // Date utilities
+          "vendor-date": ["date-fns"],
+          // Markdown
+          "vendor-markdown": ["streamdown"],
+        },
+      },
+    },
   },
   server: {
     host: true,
