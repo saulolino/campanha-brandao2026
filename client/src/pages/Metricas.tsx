@@ -46,22 +46,31 @@ export default function Metricas() {
   const { data: lastSync } = trpc.instagram.getLastSync.useQuery(undefined, queryOpts);
   const { data: followersHistory } = trpc.instagram.getFollowersHistory.useQuery(undefined, queryOpts);
 
-  // Mutação de sincronização
+  // Mutação rápida: atualiza só seguidores via Graph API
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: (result) => {
       if (result.success) {
-        toast.success(`Sincronizado! ${result.followers} seguidores · ${result.posts} posts atualizados.`);
-        utils.instagram.getMetrics.invalidate();
-        utils.instagram.getGrowth.invalidate();
-        utils.instagram.getEngagementByType.invalidate();
-        utils.instagram.getTopPosts.invalidate();
-        utils.instagram.getLastSync.invalidate();
-        utils.instagram.getFollowersHistory.invalidate();
+        toast.success(`Seguidores atualizados: ${result.followers}`);
+        utils.invalidate();
+      } else {
+        toast.error(`Erro: ${result.error || 'Tente novamente.'}`);
+      }
+    },
+    onError: () => toast.error('Falha ao sincronizar com Instagram.'),
+  });
+
+  // Mutação completa via Apify: atualiza posts + métricas + seguidores (~2 min)
+  const syncApifyMutation = trpc.instagram.syncPostsFromApify.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        const novos = result.newPosts > 0 ? ` · ${result.newPosts} posts novos` : '';
+        toast.success(`Posts atualizados! ${result.followers} seguidores · ${result.posts} posts${novos}.`);
+        utils.invalidate();
       } else {
         toast.error(`Erro na sincronização: ${result.error || 'Tente novamente.'}`);
       }
     },
-    onError: () => toast.error('Falha ao sincronizar com Instagram.'),
+    onError: (err) => toast.error(`Falha ao sincronizar posts: ${err.message}`),
   });
 
   // Buscar posts publicados da agenda (para atualização manual de métricas)
@@ -178,20 +187,34 @@ export default function Metricas() {
           <InstagramTokenAlert />
 
           {/* Barra de status de sincronização */}
-          <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4 px-1">
             <p className="text-xs text-muted-foreground">
               {lastSync?.lastSync
                 ? `Última sincronização: ${new Date(lastSync.lastSync).toLocaleString('pt-BR')}`
                 : 'Dados do cache local'}
             </p>
-            <button
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3 h-3 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar agora'}
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Botão rápido: só seguidores */}
+              <button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending || syncApifyMutation.isPending}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground transition-colors disabled:opacity-50"
+                title="Atualiza apenas o número de seguidores via Graph API (rápido)"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncMutation.isPending ? 'Atualizando...' : 'Seguidores'}
+              </button>
+              {/* Botão completo: posts + métricas via Apify */}
+              <button
+                onClick={() => syncApifyMutation.mutate()}
+                disabled={syncMutation.isPending || syncApifyMutation.isPending}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
+                title="Atualiza posts + métricas via Apify (~2 min)"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncApifyMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncApifyMutation.isPending ? 'Buscando posts...' : 'Atualizar Posts'}
+              </button>
+            </div>
           </div>
           
           {/* Header */}

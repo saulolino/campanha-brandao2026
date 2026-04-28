@@ -565,6 +565,173 @@ export class InstagramService {
   }
 
   /**
+   * Sincronizar posts e métricas completas via Apify Instagram Profile Scraper.
+   * Atualiza o instagram_real_data.json com dados frescos do perfil público.
+   * Preserva shares/saves/reach dos posts já conhecidos (Apify não retorna esses campos).
+   */
+  async syncPostsFromApify(): Promise<{
+    success: boolean;
+    followers: number;
+    posts: number;
+    newPosts: number;
+    fetchedAt: string;
+    error?: string;
+  }> {
+    try {
+      const { scrapeInstagramProfile } = await import('../apify.js');
+      console.log('[Instagram] Iniciando sync completo via Apify...');
+      const profileRaw = await scrapeInstagramProfile('eduardobrandaopv') as any;
+      if (!profileRaw) throw new Error('Apify não retornou dados do perfil');
+
+      const latestPosts: any[] = profileRaw.latestPosts || [];
+      const followersCount: number = profileRaw.followersCount || 0;
+      const followingCount: number = profileRaw.followsCount || 0;
+      const postsCount: number = profileRaw.postsCount || latestPosts.length;
+
+      // Mapear posts do Apify para o formato interno
+      const mappedPosts = latestPosts.map((p: any) => ({
+        id: String(p.id || p.shortCode || ''),
+        caption: p.caption || '',
+        mediaType: p.type === 'Video' ? 'VIDEO' : p.type === 'Sidecar' ? 'CAROUSEL_ALBUM' : 'IMAGE',
+        mediaProductType: p.productType === 'reels' ? 'REELS' : 'FEED',
+        permalink: p.url || '',
+        timestamp: p.timestamp || new Date().toISOString(),
+        likes: p.likesCount || 0,
+        comments: p.commentsCount || 0,
+        shares: 0,
+        saves: 0,
+        reach: 0,
+        views: p.videoViewCount || 0,
+        thumbnailUrl: p.displayUrl || (Array.isArray(p.images) && p.images[0]) || '',
+      }));
+
+      // Mesclar com dados existentes: preservar shares/saves/reach dos posts já conhecidos
+      const existingPosts: any[] = this.data?.posts || [];
+      const existingById = new Map(existingPosts.map((p: any) => [p.id, p]));
+      const existingByShortCode = new Map(
+        existingPosts.map((p: any) => [
+          (p.permalink || '').split('/').filter(Boolean).pop() || '',
+          p,
+        ])
+      );
+
+      const mergedPosts = mappedPosts.map((p: any) => {
+        const shortCode = (p.permalink || '').split('/').filter(Boolean).pop() || '';
+        const existing = existingById.get(p.id) || existingByShortCode.get(shortCode);
+        if (existing) {
+          return {
+            ...existing,
+            id: p.id,
+            caption: p.caption || existing.caption,
+            likes: p.likes > 0 ? p.likes : existing.likes,
+            comments: p.comments > 0 ? p.comments : existing.comments,
+            views: p.views > 0 ? p.views : (existing.views || 0),
+            thumbnailUrl: p.thumbnailUrl || existing.thumbnailUrl,
+            timestamp: p.timestamp || existing.timestamp,
+          };
+        }
+        return p;
+      });
+
+      // Contar posts novos
+      const existingIds = new Set(existingPosts.map((p: any) => p.id));
+      const newPostsCount = mergedPosts.filter((p: any) => !existingIds.has(p.id)).length;
+
+      // Recalcular métricas agregadas
+      const totalLikes = mergedPosts.reduce((s: number, p: any) => s + (p.likes || 0), 0);
+      const totalComments = mergedPosts.reduce((s: number, p: any) => s + (p.comments || 0), 0);
+      const totalShares = mergedPosts.reduce((s: number, p: any) => s + (p.shares || 0), 0);
+      const totalSaves = mergedPosts.reduce((s: number, p: any) => s + (p.saves || 0), 0);
+      const totalReach = mergedPosts.reduce((s: number, p: any) => s + (p.reach || 0), 0);
+      const avgEngagement = mergedPosts.length > 0
+        ? Math.round((totalLikes + totalComments + totalShares + totalSaves) / mergedPosts.length)
+        : 0;
+      const engagementRateRaw = followersCount > 0 && avgEngagement > 0
+        ? parseFloat(((avgEngagement / followersCount) * 100).toFixed(2))
+        : 0;
+      const engagementRate = isNaN(engagementRateRaw) ? 0 : engagementRateRaw;
+
+      // Engajamento por tipo de mídia
+      const byType: Record<string, any> = {};
+      mergedPosts.forEach((p: any) => {
+        if (!byType[p.mediaType]) {
+          byType[p.mediaType] = { type: p.mediaType, posts: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0, totalReach: 0, avgEngagement: 0 };
+        }
+        byType[p.mediaType].posts++;
+        byType[p.mediaType].totalLikes += p.likes || 0;
+        byType[p.mediaType].totalComments += p.comments || 0;
+        byType[p.mediaType].totalShares += p.shares || 0;
+        byType[p.mediaType].totalSaves += p.saves || 0;
+        byType[p.mediaType].totalReach += p.reach || 0;
+      });
+      const engagementByType = Object.values(byType).map((t: any) => ({
+        ...t,
+        avgEngagement: t.posts > 0
+          ? Math.round((t.totalLikes + t.totalComments + t.totalShares + t.totalSaves) / t.posts)
+          : 0,
+      }));
+
+      const fetchedAt = new Date().toISOString();
+      const newData: InstagramData = {
+        account: {
+          username: profileRaw.username || 'eduardobrandaopv',
+          name: profileRaw.fullName || 'Eduardo Brandão',
+          bio: profileRaw.biography || '',
+          followers: followersCount,
+          following: followingCount,
+          posts: postsCount,
+          profilePicture: profileRaw.profilePicUrl || profileRaw.profilePicUrlHD || '',
+        },
+        posts: mergedPosts,
+        metrics: { totalLikes, totalComments, totalShares, totalSaves, totalReach, avgEngagement, engagementRate, engagementByType },
+        fetchedAt,
+      };
+
+      // Persistir no arquivo JSON
+      fs.writeFileSync(this.dataPath, JSON.stringify(newData, null, 2), 'utf-8');
+      this.data = newData;
+      console.log(`[Instagram] Sync Apify concluído: ${followersCount} seguidores, ${mergedPosts.length} posts (${newPostsCount} novos)`);
+
+      // Salvar snapshot diário no banco
+      try {
+        const db = await getDb();
+        if (db) {
+          const today = new Date().toISOString().slice(0, 10);
+          const existing = await db.select({ id: instagramFollowersHistory.id })
+            .from(instagramFollowersHistory)
+            .where(and(
+              eq(instagramFollowersHistory.username, newData.account.username),
+              eq(instagramFollowersHistory.snapshotDate, today)
+            ))
+            .limit(1);
+          if (existing.length === 0) {
+            await db.insert(instagramFollowersHistory).values({
+              username: newData.account.username,
+              followers: followersCount,
+              following: followingCount,
+              postsCount,
+              totalLikes,
+              totalComments,
+              totalShares,
+              totalSaves,
+              snapshotDate: today,
+            });
+            console.log(`[Instagram] Snapshot diário salvo: ${followersCount} seguidores em ${today}`);
+          }
+        }
+      } catch (snapErr) {
+        console.warn('[Instagram] Snapshot diário não salvo:', snapErr);
+      }
+
+      return { success: true, followers: followersCount, posts: mergedPosts.length, newPosts: newPostsCount, fetchedAt };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('[Instagram] Erro no sync via Apify:', msg);
+      return { success: false, followers: 0, posts: 0, newPosts: 0, fetchedAt: new Date().toISOString(), error: msg };
+    }
+  }
+
+  /**
    * Verificar se os dados estão disponíveis
    * Sempre retorna true pois há dados de fallback
    */

@@ -238,4 +238,12 @@ export const instagramRouter = router({
   syncFromAPI: publicProcedure.mutation(async () => {
     return await instagramService.syncFromAPI();
   }),
+
+  /**
+   * Sincronização completa via Apify: busca posts recentes + métricas + seguidores.
+   * Pode demorar até 2 minutos. Atualiza o JSON local com dados frescos.
+   */
+  syncPostsFromApify: publicProcedure.mutation(async () => {
+    return await instagramService.syncPostsFromApify();
+  }),
 });

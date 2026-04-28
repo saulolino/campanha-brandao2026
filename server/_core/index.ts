@@ -45,6 +45,23 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Rota REST para tarefa agendada: sincronização automática de posts via Apify
+  // Aberta para qualquer requisição autenticada (incluindo scheduled-task cookie)
+  app.post("/api/scheduled/sync-instagram", async (req, res) => {
+    try {
+      const { instagramService } = await import("../services/instagramService.js");
+      console.log('[Scheduled] Iniciando sync automático de posts Instagram via Apify...');
+      const result = await instagramService.syncPostsFromApify();
+      console.log('[Scheduled] Sync concluído:', result);
+      res.json(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[Scheduled] Erro no sync automático:', msg);
+      res.status(500).json({ success: false, error: msg });
+    }
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
