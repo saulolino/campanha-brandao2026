@@ -46,6 +46,43 @@ async function startServer() {
     })
   );
 
+  // Proxy de imagem para thumbnails do Instagram (evita bloqueio CORS)
+  app.get("/api/image-proxy", async (req, res) => {
+    try {
+      const url = req.query.url as string;
+      if (!url || !url.startsWith('https://')) {
+        res.status(400).json({ error: 'URL inválida' });
+        return;
+      }
+      // Permitir apenas domínios do Instagram/Facebook CDN
+      const allowed = ['cdninstagram.com', 'fbcdn.net', 'instagram.com', 'scontent'];
+      const isAllowed = allowed.some(d => url.includes(d));
+      if (!isAllowed) {
+        res.status(403).json({ error: 'Domínio não permitido' });
+        return;
+      }
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; CampanhaDashboard/1.0)',
+          'Referer': 'https://www.instagram.com/',
+        },
+      });
+      if (!response.ok) {
+        res.status(response.status).end();
+        return;
+      }
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      const buffer = await response.arrayBuffer();
+      res.end(Buffer.from(buffer));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ error: msg });
+    }
+  });
+
   // Rota REST para tarefa agendada: sincronização automática de posts via Apify
   // Aberta para qualquer requisição autenticada (incluindo scheduled-task cookie)
   app.post("/api/scheduled/sync-instagram", async (req, res) => {

@@ -61,6 +61,52 @@ function MetricCard({ label, value, prev, variation, icon: Icon, color = "primar
   );
 }
 
+// ─── Componente de Thumbnail com proxy e placeholder ───────────────────────
+
+function PostThumbnail({ thumbnailUrl, mediaType }: { thumbnailUrl?: string; mediaType?: string }) {
+  const [error, setError] = useState(false);
+
+  const proxyUrl = thumbnailUrl && !error
+    ? `/api/image-proxy?url=${encodeURIComponent(thumbnailUrl)}`
+    : null;
+
+  const isVideo = mediaType === 'VIDEO' || mediaType === 'REELS';
+  const isCarousel = mediaType === 'CAROUSEL_ALBUM';
+
+  if (proxyUrl) {
+    return (
+      <div className="relative flex-shrink-0 w-12 h-12">
+        <img
+          src={proxyUrl}
+          alt=""
+          className="w-12 h-12 rounded object-cover"
+          onError={() => setError(true)}
+        />
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded">
+            <div className="w-0 h-0 border-t-[5px] border-t-transparent border-l-[8px] border-l-white border-b-[5px] border-b-transparent ml-0.5" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Placeholder quando não há thumbnail
+  return (
+    <div className="flex-shrink-0 w-12 h-12 rounded bg-muted/40 border border-border/30 flex items-center justify-center">
+      {isVideo ? (
+        <div className="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-muted-foreground/50 border-b-[6px] border-b-transparent ml-0.5" />
+      ) : isCarousel ? (
+        <div className="grid grid-cols-2 gap-0.5 w-5 h-5">
+          {[0,1,2,3].map(i => <div key={i} className="bg-muted-foreground/30 rounded-sm" />)}
+        </div>
+      ) : (
+        <div className="w-5 h-5 rounded bg-muted-foreground/30" />
+      )}
+    </div>
+  );
+}
+
 // ─── Componente principal ────────────────────────────────────────────────────
 
 export default function Relatorio() {
@@ -438,9 +484,7 @@ export default function Relatorio() {
                         <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
                           {i + 1}
                         </div>
-                        {post.thumbnailUrl && (
-                          <img src={post.thumbnailUrl} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />
-                        )}
+                        <PostThumbnail thumbnailUrl={post.thumbnailUrl} mediaType={post.mediaType} />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-foreground line-clamp-2 mb-1">{post.caption || '(sem legenda)'}</p>
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
