@@ -18,6 +18,7 @@ import Estrategia from "./pages/Estrategia";
 import Metricas from "./pages/Metricas";
 import Projecoes from "./pages/Projecoes";
 import Relatorios from "./pages/Relatorios";
+import Relatorio from "./pages/Relatorio";
 import Apoiadores from "./pages/Apoiadores";
 import PublicationManager from "./pages/PublicationManager";
 import PostPerformance from "./pages/PostPerformance";
@@ -107,6 +108,17 @@ function Router() {
             rotaTentada="/relatorios"
           >
             <Relatorios />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/relatorio">
+        {() => (
+          <ProtectedRoute
+            requiredRole={["team", "coordinator", "superadmin"]}
+            rotaTentada="/relatorio"
+          >
+            <Relatorio />
           </ProtectedRoute>
         )}
       </Route>

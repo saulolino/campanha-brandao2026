@@ -706,3 +706,13 @@
 - [x] Concorrentes: 75 testes passando (7 novos no apify.test.ts)
 - [x] Facebook Eduardo: aba Facebook nas Configurações + card no dashboard + router tRPC facebook (getMetrics, syncPage, setPageUrl) + migração 0027 aplicada
 - [x] Bug: "Sincronizar Todos" em /concorrentes corrigido — syncAll agora usa Promise.all (paralelo) em vez de loop sequencial; mapeamento de campos do Facebook corrigido para perfis pessoais (usa personalProfile.profilePhoto)
+
+## Módulo de Relatório de Performance com IA
+
+- [x] Backend: endpoint report.generate com análise de IA especialista sênior
+- [x] Backend: lógica de comparação entre período selecionado e período anterior equivalente
+- [x] Frontend: página /relatorio com seletor de datas (início e fim)
+- [x] Frontend: seções — resumo executivo, crescimento, top posts, análise por tipo, análise IA
+- [x] Frontend: exportação do relatório em PDF
+- [x] Navegação: adicionar item Relatório IA na SidebarNav
+
