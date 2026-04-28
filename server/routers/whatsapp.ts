@@ -218,7 +218,7 @@ export const whatsappRouter = router({
             caption: instagramPosts.caption,
           })
           .from(instagramPosts);
-        posts = rows.filter((r) => input.postIds.includes(r.id));
+        posts = rows.filter((r: PostItem) => input.postIds.includes(r.id));
       }
 
       // Buscar eventos selecionados
@@ -237,7 +237,7 @@ export const whatsappRouter = router({
             description: streetEvents.description,
           })
           .from(streetEvents);
-        events = rows.filter((r) => input.eventIds.includes(r.id));
+        events = rows.filter((r: EventItem) => input.eventIds.includes(r.id));
       }
 
       const message = buildMessage(input.dispatchType, posts, events);

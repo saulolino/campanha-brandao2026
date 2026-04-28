@@ -387,22 +387,20 @@ function TeamHome() {
     refetchOnWindowFocus: false,
   });
   const fbSyncMutation = trpc.facebook.syncPage.useMutation({
-    onSuccess: () => utils.facebook.getMetrics.invalidate(),
+    // Invalida TODAS as queries do app ao sincronizar Facebook
+    onSuccess: () => utils.invalidate(),
   });
 
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {
       if (result.success) {
-        await utils.instagram.getMetrics.invalidate();
-        await utils.instagram.getPosts.invalidate();
-        await utils.instagram.getGrowth.invalidate();
-        await utils.instagram.getEngagementByType.invalidate();
-        await utils.instagram.getTopPosts.invalidate();
+        // Invalida TODAS as queries do app para sincronizar todas as paginas abertas
+        await utils.invalidate();
         const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         setLastSync(now);
         setSyncError(null);
       } else {
-        setSyncError(result.error || 'Erro desconhecido na sincronização');
+        setSyncError(result.error || 'Erro desconhecido na sincronizacao');
       }
     },
     onError: (err) => {

@@ -6,7 +6,20 @@ import superjson from "superjson";
 import App from "./App";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Dados sempre considerados stale — recarrega ao focar a aba/janela
+      staleTime: 0,
+      // Recarrega automaticamente ao focar a janela (troca de aba, volta ao app)
+      refetchOnWindowFocus: true,
+      // Recarrega em background a cada 60 segundos
+      refetchInterval: 60_000,
+      // Tenta novamente 1x em caso de erro de rede
+      retry: 1,
+    },
+  },
+});
 
 queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {

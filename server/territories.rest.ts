@@ -150,7 +150,7 @@ territoriesRestRouter.get("/pdad/ranking/:indicador", async (req: Request, res: 
       indicador,
       ano,
       ordem,
-      ranking: rows.map((r, i) => ({
+      ranking: rows.map((r: any, i: number) => ({
         posicao: i + 1,
         ra_codigo: r.ra_codigo,
         ra_nome: r.ra_nome,
@@ -265,14 +265,14 @@ territoriesRestRouter.get("/pdad/:ra", async (req: Request, res: Response) => {
       fonte: raInfo.fonte,
       total_indicadores: rows.length,
       indicadores_por_categoria: groupByCategoria(
-        rows.map((r) => ({
+        rows.map((r: any) => ({
           indicador: r.indicador,
           categoria: r.categoria,
           valor: r.valor,
           unidade: r.unidade,
         }))
       ),
-      indicadores_raw: rows.map((r) => ({
+      indicadores_raw: rows.map((r: any) => ({
         indicador: r.indicador,
         categoria: r.categoria,
         valor: r.valor !== null ? parseFloat(r.valor) : null,
