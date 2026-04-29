@@ -391,6 +391,20 @@ function TeamHome() {
     onSuccess: () => utils.invalidate(),
   });
 
+  // Próximas datas eleitorais
+  const { data: upcomingElectoral = [] } = trpc.electoralCalendar.getUpcoming.useQuery({ limit: 5 });
+
+  const ELECTORAL_COLORS: Record<string, { pill: string; dot: string }> = {
+    eleicao:    { pill: 'bg-red-900/40 border-red-700 text-red-300',    dot: 'bg-red-500' },
+    propaganda: { pill: 'bg-amber-900/40 border-amber-700 text-amber-300', dot: 'bg-amber-500' },
+    prazo:      { pill: 'bg-blue-900/40 border-blue-700 text-blue-300',   dot: 'bg-blue-500' },
+    legal:      { pill: 'bg-purple-900/40 border-purple-700 text-purple-300', dot: 'bg-purple-500' },
+    restricao:  { pill: 'bg-orange-900/40 border-orange-700 text-orange-300', dot: 'bg-orange-500' },
+    convencao:  { pill: 'bg-green-900/40 border-green-700 text-green-300',  dot: 'bg-green-500' },
+    financeiro: { pill: 'bg-teal-900/40 border-teal-700 text-teal-300',   dot: 'bg-teal-500' },
+    tse:        { pill: 'bg-slate-800/40 border-slate-600 text-slate-400', dot: 'bg-slate-500' },
+  };
+
   const syncMutation = trpc.instagram.syncFromAPI.useMutation({
     onSuccess: async (result) => {
       if (result.success) {
@@ -647,6 +661,42 @@ function TeamHome() {
 
           {/* Contagem Regressiva para a Eleição */}
           <ElectionCountdownCard currentFollowers={currentFollowers} targetFollowers={targetFollowers} />
+
+          {/* Próximos Marcos Eleitorais */}
+          {upcomingElectoral.length > 0 && (
+            <Card className="mb-8 border border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-primary" />
+                  Próximos Marcos Eleitorais
+                </CardTitle>
+                <CardDescription>Datas do Calendário Eleitoral TSE 2026</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {(upcomingElectoral as any[]).map((ed) => {
+                    const today = new Date();
+                    const edDate = new Date(ed.date + 'T12:00:00');
+                    const daysUntil = Math.ceil((edDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const colors = ELECTORAL_COLORS[ed.category] || ELECTORAL_COLORS.tse;
+                    return (
+                      <div key={ed.id} className={`flex items-start gap-3 p-3 rounded-lg border ${colors.pill}`}>
+                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${colors.dot}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">{ed.title}</p>
+                          <p className="text-xs opacity-70 mt-0.5 line-clamp-1">{ed.description}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-xs font-bold">{new Date(ed.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</p>
+                          <p className="text-[10px] opacity-60">{daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanhã' : `em ${daysUntil}d`}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Progress Bar */}
           <Card className="mb-8 border border-border/50">

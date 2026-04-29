@@ -716,3 +716,11 @@
 - [x] Frontend: exportação do relatório em PDF
 - [x] Navegação: adicionar item Relatório IA na SidebarNav
 
+
+## Calendário Eleitoral 2026 nas Agendas
+
+- [ ] Backend: criar arquivo JSON com todas as datas eleitorais do TSE 2026
+- [ ] Backend: endpoint `calendar.getElectoralDates` para retornar as datas eleitorais
+- [ ] Frontend: exibir datas eleitorais como eventos fixos (não editáveis) na Agenda de Conteúdo
+- [ ] Frontend: exibir datas eleitorais como eventos fixos na Agenda de Rua
+- [ ] Visual: badge/marcador especial para diferenciar datas eleitorais dos eventos normais

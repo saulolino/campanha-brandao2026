@@ -1,0 +1,234 @@
+[
+  {
+    "id": "ec-jan-01",
+    "date": "2026-01-01",
+    "title": "Início do monitoramento de pesquisas eleitorais",
+    "description": "Início da obrigatoriedade do registro no TSE de pesquisas eleitorais que tiverem seus resultados divulgados publicamente.",
+    "category": "legal",
+    "month": "JANEIRO"
+  },
+  {
+    "id": "ec-mar-05",
+    "date": "2026-03-05",
+    "title": "Início da janela partidária",
+    "description": "Início da janela partidária exclusivamente para que deputados em exercício possam trocar de partido sem perder o mandato.",
+    "category": "legal",
+    "month": "MARÇO"
+  },
+  {
+    "id": "ec-apr-01",
+    "date": "2026-04-01",
+    "title": "Início da propaganda institucional do TSE",
+    "description": "Início da propaganda institucional do TSE direcionada ao incentivo da participação feminina, dos jovens, da diversidade racial na política e divulgação de ações educativas sobre o funcionamento do sistema eleitoral (de 1º de abril a 30 de julho).",
+    "category": "tse",
+    "month": "ABRIL"
+  },
+  {
+    "id": "ec-may-03",
+    "date": "2026-05-03",
+    "title": "Final da janela partidária",
+    "description": "Final da janela partidária exclusiva para deputados em exercício. Data final para que os pré-candidatos estabeleçam domicílio eleitoral no município em que pretendem concorrer.",
+    "category": "legal",
+    "month": "MAIO"
+  },
+  {
+    "id": "ec-may-04",
+    "date": "2026-05-04",
+    "title": "Prazo de filiação partidária",
+    "description": "Prazo final para que futuros candidatos estejam com a filiação partidária deferida. Data para desincompatibilização do presidente da República, governadores e prefeitos que pretendem concorrer.",
+    "category": "prazo",
+    "month": "MAIO"
+  },
+  {
+    "id": "ec-jun-06",
+    "date": "2026-06-06",
+    "title": "Prazo final para regularização do título de eleitor",
+    "description": "Prazo final para regularização do título de eleitor.",
+    "category": "prazo",
+    "month": "JUNHO"
+  },
+  {
+    "id": "ec-jun-15",
+    "date": "2026-06-15",
+    "title": "Início do financiamento coletivo de campanha",
+    "description": "Permissão para pré-candidatos iniciarem ações de arrecadação prévia de recursos na modalidade de financiamento coletivo.",
+    "category": "financeiro",
+    "month": "JUNHO"
+  },
+  {
+    "id": "ec-jul-04",
+    "date": "2026-07-04",
+    "title": "Desincompatibilização de dirigentes sindicais",
+    "description": "Data limite para desincompatibilização de dirigentes sindicais e representantes de classe.",
+    "category": "legal",
+    "month": "JULHO"
+  },
+  {
+    "id": "ec-jul-16",
+    "date": "2026-07-16",
+    "title": "TSE divulga montante do FEFC",
+    "description": "Data limite para o Tribunal Superior Eleitoral divulgar o montante de recursos disponíveis no Fundo Especial de Financiamento de Campanha (FEFC).",
+    "category": "financeiro",
+    "month": "JULHO"
+  },
+  {
+    "id": "ec-jul-30",
+    "date": "2026-07-30",
+    "title": "Proibição de apresentação em TV/Rádio",
+    "description": "A partir desta data, os pré-candidatos não podem apresentar ou comentar programas de TV ou Rádio.",
+    "category": "restricao",
+    "month": "JULHO"
+  },
+  {
+    "id": "ec-aug-04",
+    "date": "2026-08-04",
+    "title": "Desincompatibilização de servidores públicos",
+    "description": "Data limite para desincompatibilização de servidores públicos. Proibida a contratação de shows artísticos com recursos públicos para inauguração de obras. Proibido o comparecimento de pré-candidatos em inaugurações de obras públicas.",
+    "category": "restricao",
+    "month": "AGOSTO"
+  },
+  {
+    "id": "ec-aug-05",
+    "date": "2026-08-05",
+    "title": "Proibição de publicidade institucional",
+    "description": "Proibição da publicidade institucional dos órgãos federais e estaduais, exceto em casos de grave e urgente necessidade pública. Vedadas nomeações, contratações ou demissões sem justa causa de servidor público.",
+    "category": "restricao",
+    "month": "AGOSTO"
+  },
+  {
+    "id": "ec-aug-05b",
+    "date": "2026-08-05",
+    "title": "Início das convenções partidárias",
+    "description": "Início do período para realização das convenções dos partidos e das federações.",
+    "category": "convencao",
+    "month": "AGOSTO"
+  },
+  {
+    "id": "ec-aug-07",
+    "date": "2026-08-07",
+    "title": "Início da propaganda intrapartidária",
+    "description": "A partir desta data, observando o máximo de 15 dias que antecedem a data da convenção, o pré-candidato poderá realizar propaganda intrapartidária para incitar a indicação de seu nome.",
+    "category": "propaganda",
+    "month": "AGOSTO"
+  },
+  {
+    "id": "ec-aug-20",
+    "date": "2026-08-20",
+    "title": "TSE divulga quantitativo de eleitores",
+    "description": "Data a partir da qual o TSE pode divulgar o quantitativo de eleitores por município para fins do cálculo do limite de gastos.",
+    "category": "tse",
+    "month": "AGOSTO"
+  },
+  {
+    "id": "ec-sep-05",
+    "date": "2026-09-05",
+    "title": "Final das convenções partidárias",
+    "description": "Final do período para realização das convenções dos partidos e das federações.",
+    "category": "convencao",
+    "month": "SETEMBRO"
+  },
+  {
+    "id": "ec-sep-15",
+    "date": "2026-09-15",
+    "title": "Prazo de registro de candidatura no TSE",
+    "description": "Data limite para o registro de candidatura no TSE (até às 19h). Início da propaganda eleitoral na internet e na rua, incluindo o impulsionamento.",
+    "category": "prazo",
+    "month": "SETEMBRO"
+  },
+  {
+    "id": "ec-sep-16",
+    "date": "2026-09-16",
+    "title": "Início da propaganda eleitoral",
+    "description": "Início da propaganda eleitoral na internet e na rua, incluindo o impulsionamento.",
+    "category": "propaganda",
+    "month": "SETEMBRO"
+  },
+  {
+    "id": "ec-sep-28",
+    "date": "2026-09-28",
+    "title": "Início da propaganda gratuita em TV e rádio",
+    "description": "Início da propaganda eleitoral gratuita em TV e rádio. Início do período de proibição da realização de enquetes relacionadas ao processo eleitoral.",
+    "category": "propaganda",
+    "month": "SETEMBRO"
+  },
+  {
+    "id": "ec-oct-01",
+    "date": "2026-10-01",
+    "title": "Último dia da propaganda gratuita em TV/Rádio (1º turno)",
+    "description": "Último dia da propaganda eleitoral gratuita na TV e no rádio do 1º turno.",
+    "category": "propaganda",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-03",
+    "date": "2026-10-03",
+    "title": "Último dia para debates, reuniões e comícios (1º turno)",
+    "description": "Último dia para a realização de debates, reuniões públicas e comícios do 1º turno.",
+    "category": "restricao",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-04",
+    "date": "2026-10-04",
+    "title": "Último dia de propaganda de rua (1º turno)",
+    "description": "Último dia de propaganda eleitoral de rua (até 22h) e internet (23h59) do 1º turno.",
+    "category": "restricao",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-04-eleicao",
+    "date": "2026-10-04",
+    "title": "🗳️ 1º TURNO DAS ELEIÇÕES",
+    "description": "Dia do 1º turno das eleições municipais 2026.",
+    "category": "eleicao",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-09",
+    "date": "2026-10-09",
+    "title": "Reinício da propaganda para 2º turno",
+    "description": "Após as 17h está permitido o reinício da propaganda eleitoral de rua e na internet, incluindo o impulsionamento, para aqueles que forem disputar o 2º turno.",
+    "category": "propaganda",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-22",
+    "date": "2026-10-22",
+    "title": "Início da propaganda gratuita em TV/Rádio (2º turno)",
+    "description": "Início da propaganda eleitoral gratuita de TV e rádio para o 2º turno.",
+    "category": "propaganda",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-23",
+    "date": "2026-10-23",
+    "title": "Último dia da propaganda gratuita em TV/Rádio (2º turno)",
+    "description": "Data final da propaganda eleitoral gratuita de TV e rádio do 2º turno. Último dia para reuniões públicas e comícios do 2º turno.",
+    "category": "propaganda",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-24",
+    "date": "2026-10-24",
+    "title": "Último dia para debates em rádio e TV (2º turno)",
+    "description": "Último dia para realização de debates em rádio e TV do 2º turno.",
+    "category": "restricao",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-25",
+    "date": "2026-10-25",
+    "title": "Último dia de propaganda de rua (2º turno)",
+    "description": "Último dia de propaganda eleitoral de rua (até 22h) e internet (23h59) do 2º turno.",
+    "category": "restricao",
+    "month": "OUTUBRO"
+  },
+  {
+    "id": "ec-oct-25-eleicao",
+    "date": "2026-10-25",
+    "title": "🗳️ 2º TURNO DAS ELEIÇÕES",
+    "description": "Dia do 2º turno das eleições 2026.",
+    "category": "eleicao",
+    "month": "OUTUBRO"
+  }
+]

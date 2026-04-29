@@ -353,6 +353,25 @@ export default function Conteudo() {
   );
   const posts: any[] = postsData || [];
 
+  // Datas do Calendário Eleitoral 2026
+  const { data: electoralDates = [] } = trpc.electoralCalendar.getAll.useQuery();
+
+  function getElectoralDatesForDay(day: Date) {
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+    return electoralDates.filter((d: any) => d.date === dateStr);
+  }
+
+  const ELECTORAL_COLORS: Record<string, { pill: string }> = {
+    eleicao:    { pill: 'bg-red-900/70 border-red-600 text-red-200' },
+    propaganda: { pill: 'bg-amber-900/70 border-amber-600 text-amber-200' },
+    prazo:      { pill: 'bg-blue-900/70 border-blue-600 text-blue-200' },
+    legal:      { pill: 'bg-purple-900/70 border-purple-600 text-purple-200' },
+    restricao:  { pill: 'bg-orange-900/70 border-orange-600 text-orange-200' },
+    convencao:  { pill: 'bg-green-900/70 border-green-600 text-green-200' },
+    financeiro: { pill: 'bg-teal-900/70 border-teal-600 text-teal-200' },
+    tse:        { pill: 'bg-slate-700/70 border-slate-500 text-slate-300' },
+  };
+
   const createPost = trpc.posts.create.useMutation({
     onSuccess: () => {
       utils.posts.list.invalidate();
@@ -691,7 +710,17 @@ export default function Conteudo() {
                           )}
                         </div>
                         <div className="flex flex-col gap-1.5 flex-1">
-                          {dayPosts.length === 0 ? (
+                          {/* Eventos eleitorais do dia */}
+                          {getElectoralDatesForDay(day).map((ed: any) => (
+                            <div
+                              key={ed.id}
+                              title={ed.description}
+                              className={`w-full rounded border px-1.5 py-0.5 text-[10px] font-semibold truncate cursor-default ${(ELECTORAL_COLORS[ed.category] || ELECTORAL_COLORS.tse).pill}`}
+                            >
+                              🗃️ {ed.title}
+                            </div>
+                          ))}
+                          {dayPosts.length === 0 && getElectoralDatesForDay(day).length === 0 ? (
                             <p className="text-xs text-white/20 text-center mt-4">Sem posts</p>
                           ) : (
                             dayPosts.map((post: any) => {
@@ -902,6 +931,16 @@ export default function Conteudo() {
                           )}
                         </div>
                         <div className="flex flex-col gap-0.5 flex-1">
+                          {/* Eventos eleitorais do dia */}
+                          {getElectoralDatesForDay(day).map((ed: any) => (
+                            <div
+                              key={ed.id}
+                              title={ed.description}
+                              className={`w-full rounded px-1.5 py-0.5 text-[10px] font-semibold truncate border cursor-default ${(ELECTORAL_COLORS[ed.category] || ELECTORAL_COLORS.tse).pill}`}
+                            >
+                              🗃️ {ed.title}
+                            </div>
+                          ))}
                           {dayPosts.slice(0, 3).map((post: any) => {
                             const typeCfg = TYPE_CONFIG[(post.type as PostType) || "imagem"];
                             const statusCfg = STATUS_CONFIG[(post.status as PostStatus) || "draft"];
