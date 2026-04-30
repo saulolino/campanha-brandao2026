@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import electoralData from "../data/electoral_calendar_2026.json" assert { type: "json" };
 
 interface ElectoralDate {
   id: string;
@@ -16,13 +12,7 @@ interface ElectoralDate {
 }
 
 function loadElectoralDates(): ElectoralDate[] {
-  try {
-    const filePath = join(__dirname, "../data/electoral_calendar_2026.json");
-    const raw = readFileSync(filePath, "utf-8");
-    return JSON.parse(raw) as ElectoralDate[];
-  } catch {
-    return [];
-  }
+  return electoralData as ElectoralDate[];
 }
 
 // Cores por categoria para uso no frontend
