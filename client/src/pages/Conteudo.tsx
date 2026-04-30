@@ -639,6 +639,38 @@ export default function Conteudo() {
             </div>
           )}
 
+          {/* Banner: próximas datas eleitorais nos próximos 30 dias */}
+          {(() => {
+            const todayBanner = new Date();
+            todayBanner.setHours(0,0,0,0);
+            const in30 = new Date(todayBanner);
+            in30.setDate(in30.getDate() + 30);
+            const upcoming = (electoralDates as any[]).filter((d: any) => {
+              const dt = new Date(d.date + 'T12:00:00');
+              return dt >= todayBanner && dt <= in30;
+            }).sort((a: any, b: any) => a.date.localeCompare(b.date));
+            if (upcoming.length === 0) return null;
+            return (
+              <div className="rounded-xl border border-amber-700/40 bg-amber-950/20 px-4 py-3">
+                <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">📅 Marcos eleitorais nos próximos 30 dias</p>
+                <div className="flex flex-wrap gap-2">
+                  {upcoming.map((ed: any) => {
+                    const dt = new Date(ed.date + 'T12:00:00');
+                    const daysUntil = Math.ceil((dt.getTime() - todayBanner.getTime()) / (1000 * 60 * 60 * 24));
+                    const colors = ELECTORAL_COLORS[ed.category] || ELECTORAL_COLORS.tse;
+                    return (
+                      <div key={ed.id} className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${colors.pill}`} title={ed.description}>
+                        <span className="font-bold">{dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                        <span className="truncate max-w-[180px]">{ed.title}</span>
+                        <span className="opacity-60 text-[10px] flex-shrink-0">{daysUntil === 0 ? 'hoje' : daysUntil === 1 ? 'amanhã' : `em ${daysUntil}d`}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Resumo de tipos */}
           <div className="grid grid-cols-5 gap-3">
             {(Object.keys(TYPE_CONFIG) as PostType[]).map((type) => {
