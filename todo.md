@@ -719,8 +719,17 @@
 
 ## Calendário Eleitoral 2026 nas Agendas
 
-- [ ] Backend: criar arquivo JSON com todas as datas eleitorais do TSE 2026
-- [ ] Backend: endpoint `calendar.getElectoralDates` para retornar as datas eleitorais
-- [ ] Frontend: exibir datas eleitorais como eventos fixos (não editáveis) na Agenda de Conteúdo
-- [ ] Frontend: exibir datas eleitorais como eventos fixos na Agenda de Rua
-- [ ] Visual: badge/marcador especial para diferenciar datas eleitorais dos eventos normais
+- [x] Backend: criar arquivo JSON com todas as datas eleitorais do TSE 2026
+- [x] Backend: endpoint `electoralCalendar.getAll/getUpcoming/getByRange` para retornar as datas eleitorais
+- [x] Frontend: exibir datas eleitorais como eventos fixos (não editáveis) na Agenda de Conteúdo
+- [x] Frontend: exibir datas eleitorais como eventos fixos na Agenda de Rua
+- [x] Visual: badge/marcador especial por categoria para diferenciar datas eleitorais dos eventos normais
+- [x] Frontend: painel "Próximos Marcos Eleitorais" na Home com contagem regressiva
+
+## Sistema de Alertas Eleitorais Automáticos
+
+- [x] Backend: tabela electoral_alert_log no schema (id, electoralDateId, daysBeforeEvent, sentAt)
+- [x] Backend: router electoralAlerts com checkAndSend (verifica marcos em 7/3/1 dias)
+- [x] Backend: endpoint /api/scheduled/check-electoral-alerts para tarefa agendada
+- [x] Frontend: painel de alertas eleitorais na Home (próximos alertas + histórico disparados)
+- [x] Agendamento: tarefa diária às 8h para verificar e disparar alertas (expira 05/10/2026)

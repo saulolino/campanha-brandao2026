@@ -17,6 +17,7 @@ import { candidateSettingsRouter } from "./routers/candidateSettings";
 import { territoriesRouter } from "./routers/territories";
 import { reportRouter } from "./routers/report";
 import { electoralCalendarRouter } from "./routers/electoralCalendar";
+import { electoralAlertsRouter } from "./routers/electoralAlerts";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -49,6 +50,7 @@ export const appRouter = router({
   territories: territoriesRouter,
   report: reportRouter,
   electoralCalendar: electoralCalendarRouter,
+  electoralAlerts: electoralAlertsRouter,
 });
 
 export type AppRouter = typeof appRouter;

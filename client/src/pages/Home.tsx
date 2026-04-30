@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight, Users, Target, TrendingUp, BarChart3, Calendar, Lightbulb,
   Settings, RefreshCw, Heart, MessageCircle, FileText, MapPin, Clock,
-  CheckCircle2, XCircle, AlertCircle, CalendarDays, Lock, Timer, Flag,
+  CheckCircle2, XCircle, AlertCircle, CalendarDays, Lock, Timer, Flag, Bell, BellRing,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { InstagramErrorAlert } from "@/components/InstagramErrorAlert";
@@ -369,6 +369,8 @@ function TeamHome() {
   const [lastSync, setLastSync] = useState<string>('');
   const [syncError, setSyncError] = useState<string | null>(null);
   const utils = trpc.useUtils();
+  const { isCoordinator, isSuperAdmin } = usePermissions();
+  const canManageAlerts = isCoordinator || isSuperAdmin;
 
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery(undefined, {
     staleTime: 0,
@@ -393,6 +395,17 @@ function TeamHome() {
 
   // Próximas datas eleitorais
   const { data: upcomingElectoral = [] } = trpc.electoralCalendar.getUpcoming.useQuery({ limit: 5 });
+  // Alertas eleitorais próximos (próximos 14 dias)
+  const { data: upcomingAlerts = [] } = trpc.electoralAlerts.getUpcomingAlerts.useQuery({ days: 14 });
+  // Logs de alertas já disparados
+  const { data: alertLogs = [] } = trpc.electoralAlerts.getLogs.useQuery({ limit: 10 });
+  // Mutation para disparar alertas manualmente
+  const checkAlertsMutation = trpc.electoralAlerts.checkAndSend.useMutation({
+    onSuccess: (result) => {
+      utils.electoralAlerts.getLogs.invalidate();
+      utils.electoralAlerts.getUpcomingAlerts.invalidate();
+    },
+  });
 
   const ELECTORAL_COLORS: Record<string, { pill: string; dot: string }> = {
     eleicao:    { pill: 'bg-red-900/40 border-red-700 text-red-300',    dot: 'bg-red-500' },
@@ -698,6 +711,103 @@ function TeamHome() {
             </Card>
           )}
 
+          {/* Alertas Eleitorais Automáticos */}
+          {(upcomingAlerts.length > 0 || alertLogs.length > 0) && (
+            <Card className="mb-8 border border-amber-800/40 bg-amber-950/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BellRing className="w-5 h-5 text-amber-400" />
+                    Alertas Eleitorais Automáticos
+                    {upcomingAlerts.filter((a: any) => !a.alreadySent).length > 0 && (
+                      <Badge className="bg-amber-500/20 text-amber-300 border-amber-600 text-[10px]">
+                        {upcomingAlerts.filter((a: any) => !a.alreadySent).length} pendentes
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  {canManageAlerts && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs border-amber-700 text-amber-300 hover:bg-amber-900/30"
+                      onClick={() => checkAlertsMutation.mutate()}
+                      disabled={checkAlertsMutation.isPending}
+                    >
+                      {checkAlertsMutation.isPending ? (
+                        <><RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Verificando...</>
+                      ) : (
+                        <><Bell className="w-3 h-3 mr-1" /> Verificar Agora</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <CardDescription>Notificações automáticas 7, 3 e 1 dia antes de marcos críticos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Alertas pendentes (a disparar nos próximos 14 dias) */}
+                {upcomingAlerts.filter((a: any) => !a.alreadySent).length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">Próximos alertas a disparar</p>
+                    <div className="space-y-2">
+                      {(upcomingAlerts as any[]).filter((a) => !a.alreadySent).map((alert, idx) => {
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const alertDate = new Date(alert.alertDate + 'T12:00:00');
+                        alertDate.setHours(0,0,0,0);
+                        const daysUntil = Math.ceil((alertDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                        const urgency = alert.daysBeforeEvent === 1 ? 'border-red-700 bg-red-950/20' :
+                          alert.daysBeforeEvent === 3 ? 'border-orange-700 bg-orange-950/20' :
+                          'border-amber-700 bg-amber-950/20';
+                        const urgencyText = alert.daysBeforeEvent === 1 ? 'text-red-300' :
+                          alert.daysBeforeEvent === 3 ? 'text-orange-300' : 'text-amber-300';
+                        return (
+                          <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${urgency}`}>
+                            <Bell className={`w-4 h-4 mt-0.5 flex-shrink-0 ${urgencyText}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-foreground truncate">{alert.electoralDate.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Alerta {alert.daysBeforeEvent}d antes • Evento em {new Date(alert.electoralDate.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={`text-xs font-bold ${urgencyText}`}>
+                                {daysUntil === 0 ? 'Hoje' : daysUntil === 1 ? 'Amanhã' : `em ${daysUntil}d`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Alertas já disparados */}
+                {alertLogs.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Alertas disparados recentemente</p>
+                    <div className="space-y-1.5">
+                      {(alertLogs as any[]).slice(0, 5).map((log) => (
+                        <div key={log.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
+                          <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">{log.electoralTitle}</p>
+                            <p className="text-[10px] text-muted-foreground">{log.daysBeforeEvent}d antes • {new Date(log.sentAt).toLocaleDateString('pt-BR')}</p>
+                          </div>
+                          <Badge className={`text-[10px] ${log.notificationSent ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-red-900/30 text-red-400 border-red-700'}`}>
+                            {log.notificationSent ? 'Enviado' : 'Erro'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {upcomingAlerts.length === 0 && alertLogs.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum alerta nos próximos 14 dias.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
           {/* Progress Bar */}
           <Card className="mb-8 border border-border/50">
             <CardHeader>

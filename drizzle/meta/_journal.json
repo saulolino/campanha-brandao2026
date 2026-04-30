@@ -218,6 +218,13 @@
       "when": 1776184017000,
       "tag": "0030_far_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1777509027195,
+      "tag": "0031_perfect_miracleman",
+      "breakpoints": true
     }
   ]
 }

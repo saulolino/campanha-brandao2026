@@ -471,3 +471,23 @@ export const competitorSnapshots = mysqlTable("competitor_snapshots", {
 });
 export type CompetitorSnapshot = typeof competitorSnapshots.$inferSelect;
 export type InsertCompetitorSnapshot = typeof competitorSnapshots.$inferInsert;
+
+// ─── Electoral Alert Log (Alertas Eleitorais Automáticos) ────────────────────────
+// Registro de alertas disparados para marcos eleitorais críticos
+export const electoralAlertLog = mysqlTable("electoral_alert_log", {
+  id: int("id").autoincrement().primaryKey(),
+  // ID da data eleitoral (referencia ao JSON electoral_calendar_2026.json)
+  electoralDateId: varchar("electoralDateId", { length: 64 }).notNull(),
+  // Título e data do marco eleitoral (desnormalizado para histórico)
+  electoralTitle: varchar("electoralTitle", { length: 512 }).notNull(),
+  electoralDate: varchar("electoralDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  category: varchar("category", { length: 64 }).notNull(),
+  // Quantos dias antes o alerta foi disparado (7, 3 ou 1)
+  daysBeforeEvent: int("daysBeforeEvent").notNull(),
+  // Status do envio da notificação
+  notificationSent: tinyint("notificationSent").default(0).notNull(),
+  notificationError: text("notificationError"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+export type ElectoralAlertLog = typeof electoralAlertLog.$inferSelect;
+export type InsertElectoralAlertLog = typeof electoralAlertLog.$inferInsert;

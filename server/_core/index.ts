@@ -99,6 +99,21 @@ async function startServer() {
     }
   });
 
+  // Rota REST para tarefa agendada: verificação e disparo de alertas eleitorais
+  app.post("/api/scheduled/check-electoral-alerts", async (req, res) => {
+    try {
+      const { checkAndSendElectoralAlerts } = await import("../routers/electoralAlerts.js");
+      console.log('[Scheduled] Verificando marcos eleitorais críticos...');
+      const result = await checkAndSendElectoralAlerts();
+      console.log('[Scheduled] Alertas eleitorais:', result);
+      res.json({ success: true, ...result });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[Scheduled] Erro na verificação de alertas eleitorais:', msg);
+      res.status(500).json({ success: false, error: msg });
+    }
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
