@@ -16,6 +16,8 @@ import { getDb } from '../db.js';
 import { instagramMetrics, instagramFollowersHistory } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { notifyOwner } from '../_core/notification.js';
+// Import estático garante que o JSON seja empacotado no build de produção (esbuild)
+import bundledInstagramData from '../data/instagram_real_data.json' assert { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -170,20 +172,25 @@ export class InstagramService {
 
   /**
    * Carregar dados do arquivo JSON
+   * Tenta fs.readFileSync primeiro (dev), depois usa import estático (produção)
    */
   private loadData(): void {
     try {
       if (fs.existsSync(this.dataPath)) {
         const raw = fs.readFileSync(this.dataPath, 'utf-8');
-        this.data = JSON.parse(raw);
-        console.log(`[Instagram] Dados reais carregados: @${this.data?.account?.username}, ${this.data?.posts?.length} posts`);
-      } else {
-        console.warn(`[Instagram] Arquivo de dados não encontrado em: ${this.dataPath}`);
-        console.warn(`[Instagram] Usando dados de fallback (última sincronização conhecida)`);
-        this.data = FALLBACK_DATA;
+        this.data = JSON.parse(raw) as InstagramData;
+        console.log(`[Instagram] Dados reais carregados (fs): @${this.data?.account?.username}, ${this.data?.posts?.length} posts`);
+        return;
       }
+    } catch {
+      // fs falhou, tentar import estático
+    }
+    // Fallback: usar import estático empacotado no build
+    try {
+      this.data = bundledInstagramData as unknown as InstagramData;
+      console.log(`[Instagram] Dados reais carregados (bundle): @${this.data?.account?.username}, ${this.data?.posts?.length} posts`);
     } catch (error) {
-      console.error('[Instagram] Erro ao carregar dados, usando fallback:', error);
+      console.error('[Instagram] Erro ao carregar dados, usando fallback hardcoded:', error);
       this.data = FALLBACK_DATA;
     }
   }
