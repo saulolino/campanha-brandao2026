@@ -1,0 +1,23 @@
+CREATE TABLE `instagram_published_posts` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`instagramId` varchar(128) NOT NULL,
+	`caption` text,
+	`mediaType` varchar(32) NOT NULL DEFAULT 'IMAGE',
+	`mediaProductType` varchar(32) NOT NULL DEFAULT 'FEED',
+	`permalink` varchar(512),
+	`thumbnailUrl` text,
+	`mediaUrl` text,
+	`likes` int NOT NULL DEFAULT 0,
+	`comments` int NOT NULL DEFAULT 0,
+	`shares` int NOT NULL DEFAULT 0,
+	`saves` int NOT NULL DEFAULT 0,
+	`reach` int NOT NULL DEFAULT 0,
+	`views` int NOT NULL DEFAULT 0,
+	`postedAt` timestamp NOT NULL,
+	`syncSource` varchar(32) NOT NULL DEFAULT 'json',
+	`lastSyncedAt` timestamp NOT NULL DEFAULT (now()),
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `instagram_published_posts_id` PRIMARY KEY(`id`),
+	CONSTRAINT `instagram_published_posts_instagramId_unique` UNIQUE(`instagramId`)
+);

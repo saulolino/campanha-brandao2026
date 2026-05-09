@@ -733,3 +733,13 @@
 - [x] Backend: endpoint /api/scheduled/check-electoral-alerts para tarefa agendada
 - [x] Frontend: painel de alertas eleitorais na Home (próximos alertas + histórico disparados)
 - [x] Agendamento: tarefa diária às 8h para verificar e disparar alertas (expira 05/10/2026)
+
+## Migração de Posts Instagram para MySQL
+
+- [ ] Schema: adicionar tabela `instagram_posts` no drizzle/schema.ts
+- [ ] DB: executar pnpm db:push para criar a tabela no banco
+- [ ] Backend: helpers getInstagramPosts, upsertInstagramPost, getInstagramPostsByDateRange em server/db.ts
+- [ ] Backend: atualizar instagramService para usar MySQL como fonte primária de posts
+- [ ] Backend: atualizar syncPostsFromApify para persistir posts no banco MySQL
+- [ ] Seed: migrar 55 posts do JSON para o banco via script de seed
+- [ ] Backend: atualizar router de relatório para buscar posts do banco

@@ -1,6 +1,6 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gte, lte, and as drizzleAnd, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory } from "../drizzle/schema";
+import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory, instagramPublishedPosts, InsertInstagramPublishedPost } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import mysql from "mysql2/promise";
 
@@ -272,5 +272,127 @@ export async function getAllUsers() {
   } catch (error) {
     console.error("[Database] Failed to get users:", error);
     throw error;
+  }
+}
+
+// ─── Instagram Published Posts Helpers ──────────────────────────────────────
+// Funções CRUD para a tabela instagram_published_posts
+// Usadas pelo instagramService como fonte primária de posts históricos
+
+/**
+ * Buscar posts publicados do Instagram ordenados por data (mais recentes primeiro)
+ */
+export async function getInstagramPublishedPosts(limit: number = 100): Promise<typeof instagramPublishedPosts.$inferSelect[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select()
+      .from(instagramPublishedPosts)
+      .orderBy(desc(instagramPublishedPosts.postedAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Failed to get instagram published posts:", error);
+    return [];
+  }
+}
+
+/**
+ * Buscar posts publicados por intervalo de datas
+ */
+export async function getInstagramPublishedPostsByDateRange(
+  startDate: Date,
+  endDate: Date
+): Promise<typeof instagramPublishedPosts.$inferSelect[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select()
+      .from(instagramPublishedPosts)
+      .where(
+        drizzleAnd(
+          gte(instagramPublishedPosts.postedAt, startDate),
+          lte(instagramPublishedPosts.postedAt, endDate)
+        )
+      )
+      .orderBy(desc(instagramPublishedPosts.postedAt));
+  } catch (error) {
+    console.error("[Database] Failed to get instagram published posts by date range:", error);
+    return [];
+  }
+}
+
+/**
+ * Inserir ou atualizar um post publicado (upsert por instagramId)
+ */
+export async function upsertInstagramPublishedPost(
+  post: InsertInstagramPublishedPost
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(instagramPublishedPosts)
+      .values(post)
+      .onDuplicateKeyUpdate({
+        set: {
+          caption: post.caption,
+          likes: post.likes,
+          comments: post.comments,
+          shares: post.shares,
+          saves: post.saves,
+          reach: post.reach,
+          views: post.views,
+          thumbnailUrl: post.thumbnailUrl,
+          mediaUrl: post.mediaUrl,
+          syncSource: post.syncSource,
+          lastSyncedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+  } catch (error) {
+    console.error("[Database] Failed to upsert instagram published post:", error);
+    throw error;
+  }
+}
+
+/**
+ * Inserir múltiplos posts em lote (upsert)
+ */
+export async function bulkUpsertInstagramPublishedPosts(
+  posts: InsertInstagramPublishedPost[]
+): Promise<{ inserted: number; updated: number }> {
+  if (posts.length === 0) return { inserted: 0, updated: 0 };
+  const db = await getDb();
+  if (!db) return { inserted: 0, updated: 0 };
+  let inserted = 0;
+  let updated = 0;
+  for (const post of posts) {
+    try {
+      // Verificar se já existe para contar inseridos vs atualizados
+      const existing = await db.select({ id: instagramPublishedPosts.id })
+        .from(instagramPublishedPosts)
+        .where(eq(instagramPublishedPosts.instagramId, post.instagramId))
+        .limit(1);
+      await upsertInstagramPublishedPost(post);
+      if (existing.length > 0) updated++; else inserted++;
+    } catch (error) {
+      console.error(`[Database] Failed to upsert post ${post.instagramId}:`, error);
+    }
+  }
+  return { inserted, updated };
+}
+
+/**
+ * Contar total de posts publicados no banco
+ */
+export async function countInstagramPublishedPosts(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const result = await db.select({ count: sql<number>`COUNT(*)` })
+      .from(instagramPublishedPosts);
+    return Number(result[0]?.count ?? 0);
+  } catch (error) {
+    console.error("[Database] Failed to count instagram published posts:", error);
+    return 0;
   }
 }

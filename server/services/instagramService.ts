@@ -12,7 +12,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { ENV } from '../_core/env.js';
-import { getDb } from '../db.js';
+import { getDb, getInstagramPublishedPosts, getInstagramPublishedPostsByDateRange, bulkUpsertInstagramPublishedPosts, countInstagramPublishedPosts } from '../db.js';
 import { instagramMetrics, instagramFollowersHistory } from '../../drizzle/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { notifyOwner } from '../_core/notification.js';
@@ -270,11 +270,37 @@ export class InstagramService {
 
   /**
    * Buscar posts recentes
-   * Nunca lança erro — usa fallback se necessário
+   * Fonte primária: banco MySQL (instagram_published_posts)
+   * Fallback: JSON estático (bundledInstagramData)
    */
-  async getPosts(limit: number = 10): Promise<InstagramPostReal[]> {
+  async getPosts(limit: number = 100): Promise<InstagramPostReal[]> {
+    // Tentar banco MySQL primeiro
+    try {
+      const dbPosts = await getInstagramPublishedPosts(limit);
+      if (dbPosts.length > 0) {
+        return dbPosts.map((post) => ({
+          id: post.instagramId,
+          caption: post.caption || '',
+          mediaType: post.mediaType,
+          mediaProductType: post.mediaProductType,
+          mediaUrl: post.mediaUrl || post.thumbnailUrl || '',
+          thumbnailUrl: post.thumbnailUrl || '',
+          permalink: post.permalink || '',
+          timestamp: post.postedAt.toISOString(),
+          likes: post.likes,
+          comments: post.comments,
+          shares: post.shares,
+          saves: post.saves,
+          reach: post.reach,
+          impressions: post.views,
+          engagement: post.likes + post.comments + post.shares + post.saves,
+        }));
+      }
+    } catch (dbErr) {
+      console.warn('[Instagram] Banco indisponível para getPosts, usando JSON:', dbErr);
+    }
+    // Fallback: JSON estático
     const data = this.data || FALLBACK_DATA;
-
     return data.posts
       .slice(0, limit)
       .map((post) => ({
@@ -694,10 +720,40 @@ export class InstagramService {
         fetchedAt,
       };
 
-      // Persistir no arquivo JSON
-      fs.writeFileSync(this.dataPath, JSON.stringify(newData, null, 2), 'utf-8');
+      // Persistir no arquivo JSON (fallback local)
+      try {
+        fs.writeFileSync(this.dataPath, JSON.stringify(newData, null, 2), 'utf-8');
+      } catch (writeErr) {
+        console.warn('[Instagram] Não foi possível salvar JSON local (produção):', writeErr);
+      }
       this.data = newData;
       console.log(`[Instagram] Sync Apify concluído: ${followersCount} seguidores, ${mergedPosts.length} posts (${newPostsCount} novos)`);
+
+      // Persistir posts no banco MySQL (fonte primária)
+      try {
+        const postsToUpsert = mergedPosts.map((p: any) => ({
+          instagramId: String(p.id || p.shortCode || ''),
+          caption: p.caption || null,
+          mediaType: p.mediaType || 'IMAGE',
+          mediaProductType: p.mediaProductType || 'FEED',
+          permalink: p.permalink || null,
+          thumbnailUrl: p.thumbnailUrl || null,
+          mediaUrl: p.mediaUrl || p.thumbnailUrl || null,
+          likes: p.likes || 0,
+          comments: p.comments || 0,
+          shares: p.shares || 0,
+          saves: p.saves || 0,
+          reach: p.reach || 0,
+          views: p.views || 0,
+          postedAt: new Date(p.timestamp || Date.now()),
+          syncSource: 'apify' as const,
+          lastSyncedAt: new Date(),
+        }));
+        const { inserted: dbInserted, updated: dbUpdated } = await bulkUpsertInstagramPublishedPosts(postsToUpsert);
+        console.log(`[Instagram] Banco atualizado: ${dbInserted} inseridos, ${dbUpdated} atualizados`);
+      } catch (dbErr) {
+        console.warn('[Instagram] Falha ao persistir posts no banco:', dbErr);
+      }
 
       // Salvar snapshot diário no banco
       try {

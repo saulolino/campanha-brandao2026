@@ -491,3 +491,36 @@ export const electoralAlertLog = mysqlTable("electoral_alert_log", {
 });
 export type ElectoralAlertLog = typeof electoralAlertLog.$inferSelect;
 export type InsertElectoralAlertLog = typeof electoralAlertLog.$inferInsert;
+
+// ─── Instagram Published Posts (Posts Históricos do Perfil) ─────────────────
+// Armazena posts reais publicados no perfil @eduardobrandaopv
+// Fonte: Apify scraper / Graph API — substitui instagram_real_data.json
+// Diferente de instagram_posts (fluxo de produção interna), esta tabela
+// guarda os dados de performance dos posts já publicados no Instagram.
+export const instagramPublishedPosts = mysqlTable("instagram_published_posts", {
+  id: int("id").autoincrement().primaryKey(),
+  // ID original do Instagram (shortcode ou ID numérico do Apify) — chave única
+  instagramId: varchar("instagramId", { length: 128 }).notNull().unique(),
+  caption: text("caption"),
+  mediaType: varchar("mediaType", { length: 32 }).notNull().default("IMAGE"), // IMAGE, VIDEO, CAROUSEL_ALBUM
+  mediaProductType: varchar("mediaProductType", { length: 32 }).notNull().default("FEED"), // FEED, REELS
+  permalink: varchar("permalink", { length: 512 }),
+  thumbnailUrl: text("thumbnailUrl"),
+  mediaUrl: text("mediaUrl"),
+  // Métricas de engajamento (atualizadas a cada sync)
+  likes: int("likes").default(0).notNull(),
+  comments: int("comments").default(0).notNull(),
+  shares: int("shares").default(0).notNull(),
+  saves: int("saves").default(0).notNull(),
+  reach: int("reach").default(0).notNull(),
+  views: int("views").default(0).notNull(),
+  // Timestamp original do post no Instagram (UTC)
+  postedAt: timestamp("postedAt").notNull(),
+  // Controle de sincronização
+  syncSource: varchar("syncSource", { length: 32 }).default("json").notNull(), // json, apify, graph_api
+  lastSyncedAt: timestamp("lastSyncedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type InstagramPublishedPost = typeof instagramPublishedPosts.$inferSelect;
+export type InsertInstagramPublishedPost = typeof instagramPublishedPosts.$inferInsert;
