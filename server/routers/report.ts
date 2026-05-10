@@ -5,10 +5,10 @@
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { instagramService } from "../services/instagramService";
-import { getDb, getInstagramPublishedPostsByDateRange, getInstagramPublishedPosts } from "../db";
+import { getDb, getInstagramPublishedPostsByDateRange, getInstagramPublishedPosts, saveReport, listSavedReports, getSavedReportById, deleteSavedReport } from "../db";
 import { instagramFollowersHistory } from "../../drizzle/schema";
 import { gte, lte, and } from "drizzle-orm";
 import type { InstagramPublishedPost } from "../../drizzle/schema";
@@ -341,5 +341,76 @@ Seja específico, use os números fornecidos, e dê recomendações acionáveis 
         dataSource: usingFallback ? 'json_fallback' : 'mysql',
         generatedAt: new Date().toISOString(),
       };
+    }),
+
+  /**
+   * Salva um relatório gerado no banco de dados para histórico.
+   */
+  save: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(256),
+        periodFrom: z.string(),
+        periodTo: z.string(),
+        periodLabel: z.string(),
+        currentMetrics: z.any(),
+        previousMetrics: z.any(),
+        variations: z.any(),
+        followersData: z.any().optional(),
+        topPosts: z.any().optional(),
+        byType: z.any().optional(),
+        aiAnalysis: z.string().optional(),
+        dataSource: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const result = await saveReport({
+        title: input.title,
+        periodFrom: new Date(input.periodFrom),
+        periodTo: new Date(input.periodTo),
+        periodLabel: input.periodLabel,
+        currentMetrics: input.currentMetrics,
+        previousMetrics: input.previousMetrics,
+        variations: input.variations,
+        followersData: input.followersData ?? null,
+        topPosts: input.topPosts ?? null,
+        byType: input.byType ?? null,
+        aiAnalysis: input.aiAnalysis ?? null,
+        dataSource: input.dataSource ?? 'mysql',
+        createdBy: ctx.user?.name ?? ctx.user?.email ?? 'unknown',
+      });
+      return { success: true, insertId: (result as any).insertId };
+    }),
+
+  /**
+   * Lista os relatórios salvos (resumo para exibição na lista).
+   */
+  list: publicProcedure
+    .query(async () => {
+      const reports = await listSavedReports(50);
+      return reports;
+    }),
+
+  /**
+   * Busca um relatório salvo completo pelo ID.
+   */
+  getById: publicProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const report = await getSavedReportById(input.id);
+      if (!report) throw new Error('Relatório não encontrado');
+      return report;
+    }),
+
+  /**
+   * Exclui um relatório salvo (apenas coordenador/superadmin).
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      const allowed = ['coordinator', 'superadmin'].includes(ctx.user?.role ?? '');
+      if (!allowed) throw new Error('Sem permissão para excluir relatórios');
+      const ok = await deleteSavedReport(input.id);
+      return { success: ok };
     }),
 });

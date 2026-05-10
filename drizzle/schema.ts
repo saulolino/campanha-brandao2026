@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint, double, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, tinyint, double, boolean, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -524,3 +524,37 @@ export const instagramPublishedPosts = mysqlTable("instagram_published_posts", {
 });
 export type InstagramPublishedPost = typeof instagramPublishedPosts.$inferSelect;
 export type InsertInstagramPublishedPost = typeof instagramPublishedPosts.$inferInsert;
+
+// ─── Relatórios Salvos ────────────────────────────────────────────────────────
+// Histórico de relatórios de performance gerados pela IA
+export const savedReports = mysqlTable("saved_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  // Título do relatório (gerado automaticamente ou personalizado)
+  title: varchar("title", { length: 256 }).notNull(),
+  // Período analisado
+  periodFrom: timestamp("periodFrom").notNull(),
+  periodTo: timestamp("periodTo").notNull(),
+  periodLabel: varchar("periodLabel", { length: 128 }).notNull(),
+  // Métricas do período atual (JSON serializado)
+  currentMetrics: json("currentMetrics").notNull(),
+  // Métricas do período anterior (JSON serializado)
+  previousMetrics: json("previousMetrics").notNull(),
+  // Variações percentuais (JSON serializado)
+  variations: json("variations").notNull(),
+  // Dados de seguidores (JSON serializado)
+  followersData: json("followersData"),
+  // Top posts (JSON serializado)
+  topPosts: json("topPosts"),
+  // Distribuição por tipo (JSON serializado)
+  byType: json("byType"),
+  // Análise completa da IA (texto markdown)
+  aiAnalysis: text("aiAnalysis"),
+  // Fonte dos dados usada na geração
+  dataSource: varchar("dataSource", { length: 32 }).default("mysql").notNull(),
+  // Usuário que salvou
+  createdBy: varchar("createdBy", { length: 256 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SavedReport = typeof savedReports.$inferSelect;
+export type InsertSavedReport = typeof savedReports.$inferInsert;

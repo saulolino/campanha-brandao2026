@@ -232,6 +232,13 @@
       "when": 1778342438438,
       "tag": "0032_hard_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1778418790744,
+      "tag": "0033_flaky_sphinx",
+      "breakpoints": true
     }
   ]
 }

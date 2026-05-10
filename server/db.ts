@@ -1,6 +1,6 @@
 import { eq, desc, gte, lte, and as drizzleAnd, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory, instagramPublishedPosts, InsertInstagramPublishedPost } from "../drizzle/schema";
+import { InsertUser, users, instagramPosts, postStatusHistory, InsertInstagramPost, InsertPostStatusHistory, instagramPublishedPosts, InsertInstagramPublishedPost, savedReports, InsertSavedReport } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import mysql from "mysql2/promise";
 
@@ -394,5 +394,71 @@ export async function countInstagramPublishedPosts(): Promise<number> {
   } catch (error) {
     console.error("[Database] Failed to count instagram published posts:", error);
     return 0;
+  }
+}
+
+// ─── Helpers: saved_reports ───────────────────────────────────────────────────
+
+export async function saveReport(data: InsertSavedReport) {
+  const db = await getDb();
+  try {
+    const [result] = await db.insert(savedReports).values(data);
+    return result;
+  } catch (error) {
+    console.error("[Database] Failed to save report:", error);
+    throw error;
+  }
+}
+
+export async function listSavedReports(limit = 50) {
+  const db = await getDb();
+  try {
+    const rows = await db
+      .select({
+        id: savedReports.id,
+        title: savedReports.title,
+        periodFrom: savedReports.periodFrom,
+        periodTo: savedReports.periodTo,
+        periodLabel: savedReports.periodLabel,
+        dataSource: savedReports.dataSource,
+        createdBy: savedReports.createdBy,
+        createdAt: savedReports.createdAt,
+        // Inclui métricas resumidas para exibição na lista
+        currentMetrics: savedReports.currentMetrics,
+        variations: savedReports.variations,
+      })
+      .from(savedReports)
+      .orderBy(desc(savedReports.createdAt))
+      .limit(limit);
+    return rows;
+  } catch (error) {
+    console.error("[Database] Failed to list saved reports:", error);
+    return [];
+  }
+}
+
+export async function getSavedReportById(id: number) {
+  const db = await getDb();
+  try {
+    const rows = await db
+      .select()
+      .from(savedReports)
+      .where(eq(savedReports.id, id))
+      .limit(1);
+    return rows[0] ?? null;
+  } catch (error) {
+    console.error("[Database] Failed to get saved report:", error);
+    return null;
+  }
+}
+
+export async function deleteSavedReport(id: number) {
+  const db = await getDb();
+  try {
+    await db.delete(savedReports).where(eq(savedReports.id, id));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to delete saved report:", error);
+    return false;
   }
 }

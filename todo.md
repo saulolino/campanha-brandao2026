@@ -758,3 +758,13 @@
 - [x] Garantir que cálculo de período anterior também use o banco
 - [x] Fallback automático para JSON quando banco estiver vazio
 - [x] Testar compilação sem novos erros TS (28 pré-existentes, 0 novos)
+
+## Histórico de Relatórios
+
+- [x] Schema: tabela saved_reports (id, title, periodFrom, periodTo, metrics JSON, aiAnalysis, dataSource, createdBy, createdAt)
+- [x] DB: helpers saveReport, listReports, getReportById, deleteReport
+- [x] Router: report.save, report.list, report.getById, report.delete
+- [x] Frontend: botão "Salvar Relatório" na página /relatorio após gerar análise
+- [x] Frontend: aba "Histórico" na página /relatorio com lista de relatórios salvos
+- [x] Frontend: modal/drawer para visualizar relatório salvo completo
+- [x] Frontend: opção de excluir relatório (apenas coordenador/superadmin)
