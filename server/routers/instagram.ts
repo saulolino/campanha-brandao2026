@@ -157,7 +157,7 @@ export const instagramRouter = router({
         .from(instagramFollowersHistory)
         .orderBy(instagramFollowersHistory.snapshotDate)
         .limit(90);
-      return rows.map(r => ({
+      return rows.map((r: typeof rows[0]) => ({
         date: r.snapshotDate,
         followers: r.followers,
         totalLikes: r.totalLikes,
@@ -231,19 +231,110 @@ export const instagramRouter = router({
     }
   }),
 
-  /**
+   /**
    * Sincronizar dados diretamente da Instagram Graph API
    * Busca followers, posts e métricas em tempo real
    */
   syncFromAPI: publicProcedure.mutation(async () => {
     return await instagramService.syncFromAPI();
   }),
-
   /**
    * Sincronização completa via Apify: busca posts recentes + métricas + seguidores.
    * Pode demorar até 2 minutos. Atualiza o JSON local com dados frescos.
    */
   syncPostsFromApify: publicProcedure.mutation(async () => {
     return await instagramService.syncPostsFromApify();
+  }),
+  /**
+   * Sincronizar métricas reais dos posts publicados via Instagram Graph API.
+   * Busca like_count, comments_count, reach, impressions, video_views para cada
+   * post da agenda que tenha instagramPostId preenchido.
+   * Atualiza os campos realLikes, realComments, realReach, realViews na tabela instagram_posts.
+   */
+  syncPublishedPostMetrics: publicProcedure.mutation(async () => {
+    const db = await getDb();
+    if (!db) return { success: false, error: 'Database unavailable', updated: 0 };
+
+    const accessToken = process.env.INSTAGRAM_GRAPH_API_TOKEN;
+    if (!accessToken) return { success: false, error: 'Token do Instagram não configurado', updated: 0 };
+
+    // Buscar posts publicados que tenham instagramPostId
+    const { instagramPosts } = await import('../../drizzle/schema');
+    const { eq, isNotNull } = await import('drizzle-orm');
+    const publishedPosts = await db
+      .select()
+      .from(instagramPosts)
+      .where(
+        eq(instagramPosts.status, 'published')
+      );
+
+    const postsWithId = publishedPosts.filter((p: any) => p.instagramPostId);
+    if (postsWithId.length === 0) {
+      return { success: true, updated: 0, message: 'Nenhum post publicado com ID do Instagram encontrado. Publique posts via dashboard para habilitar sync automático.' };
+    }
+
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const post of postsWithId) {
+      try {
+        // Buscar métricas via Graph API
+        const fields = 'like_count,comments_count,media_type,timestamp';
+        const url = `https://graph.instagram.com/v18.0/${post.instagramPostId}?fields=${fields}&access_token=${accessToken}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          errors.push(`Post ${post.id}: HTTP ${res.status}`);
+          continue;
+        }
+        const data = await res.json();
+        if (data.error) {
+          errors.push(`Post ${post.id}: ${data.error.message}`);
+          continue;
+        }
+
+        // Buscar insights (reach, impressions, video_views) via endpoint separado
+        let reach = post.realReach ?? 0;
+        let views = post.realViews ?? 0;
+        try {
+          const insightMetrics = data.media_type === 'VIDEO'
+            ? 'reach,impressions,video_views'
+            : 'reach,impressions';
+          const insightUrl = `https://graph.instagram.com/v18.0/${post.instagramPostId}/insights?metric=${insightMetrics}&access_token=${accessToken}`;
+          const insightRes = await fetch(insightUrl);
+          if (insightRes.ok) {
+            const insightData = await insightRes.json();
+            if (insightData.data) {
+              for (const metric of insightData.data) {
+                if (metric.name === 'reach') reach = metric.values?.[0]?.value ?? metric.value ?? reach;
+                if (metric.name === 'video_views') views = metric.values?.[0]?.value ?? metric.value ?? views;
+              }
+            }
+          }
+        } catch (_) { /* insights opcionais */ }
+
+        // Atualizar no banco
+        await db.update(instagramPosts)
+          .set({
+            realLikes: data.like_count ?? post.realLikes ?? 0,
+            realComments: data.comments_count ?? post.realComments ?? 0,
+            realReach: reach,
+            realViews: views,
+          })
+          .where(eq(instagramPosts.id, post.id));
+
+        updated++;
+        // Pequena pausa para evitar rate limit
+        await new Promise(r => setTimeout(r, 200));
+      } catch (err: any) {
+        errors.push(`Post ${post.id}: ${err.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      updated,
+      total: postsWithId.length,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }),
 });

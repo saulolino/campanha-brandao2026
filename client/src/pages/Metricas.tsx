@@ -30,6 +30,7 @@ export default function Metricas() {
     realShares: 0,
     realSaves: 0,
     realReach: 0,
+    realViews: 0,
     aiAnalysis: "neutro" as "top" | "fraco" | "neutro",
     aiSuggestion: "ajustar" as "replicar" | "ajustar" | "descartar",
     aiSuggestionNote: "",
@@ -57,6 +58,23 @@ export default function Metricas() {
       }
     },
     onError: () => toast.error('Falha ao sincronizar com Instagram.'),
+  });
+
+  // Mutação de sync de métricas dos posts publicados via Graph API
+  const syncPostMetricsMutation = trpc.instagram.syncPublishedPostMetrics.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        if (result.updated === 0) {
+          toast.info(result.message || 'Nenhum post com ID do Instagram para sincronizar.');
+        } else {
+          toast.success(`${result.updated} post(s) atualizados com métricas reais do Instagram!`);
+          utils.invalidate();
+        }
+      } else {
+        toast.error(`Erro: ${result.error || 'Tente novamente.'}`);
+      }
+    },
+    onError: (err) => toast.error(`Falha ao sincronizar métricas: ${err.message}`),
   });
 
   // Mutação completa via Apify: atualiza posts + métricas + seguidores (~2 min)
@@ -98,6 +116,7 @@ export default function Metricas() {
       realShares: post.realShares ?? 0,
       realSaves: post.realSaves ?? 0,
       realReach: post.realReach ?? post.expectedReach ?? 0,
+      realViews: post.realViews ?? 0,
       aiAnalysis: (post.aiAnalysis as "top" | "fraco" | "neutro") ?? "neutro",
       aiSuggestion: (post.aiSuggestion as "replicar" | "ajustar" | "descartar") ?? "ajustar",
       aiSuggestionNote: post.aiSuggestionNote ?? "",
@@ -114,6 +133,7 @@ export default function Metricas() {
       realShares: editForm.realShares,
       realSaves: editForm.realSaves,
       realReach: editForm.realReach,
+      realViews: editForm.realViews,
       aiAnalysis: editForm.aiAnalysis,
       aiSuggestion: editForm.aiSuggestion,
       aiSuggestionNote: editForm.aiSuggestionNote || null,
@@ -204,10 +224,20 @@ export default function Metricas() {
                 <RefreshCw className={`w-3 h-3 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
                 {syncMutation.isPending ? 'Atualizando...' : 'Seguidores'}
               </button>
+              {/* Botão: sync métricas dos posts publicados via Graph API */}
+              <button
+                onClick={() => syncPostMetricsMutation.mutate()}
+                disabled={syncMutation.isPending || syncApifyMutation.isPending || syncPostMetricsMutation.isPending}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 transition-colors disabled:opacity-50"
+                title="Busca curtidas, comentários, alcance e views diretamente do Instagram para posts publicados via dashboard"
+              >
+                <RefreshCw className={`w-3 h-3 ${syncPostMetricsMutation.isPending ? 'animate-spin' : ''}`} />
+                {syncPostMetricsMutation.isPending ? 'Sincronizando...' : 'Sync Métricas'}
+              </button>
               {/* Botão completo: posts + métricas via Apify */}
               <button
                 onClick={() => syncApifyMutation.mutate()}
-                disabled={syncMutation.isPending || syncApifyMutation.isPending}
+                disabled={syncMutation.isPending || syncApifyMutation.isPending || syncPostMetricsMutation.isPending}
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors disabled:opacity-50"
                 title="Atualiza posts + métricas via Apify (~2 min)"
               >
@@ -701,6 +731,9 @@ export default function Metricas() {
                                     <span className="text-green-400">🔁 {(post.realShares ?? 0).toLocaleString()}</span>
                                     <span className="text-yellow-400">🔖 {(post.realSaves ?? 0).toLocaleString()}</span>
                                     <span className="text-purple-400">👁️ {(post.realReach ?? 0).toLocaleString()}</span>
+                                    {(post.realViews ?? 0) > 0 && (
+                                      <span className="text-cyan-400">🎬 {(post.realViews ?? 0).toLocaleString()} views</span>
+                                    )}
                                     <span className="text-primary font-semibold">⚡ {totalEngagement.toLocaleString()} eng.</span>
                                   </div>
                                 )}
@@ -792,12 +825,21 @@ export default function Metricas() {
                     className="h-9"
                   />
                 </div>
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-xs">👁️ Alcance</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">👁️ Alcance (Reach)</Label>
                   <Input
                     type="number" min={0}
                     value={editForm.realReach}
                     onChange={(e) => setEditForm(f => ({ ...f, realReach: Number(e.target.value) }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">🎬 Visualizações (Vídeo/Reels)</Label>
+                  <Input
+                    type="number" min={0}
+                    value={editForm.realViews}
+                    onChange={(e) => setEditForm(f => ({ ...f, realViews: Number(e.target.value) }))}
                     className="h-9"
                   />
                 </div>

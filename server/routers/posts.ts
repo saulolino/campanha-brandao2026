@@ -455,6 +455,7 @@ Garanta que os slides formem uma narrativa coesa e que o último slide tenha um 
       realComments: z.number().optional(),
       realShares: z.number().optional(),
       realSaves: z.number().optional(),
+      realViews: z.number().optional(),
       retentionRate: z.string().optional(),
       // Análise IA
       aiAnalysis: z.enum(["top", "fraco", "neutro"]).nullable().optional(),

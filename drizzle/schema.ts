@@ -70,6 +70,7 @@ export const instagramPosts = mysqlTable("instagram_posts", {
   realComments: int("realComments"),
   realShares: int("realShares"),
   realSaves: int("realSaves"),
+  realViews: int("realViews"),           // Visualizações reais (vídeos/reels)
   retentionRate: decimal("retentionRate", { precision: 5, scale: 2 }), // % retenção vídeo
   // ─── Metodologia: Análise IA ─────────────────────────────────────────────────
   aiAnalysis: mysqlEnum("aiAnalysis", ["top", "fraco", "neutro"]), // classificação automática

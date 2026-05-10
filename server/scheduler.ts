@@ -294,8 +294,72 @@ export function initializeScheduler(): void {
       console.error("[Scheduler] Erro na verificação do token:", err.message);
     }
   });
-
-  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora, sync do Instagram às 08h, verificação do token às 09h.");
+  // Sincronizar métricas reais dos posts publicados às 20h
+  cron.schedule("0 20 * * *", async () => {
+    try {
+      console.log("[Scheduler] Sincronizando métricas dos posts publicados (20h)...");
+      const accessToken = process.env.INSTAGRAM_GRAPH_API_TOKEN;
+      if (!accessToken) {
+        console.warn("[Scheduler] Token do Instagram não configurado, pulando sync de métricas.");
+        return;
+      }
+      const db = await getDb();
+      if (!db) return;
+      const { eq } = await import('drizzle-orm');
+      const publishedPosts = await db.select().from(instagramPosts).where(eq(instagramPosts.status, 'published'));
+      const postsWithId = publishedPosts.filter((p: any) => p.instagramPostId);
+      if (postsWithId.length === 0) {
+        console.log("[Scheduler] Nenhum post publicado com ID do Instagram para sincronizar.");
+        return;
+      }
+      let updated = 0;
+      for (const post of postsWithId) {
+        try {
+          const fields = 'like_count,comments_count,media_type';
+          const url = `https://graph.instagram.com/v18.0/${post.instagramPostId}?fields=${fields}&access_token=${accessToken}`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          if (data.error) continue;
+          let reach = post.realReach ?? 0;
+          let views = post.realViews ?? 0;
+          try {
+            const insightMetrics = data.media_type === 'VIDEO' ? 'reach,impressions,video_views' : 'reach,impressions';
+            const insightUrl = `https://graph.instagram.com/v18.0/${post.instagramPostId}/insights?metric=${insightMetrics}&access_token=${accessToken}`;
+            const insightRes = await fetch(insightUrl);
+            if (insightRes.ok) {
+              const insightData = await insightRes.json();
+              if (insightData.data) {
+                for (const metric of insightData.data) {
+                  if (metric.name === 'reach') reach = metric.values?.[0]?.value ?? metric.value ?? reach;
+                  if (metric.name === 'video_views') views = metric.values?.[0]?.value ?? metric.value ?? views;
+                }
+              }
+            }
+          } catch (_) { /* insights opcionais */ }
+          await db.update(instagramPosts).set({
+            realLikes: data.like_count ?? post.realLikes ?? 0,
+            realComments: data.comments_count ?? post.realComments ?? 0,
+            realReach: reach,
+            realViews: views,
+          }).where(eq(instagramPosts.id, post.id));
+          updated++;
+          await new Promise(r => setTimeout(r, 200));
+        } catch (_) { /* continuar com próximo post */ }
+      }
+      console.log(`[Scheduler] Métricas sincronizadas: ${updated}/${postsWithId.length} posts atualizados.`);
+      if (updated > 0) {
+        createNotification({
+          type: 'instagram_sync',
+          title: 'Métricas dos posts atualizadas',
+          message: `${updated} post(s) tiveram suas métricas reais atualizadas automaticamente às 20h.`,
+        }).catch(() => {});
+      }
+    } catch (err: any) {
+      console.error("[Scheduler] Erro no sync de métricas dos posts:", err.message);
+    }
+  });
+  console.log("[Scheduler] Scheduler inicializado — posts agendados a cada minuto, lembretes de eventos a cada hora, sync do Instagram às 08h, verificação do token às 09h, sync de métricas dos posts às 20h.");;
 }
 
 /**

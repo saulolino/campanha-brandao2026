@@ -768,3 +768,16 @@
 - [x] Frontend: aba "Histórico" na página /relatorio com lista de relatórios salvos
 - [x] Frontend: modal/drawer para visualizar relatório salvo completo
 - [x] Frontend: opção de excluir relatório (apenas coordenador/superadmin)
+
+## Correção e Melhoria do Sistema de Métricas
+
+- [ ] Schema: adicionar campo `realViews` na tabela `instagram_posts`
+- [ ] DB: executar pnpm db:push para criar o campo no banco
+- [ ] Backend: atualizar procedure `posts.update` para aceitar e salvar `realViews`
+- [ ] Backend: implementar `syncPostMetricsFromGraphAPI` — busca métricas reais (likes, comments, reach, impressions, views) de cada post publicado via Graph API
+- [ ] Backend: adicionar endpoint `instagram.syncPostMetrics` no router
+- [ ] Frontend: adicionar campo "Visualizações" no modal de atualização manual de métricas (Metricas.tsx)
+- [ ] Frontend: exibir visualizações no card de métricas dos posts publicados
+- [ ] Frontend: atualizar cálculo de engajamento para incluir visualizações no resumo
+- [ ] Frontend: adicionar botão "Sincronizar Métricas via API" na seção de atualização de métricas
+- [ ] Frontend: exibir explicação de por que shares/saves ficam 0 (limitação do Apify)
