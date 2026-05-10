@@ -1,33 +1,28 @@
 /**
  * Router de Relatório de Performance do Instagram
  * Gera relatórios comparativos com análise de IA como especialista sênior em redes sociais.
+ * Fonte de dados: banco de dados MySQL (tabela instagram_published_posts)
  */
 
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { instagramService } from "../services/instagramService";
-import { getDb } from "../db";
+import { getDb, getInstagramPublishedPostsByDateRange, getInstagramPublishedPosts } from "../db";
 import { instagramFollowersHistory } from "../../drizzle/schema";
-import { gte, lte, and, eq } from "drizzle-orm";
+import { gte, lte, and } from "drizzle-orm";
+import type { InstagramPublishedPost } from "../../drizzle/schema";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function filterPostsByPeriod(posts: any[], from: Date, to: Date) {
-  return posts.filter((p) => {
-    const ts = new Date(p.timestamp);
-    return ts >= from && ts <= to;
-  });
-}
-
-function calcMetrics(posts: any[]) {
+function calcMetrics(posts: InstagramPublishedPost[]) {
   if (posts.length === 0) {
     return { totalPosts: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalSaves: 0, totalEngagement: 0, avgEngagement: 0, avgLikes: 0, avgComments: 0 };
   }
-  const totalLikes = posts.reduce((s, p) => s + (p.likes || 0), 0);
-  const totalComments = posts.reduce((s, p) => s + (p.comments || 0), 0);
-  const totalShares = posts.reduce((s, p) => s + (p.shares || 0), 0);
-  const totalSaves = posts.reduce((s, p) => s + (p.saves || 0), 0);
+  const totalLikes = posts.reduce((s, p) => s + (p.likes ?? 0), 0);
+  const totalComments = posts.reduce((s, p) => s + (p.comments ?? 0), 0);
+  const totalShares = posts.reduce((s, p) => s + (p.shares ?? 0), 0);
+  const totalSaves = posts.reduce((s, p) => s + (p.saves ?? 0), 0);
   const totalEngagement = totalLikes + totalComments + totalShares + totalSaves;
   return {
     totalPosts: posts.length,
@@ -47,35 +42,52 @@ function pct(current: number, previous: number): number | null {
   return parseFloat(((current - previous) / previous * 100).toFixed(1));
 }
 
-function topN(posts: any[], n: number) {
+function topN(posts: InstagramPublishedPost[], n: number) {
   return [...posts]
     .map((p) => ({
-      id: p.id,
+      id: p.instagramId,
       caption: (p.caption || '').slice(0, 120),
       mediaType: p.mediaType,
       mediaProductType: p.mediaProductType,
-      permalink: p.permalink,
-      timestamp: p.timestamp,
+      permalink: p.permalink || '',
+      timestamp: p.postedAt.toISOString(),
       thumbnailUrl: p.thumbnailUrl || '',
-      likes: p.likes || 0,
-      comments: p.comments || 0,
-      shares: p.shares || 0,
-      saves: p.saves || 0,
-      engagement: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) + (p.saves || 0),
+      likes: p.likes ?? 0,
+      comments: p.comments ?? 0,
+      shares: p.shares ?? 0,
+      saves: p.saves ?? 0,
+      engagement: (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0) + (p.saves ?? 0),
     }))
     .sort((a, b) => b.engagement - a.engagement)
     .slice(0, n);
 }
 
-function byType(posts: any[]) {
+function worstN(posts: InstagramPublishedPost[], n: number) {
+  return [...posts]
+    .map((p) => ({
+      id: p.instagramId,
+      caption: (p.caption || '').slice(0, 120),
+      mediaType: p.mediaType,
+      permalink: p.permalink || '',
+      timestamp: p.postedAt.toISOString(),
+      thumbnailUrl: p.thumbnailUrl || '',
+      likes: p.likes ?? 0,
+      comments: p.comments ?? 0,
+      engagement: (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0) + (p.saves ?? 0),
+    }))
+    .sort((a, b) => a.engagement - b.engagement)
+    .slice(0, n);
+}
+
+function byType(posts: InstagramPublishedPost[]) {
   const map: Record<string, { type: string; posts: number; totalLikes: number; totalComments: number; totalEngagement: number; avgEngagement: number }> = {};
   posts.forEach((p) => {
     const t = p.mediaType || 'IMAGE';
     if (!map[t]) map[t] = { type: t, posts: 0, totalLikes: 0, totalComments: 0, totalEngagement: 0, avgEngagement: 0 };
-    const eng = (p.likes || 0) + (p.comments || 0) + (p.shares || 0) + (p.saves || 0);
+    const eng = (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0) + (p.saves ?? 0);
     map[t].posts++;
-    map[t].totalLikes += p.likes || 0;
-    map[t].totalComments += p.comments || 0;
+    map[t].totalLikes += p.likes ?? 0;
+    map[t].totalComments += p.comments ?? 0;
     map[t].totalEngagement += eng;
   });
   return Object.values(map).map((t) => ({
@@ -89,6 +101,7 @@ function byType(posts: any[]) {
 export const reportRouter = router({
   /**
    * Gera um relatório completo de performance para o período informado.
+   * Busca posts diretamente do banco MySQL (instagram_published_posts).
    * Inclui métricas, comparativo com período anterior e análise de IA.
    */
   generate: publicProcedure
@@ -109,14 +122,69 @@ export const reportRouter = router({
       const prevToDate = new Date(fromDate.getTime() - 1);
       const prevFromDate = new Date(prevToDate.getTime() - durationMs);
 
-      // Buscar todos os posts
-      const allPosts = await instagramService.getPosts(200);
-      const currentPosts = filterPostsByPeriod(allPosts, fromDate, toDate);
-      const prevPosts = filterPostsByPeriod(allPosts, prevFromDate, prevToDate);
+      // ── Buscar posts do banco MySQL ──────────────────────────────────────
+      // Período atual
+      const currentPosts = await getInstagramPublishedPostsByDateRange(fromDate, toDate);
+
+      // Período anterior — busca diretamente do banco por intervalo
+      const prevPosts = await getInstagramPublishedPostsByDateRange(prevFromDate, prevToDate);
+
+      // Fallback: se o banco estiver vazio, tenta buscar via instagramService (JSON)
+      let usingFallback = false;
+      let allPostsFallback: InstagramPublishedPost[] = [];
+      if (currentPosts.length === 0 && prevPosts.length === 0) {
+        // Verificar se há qualquer post no banco
+        const anyPosts = await getInstagramPublishedPosts(1);
+        if (anyPosts.length === 0) {
+          // Banco vazio — usar JSON como fallback temporário
+          usingFallback = true;
+          const jsonPosts = await instagramService.getPosts(200);
+          // Converter para formato compatível com InstagramPublishedPost
+          allPostsFallback = jsonPosts.map((p: any) => ({
+            id: 0,
+            instagramId: p.id || '',
+            caption: p.caption || '',
+            mediaType: p.mediaType || 'IMAGE',
+            mediaProductType: p.mediaProductType || 'FEED',
+            permalink: p.permalink || '',
+            thumbnailUrl: p.thumbnailUrl || '',
+            mediaUrl: p.mediaUrl || '',
+            likes: p.likes ?? 0,
+            comments: p.comments ?? 0,
+            shares: p.shares ?? 0,
+            saves: p.saves ?? 0,
+            reach: p.reach ?? 0,
+            views: p.views ?? 0,
+            postedAt: new Date(p.timestamp || p.postedAt || Date.now()),
+            syncSource: 'json',
+            lastSyncedAt: new Date(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }));
+        }
+      }
+
+      // Selecionar fonte de dados
+      let currentPostsFinal: InstagramPublishedPost[];
+      let prevPostsFinal: InstagramPublishedPost[];
+
+      if (usingFallback) {
+        currentPostsFinal = allPostsFallback.filter((p) => {
+          const ts = p.postedAt;
+          return ts >= fromDate && ts <= toDate;
+        });
+        prevPostsFinal = allPostsFallback.filter((p) => {
+          const ts = p.postedAt;
+          return ts >= prevFromDate && ts <= prevToDate;
+        });
+      } else {
+        currentPostsFinal = currentPosts;
+        prevPostsFinal = prevPosts;
+      }
 
       // Métricas dos dois períodos
-      const currentMetrics = calcMetrics(currentPosts);
-      const prevMetrics = calcMetrics(prevPosts);
+      const currentMetrics = calcMetrics(currentPostsFinal);
+      const prevMetrics = calcMetrics(prevPostsFinal);
 
       // Variações percentuais
       const variations = {
@@ -127,16 +195,12 @@ export const reportRouter = router({
         avgEngagement: pct(currentMetrics.avgEngagement, prevMetrics.avgEngagement),
       };
 
-      // Top posts do período
-      const topPosts = topN(currentPosts, 5);
-      const worstPosts = [...currentPosts]
-        .map((p) => ({ ...p, engagement: (p.likes || 0) + (p.comments || 0) + (p.shares || 0) + (p.saves || 0) }))
-        .sort((a, b) => a.engagement - b.engagement)
-        .slice(0, 3)
-        .map((p) => ({ id: p.id, caption: (p.caption || '').slice(0, 120), mediaType: p.mediaType, permalink: p.permalink, timestamp: p.timestamp, thumbnailUrl: p.thumbnailUrl || '', engagement: p.engagement, likes: p.likes || 0, comments: p.comments || 0 }));
+      // Top e piores posts do período
+      const topPosts = topN(currentPostsFinal, 5);
+      const worstPosts = worstN(currentPostsFinal, 3);
 
       // Engajamento por tipo de conteúdo
-      const byTypeData = byType(currentPosts);
+      const byTypeData = byType(currentPostsFinal);
 
       // Dados de seguidores do banco (snapshot histórico)
       let followersStart: number | null = null;
@@ -198,6 +262,7 @@ DADOS DO PERÍODO ATUAL (${periodLabel}):
 ${followersStart !== null ? `- Seguidores no início do período: ${followersStart}` : ''}
 ${followersEnd !== null ? `- Seguidores no final do período: ${followersEnd}` : ''}
 ${followerGrowth !== null ? `- Crescimento de seguidores: ${followerGrowth > 0 ? '+' : ''}${followerGrowth} (${followerGrowthPct !== null ? followerGrowthPct + '%' : 'N/A'})` : `- Seguidores atuais: ${currentFollowers}`}
+${usingFallback ? '\n⚠️ NOTA: Dados obtidos do arquivo JSON local (banco ainda não populado).' : `\n✅ Dados obtidos diretamente do banco de dados MySQL (${currentPostsFinal.length} posts no período).`}
 
 COMPARATIVO COM PERÍODO ANTERIOR (${prevPeriodLabel}):
 - Posts: ${prevMetrics.totalPosts} → ${currentMetrics.totalPosts} (${variations.posts !== null ? (variations.posts > 0 ? '+' : '') + variations.posts + '%' : 'sem dados anteriores'})
@@ -273,6 +338,7 @@ Seja específico, use os números fornecidos, e dê recomendações acionáveis 
         byType: byTypeData,
         aiAnalysis,
         aiError: aiError || undefined,
+        dataSource: usingFallback ? 'json_fallback' : 'mysql',
         generatedAt: new Date().toISOString(),
       };
     }),

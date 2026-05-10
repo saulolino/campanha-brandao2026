@@ -750,3 +750,11 @@
 - [x] Backend: retornar estatísticas (inseridos, atualizados, total)
 - [x] Frontend: seção "Dados e Sincronização" na aba Configurações (apenas SuperAdmin/Coordenador)
 - [x] Frontend: botão "Sincronizar Agora" com loading, resultado e indicador de divergência
+
+## Router de Relatório → MySQL (CONCLUÍDO)
+
+- [x] Atualizar report.ts para buscar posts da tabela instagram_published_posts (MySQL)
+- [x] Garantir que filtro por período (startDate/endDate) use campos do banco
+- [x] Garantir que cálculo de período anterior também use o banco
+- [x] Fallback automático para JSON quando banco estiver vazio
+- [x] Testar compilação sem novos erros TS (28 pré-existentes, 0 novos)
