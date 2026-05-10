@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key, Bell, BellOff, Trash2 as Trash2Icon, CheckCheck, Filter, Loader2, UserPlus as UserPlusIcon, CalendarPlus, Instagram, RefreshCcw, Info, X, MessageSquare, Wifi, WifiOff, Star, StarOff } from "lucide-react";
+import { AlertCircle, CheckCircle2, Settings, Clock, FileText, Key, Bell, BellOff, Trash2 as Trash2Icon, CheckCheck, Filter, Loader2, UserPlus as UserPlusIcon, CalendarPlus, Instagram, RefreshCcw, Info, X, MessageSquare, Wifi, WifiOff, Star, StarOff, Database, HardDrive } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -337,6 +337,12 @@ export default function SettingsPage() {
                   <Bell className="w-4 h-4" />
                   <span className="hidden sm:inline">Notificações</span>
                   <NotifBadge />
+                </TabsTrigger>
+              )}
+              {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+                <TabsTrigger value="dados" className="flex items-center gap-2">
+                  <Database className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dados</span>
                 </TabsTrigger>
               )}
             </TabsList>
@@ -994,6 +1000,13 @@ export default function SettingsPage() {
             {/* ─── Aba Notificações ─────────────────────────────────────────────── */}         {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
               <TabsContent value="notifications">
                 <NotificationsTab isSuperAdmin={isSuperAdmin} />
+              </TabsContent>
+            )}
+
+            {/* ─── Aba Dados ─────────────────────────────────────────────────────── */}
+            {["coordinator", "superadmin"].includes(effectiveRole ?? "") && (
+              <TabsContent value="dados">
+                <DataSyncTab />
               </TabsContent>
             )}
 
@@ -2315,6 +2328,159 @@ function CandidateSettingsTab() {
           )}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ─── Aba Dados e Sincronização ────────────────────────────────────────────────
+function DataSyncTab() {
+  const utils = trpc.useUtils();
+
+  // Estatísticas do banco
+  const statsQuery = trpc.admin.getDatabaseStats.useQuery(undefined, {
+    refetchOnWindowFocus: true,
+  });
+
+  // Mutation de sincronização JSON → banco
+  const syncMutation = trpc.admin.syncJsonToDatabase.useMutation({
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success(result.message);
+        utils.admin.getDatabaseStats.invalidate();
+        utils.instagram.getTopPosts.invalidate();
+      } else {
+        toast.error(result.message);
+      }
+    },
+    onError: (err) => {
+      toast.error(`Erro na sincronização: ${err.message}`);
+    },
+  });
+
+  const stats = statsQuery.data;
+
+  return (
+    <div className="space-y-6">
+      {/* Cabeçalho */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Database className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Dados e Sincronização</CardTitle>
+              <CardDescription>
+                Gerencie a persistência dos dados do Instagram no banco de dados MySQL.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+
+          {/* Estatísticas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Posts no Banco (MySQL)</p>
+              {statsQuery.isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary" />
+              ) : (
+                <p className="text-3xl font-bold text-primary">{stats?.totalInDb ?? 0}</p>
+              )}
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Posts no Arquivo JSON</p>
+              {statsQuery.isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-foreground" />
+              ) : (
+                <p className="text-3xl font-bold text-foreground">{stats?.totalInJson ?? 0}</p>
+              )}
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Última Sincronização</p>
+              {statsQuery.isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+              ) : stats?.lastSync ? (
+                <p className="text-sm font-medium text-foreground">
+                  {new Date(stats.lastSync).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nunca</p>
+              )}
+            </div>
+          </div>
+
+          {/* Aviso de divergência */}
+          {stats && stats.totalInDb < stats.totalInJson && (
+            <div className="flex items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+              <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-yellow-500">Dados desatualizados no banco</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O arquivo JSON tem {stats.totalInJson} posts, mas o banco tem apenas {stats.totalInDb}.
+                  Clique em "Sincronizar Agora" para corrigir.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {stats && stats.totalInDb >= stats.totalInJson && stats.totalInDb > 0 && (
+            <div className="flex items-start gap-3 rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+              <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-500">Banco sincronizado</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O banco contém {stats.totalInDb} posts — igual ou superior ao arquivo JSON ({stats.totalInJson}).
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Botão de sincronização */}
+          <div className="rounded-lg border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <HardDrive className="w-5 h-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Sincronizar JSON → Banco</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Lê todos os posts do arquivo <code className="text-xs bg-muted px-1 py-0.5 rounded">instagram_real_data.json</code> e
+              insere ou atualiza cada post no banco MySQL. Posts já existentes são atualizados com os dados mais recentes do arquivo.
+              Esta operação é segura e pode ser executada múltiplas vezes.
+            </p>
+            <Button
+              onClick={() => syncMutation.mutate({ force: true })}
+              disabled={syncMutation.isPending}
+              className="w-full sm:w-auto"
+            >
+              {syncMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Sincronizar Agora
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Informação sobre sincronização automática */}
+          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">Sincronização automática</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              O banco é atualizado automaticamente toda vez que você clica em <strong>Atualizar Posts</strong> na página de Métricas
+              (coleta via Apify). Use esta sincronização manual apenas quando o banco estiver desatualizado em relação ao arquivo JSON
+              local — por exemplo, após um novo deploy.
+            </p>
+          </div>
+
+        </CardContent>
+      </Card>
     </div>
   );
 }

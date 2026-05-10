@@ -743,3 +743,10 @@
 - [ ] Backend: atualizar syncPostsFromApify para persistir posts no banco MySQL
 - [ ] Seed: migrar 55 posts do JSON para o banco via script de seed
 - [ ] Backend: atualizar router de relatório para buscar posts do banco
+
+## Botão de Sincronização Manual (Configurações)
+
+- [x] Backend: endpoint `admin.syncJsonToDatabase` para migrar JSON → MySQL
+- [x] Backend: retornar estatísticas (inseridos, atualizados, total)
+- [x] Frontend: seção "Dados e Sincronização" na aba Configurações (apenas SuperAdmin/Coordenador)
+- [x] Frontend: botão "Sincronizar Agora" com loading, resultado e indicador de divergência
