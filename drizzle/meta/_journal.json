@@ -246,6 +246,13 @@
       "when": 1778419820651,
       "tag": "0034_typical_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1778420788736,
+      "tag": "0035_good_sentry",
+      "breakpoints": true
     }
   ]
 }

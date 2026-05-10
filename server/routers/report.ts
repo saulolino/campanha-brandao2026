@@ -158,6 +158,7 @@ export const reportRouter = router({
             postedAt: new Date(p.timestamp || p.postedAt || Date.now()),
             syncSource: 'json',
             lastSyncedAt: new Date(),
+            engagementAlertSentAt: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           }));

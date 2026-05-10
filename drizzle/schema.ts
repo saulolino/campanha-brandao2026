@@ -520,6 +520,8 @@ export const instagramPublishedPosts = mysqlTable("instagram_published_posts", {
   // Controle de sincronização
   syncSource: varchar("syncSource", { length: 32 }).default("json").notNull(), // json, apify, graph_api
   lastSyncedAt: timestamp("lastSyncedAt").defaultNow().notNull(),
+  // Controle de alerta de engajamento abaixo da média (null = alerta ainda não enviado)
+  engagementAlertSentAt: timestamp("engagementAlertSentAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

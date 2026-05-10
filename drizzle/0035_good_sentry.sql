@@ -1,0 +1,1 @@
+ALTER TABLE `instagram_published_posts` ADD `engagementAlertSentAt` timestamp;

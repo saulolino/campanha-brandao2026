@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users, Pencil, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, TrendingUp, Filter, Loader, RefreshCw, Users, Pencil, ExternalLink, CheckCircle2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -43,6 +43,7 @@ export default function Metricas() {
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = trpc.instagram.getMetrics.useQuery(undefined, queryOpts);
   const { data: engagementByType, isLoading: engagementLoading } = trpc.instagram.getEngagementByType.useQuery(undefined, queryOpts);
   const { data: topPosts, isLoading: topLoading } = trpc.instagram.getTopPosts.useQuery({ limit: 10 }, queryOpts);
+  const { data: postsForChart } = trpc.instagram.getPostsForChart.useQuery({ limit: 30 }, queryOpts);
   const { data: growth, isLoading: growthLoading } = trpc.instagram.getGrowth.useQuery(undefined, queryOpts);
   const { data: lastSync } = trpc.instagram.getLastSync.useQuery(undefined, queryOpts);
   const { data: followersHistory } = trpc.instagram.getFollowersHistory.useQuery(undefined, queryOpts);
@@ -351,10 +352,11 @@ export default function Metricas() {
           </div>
 
           <Tabs defaultValue="crescimento" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="crescimento">Crescimento</TabsTrigger>
               <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
               <TabsTrigger value="topPosts">Top Posts</TabsTrigger>
+              <TabsTrigger value="viewsAlcance">Views vs Alcançe</TabsTrigger>
             </TabsList>
 
             {/* Crescimento */}
@@ -762,11 +764,120 @@ export default function Metricas() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Views vs Alcance */}
+            <TabsContent value="viewsAlcance" className="space-y-4">
+              <Card className="bg-gray-900 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-cyan-400" />
+                    Visualizações vs. Alcançe por Post
+                  </CardTitle>
+                  <p className="text-gray-400 text-sm">
+                    Compara o número de visualizações (vídeos/reels) com o alcançe de cada post. Posts com alta taxa Views/Alcançe indicam boa retenção de vídeo.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {!postsForChart || postsForChart.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Eye className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>Nenhum dado de visualizações disponível.</p>
+                      <p className="text-xs mt-1">Sincronize os posts via Apify ou Graph API para obter dados de views e alcançe.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Gráfico de barras agrupadas: Views e Alcançe por post */}
+                      <div style={{ height: 320 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={(postsForChart as any[]).map((p: any) => ({
+                              name: new Date(p.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                              caption: p.caption,
+                              views: p.views ?? 0,
+                              alcance: p.reach ?? 0,
+                              engajamento: p.engagement ?? 0,
+                              tipo: p.mediaType,
+                            }))}
+                            margin={{ top: 5, right: 20, left: 0, bottom: 60 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis
+                              dataKey="name"
+                              stroke="#9CA3AF"
+                              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+                              angle={-45}
+                              textAnchor="end"
+                              height={60}
+                            />
+                            <YAxis stroke="#9CA3AF" tick={{ fill: '#9CA3AF', fontSize: 11 }} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: 8 }}
+                              labelStyle={{ color: '#F9FAFB', fontSize: 12 }}
+                              formatter={(value: any, name: string) => [
+                                value.toLocaleString(),
+                                name === 'views' ? 'Visualizações' : name === 'alcance' ? 'Alcançe' : 'Engajamento'
+                              ]}
+                            />
+                            <Legend
+                              formatter={(value) => value === 'views' ? 'Visualizações' : value === 'alcance' ? 'Alcançe' : 'Engajamento'}
+                              wrapperStyle={{ color: '#9CA3AF', fontSize: 12 }}
+                            />
+                            <Bar dataKey="views" fill="#06B6D4" name="views" radius={[3, 3, 0, 0]} />
+                            <Bar dataKey="alcance" fill="#8B5CF6" name="alcance" radius={[3, 3, 0, 0]} />
+                            <Bar dataKey="engajamento" fill="#10B981" name="engajamento" radius={[3, 3, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Tabela de taxa de retenção */}
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-gray-300 mb-3">Taxa de Retenção de Vídeo (Views / Alcançe)</h4>
+                        <div className="space-y-2">
+                          {(postsForChart as any[])
+                            .filter((p: any) => (p.views ?? 0) > 0)
+                            .sort((a: any, b: any) => {
+                              const rA = a.reach > 0 ? a.views / a.reach : 0;
+                              const rB = b.reach > 0 ? b.views / b.reach : 0;
+                              return rB - rA;
+                            })
+                            .slice(0, 8)
+                            .map((p: any, i: number) => {
+                              const retention = p.reach > 0 ? Math.round((p.views / p.reach) * 100) : 0;
+                              const color = retention >= 80 ? 'text-green-400' : retention >= 50 ? 'text-yellow-400' : 'text-red-400';
+                              return (
+                                <div key={p.id} className="flex items-center gap-3 bg-gray-800/50 rounded-lg p-2">
+                                  <span className="text-gray-500 text-xs w-5">{i + 1}.</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-gray-300 text-xs truncate">{p.caption || '(sem legenda)'}</p>
+                                    <p className="text-gray-500 text-xs">{new Date(p.timestamp).toLocaleDateString('pt-BR')} · {p.mediaType}</p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <p className="text-cyan-400 text-xs">{(p.views ?? 0).toLocaleString()} views</p>
+                                    <p className="text-purple-400 text-xs">{(p.reach ?? 0).toLocaleString()} alcançe</p>
+                                  </div>
+                                  <div className={`text-right shrink-0 w-16 ${color}`}>
+                                    <p className="font-bold text-sm">{retention}%</p>
+                                    <p className="text-xs opacity-70">retenção</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {(postsForChart as any[]).filter((p: any) => (p.views ?? 0) > 0).length === 0 && (
+                            <p className="text-gray-500 text-sm text-center py-4">
+                              Nenhum post com dados de visualizações. Apenas vídeos e Reels têm views.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
       </main>
     </div>
-
     {/* Modal de Atualizacao de Metricas */}
     <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
       <DialogContent className="max-w-lg">

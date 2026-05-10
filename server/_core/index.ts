@@ -128,13 +128,70 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
     // Inicializar scheduler de posts
     initializeScheduler();
     // Inicializar WebSocket para colaboração
     initializeCollaborationServer(server);
+    // Seed automático: importar posts históricos do JSON para o banco se ainda não foram importados
+    seedInstagramPostsFromJson().catch((err) =>
+      console.error('[Startup] Erro no seed automático de posts:', err)
+    );
   });
+}
+
+/**
+ * Importa os posts históricos do instagram_real_data.json para a tabela instagram_published_posts.
+ * Executa apenas se o banco estiver vazio (evita re-importação desnecessária).
+ * Mapeia o campo `id` do JSON como instagramId e as métricas reais (likes, comments, videoViewCount).
+ */
+async function seedInstagramPostsFromJson() {
+  try {
+    const { countInstagramPublishedPosts, bulkUpsertInstagramPublishedPosts } = await import('../db.js');
+    const count = await countInstagramPublishedPosts();
+    if (count > 0) {
+      console.log(`[Startup] Banco já tem ${count} posts publicados — seed ignorado.`);
+      return;
+    }
+    // Carregar JSON
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    const rawData = require('../data/instagram_real_data.json');
+    const posts: any[] = (rawData as any).posts ?? [];
+    if (posts.length === 0) {
+      console.warn('[Startup] JSON de posts vazio — seed ignorado.');
+      return;
+    }
+    // Mapear tipo Apify -> mediaType do banco
+    const typeMap: Record<string, string> = {
+      Video: 'VIDEO',
+      Image: 'IMAGE',
+      Sidecar: 'CAROUSEL_ALBUM',
+    };
+    const postsToUpsert = posts.map((p: any) => ({
+      instagramId: String(p.id || p.shortCode || ''),
+      caption: p.caption ?? null,
+      mediaType: (typeMap[p.type] ?? 'IMAGE') as any,
+      mediaProductType: (p.type === 'Video' ? 'REELS' : 'FEED') as any,
+      permalink: p.url ?? null,
+      thumbnailUrl: p.thumbnailUrl ?? null,
+      mediaUrl: p.thumbnailUrl ?? null,
+      likes: Number(p.likesCount ?? 0),
+      comments: Number(p.commentsCount ?? 0),
+      shares: Number(p.sharesCount ?? 0),
+      saves: Number(p.savesCount ?? 0),
+      reach: Number(p.reach ?? 0),
+      views: Number(p.videoViewCount ?? 0),
+      postedAt: new Date(p.timestamp ?? Date.now()),
+      syncSource: 'json' as const,
+      lastSyncedAt: new Date(),
+    }));
+    const { inserted, updated } = await bulkUpsertInstagramPublishedPosts(postsToUpsert);
+    console.log(`[Startup] Seed automático concluído: ${inserted} posts inseridos, ${updated} atualizados (total JSON: ${posts.length}).`);
+  } catch (err: any) {
+    console.error('[Startup] Falha no seed automático:', err.message);
+  }
 }
 
 startServer().catch(console.error);

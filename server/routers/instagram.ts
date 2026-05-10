@@ -112,6 +112,43 @@ export const instagramRouter = router({
     }),
 
   /**
+   * Obter posts com views e reach para o gráfico de visualizações vs. alcançe.
+   * Retorna os últimos N posts com views > 0 ou reach > 0, ordenados por data.
+   */
+  getPostsForChart: publicProcedure
+    .input((val: unknown) => {
+      if (typeof val === 'object' && val !== null && 'limit' in val) {
+        return val as { limit?: number };
+      }
+      return { limit: 20 };
+    })
+    .query(async ({ input }) => {
+      try {
+        const posts = await instagramService.getPosts(100);
+        return posts
+          .map((post) => ({
+            id: post.id,
+            caption: (post.caption || '').slice(0, 60),
+            mediaType: post.mediaType,
+            thumbnailUrl: post.thumbnailUrl || '',
+            permalink: post.permalink || '',
+            timestamp: post.timestamp,
+            likes: post.likes ?? 0,
+            comments: post.comments ?? 0,
+            shares: post.shares ?? 0,
+            saves: post.saves ?? 0,
+            reach: post.reach ?? 0,
+            views: (post as any).impressions ?? 0, // impressions é o campo views mapeado pelo instagramService
+            engagement: (post.likes ?? 0) + (post.comments ?? 0) + (post.shares ?? 0) + (post.saves ?? 0),
+          }))
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+          .slice(-(input.limit || 20));
+      } catch (error) {
+        console.error('[Instagram] Erro ao obter posts para gráfico:', error);
+        return [];
+      }
+    }),
+  /**
    * Obter data da última sincronização
    */
   getLastSync: publicProcedure.query(() => {

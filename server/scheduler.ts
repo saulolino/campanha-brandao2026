@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { getDb, resetDb } from "./db";
-import { instagramPosts, streetEvents } from "../drizzle/schema";
-import { eq, and, isNotNull, lt, gte, lte } from "drizzle-orm";
+import { instagramPosts, instagramPublishedPosts, streetEvents } from "../drizzle/schema";
+import { eq, and, isNotNull, lt, gte, lte, desc, isNull } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 import { createNotification } from "./routers/notifications";
 import { syncInstagramProfile } from "./instagramSync";
@@ -292,6 +292,71 @@ export function initializeScheduler(): void {
       await checkAndRenewInstagramToken();
     } catch (err: any) {
       console.error("[Scheduler] Erro na verificação do token:", err.message);
+    }
+  });
+  // Verificar posts com engajamento abaixo da média a cada 6 horas (posts com 48h+ sem alerta)
+  cron.schedule("0 */6 * * *", async () => {
+    try {
+      console.log("[Scheduler] Verificando engajamento dos posts publicados...");
+      const db = await getDb();
+      if (!db) return;
+      // instagramPublishedPosts e desc/isNull já importados no topo do arquivo
+
+      // Buscar os últimos 50 posts para calcular a média
+      const recentPosts = await db.select()
+        .from(instagramPublishedPosts)
+        .orderBy(desc(instagramPublishedPosts.postedAt))
+        .limit(50);
+
+      if (recentPosts.length < 5) return; // poucos dados para calcular média
+
+      // Calcular média de engajamento dos últimos 10 posts
+      const last10 = recentPosts.slice(0, 10);
+      const avgEngagement = last10.reduce((sum: number, p: any) => sum + p.likes + p.comments + p.shares + p.saves, 0) / last10.length;
+      const threshold = avgEngagement * 0.5; // abaixo de 50% da média = alerta
+
+      // Posts publicados há mais de 48h, sem alerta enviado, com engajamento abaixo do threshold
+      const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const postsToAlert = recentPosts.filter((p: any) =>
+        p.postedAt < cutoff48h &&
+        !p.engagementAlertSentAt &&
+        (p.likes + p.comments + p.shares + p.saves) < threshold &&
+        (p.likes + p.comments + p.shares + p.saves) > 0 // ignorar posts sem métricas
+      );
+
+      for (const post of postsToAlert) {
+        const eng = post.likes + post.comments + post.shares + post.saves;
+        const shortCaption = (post.caption || '').slice(0, 60);
+        const postDate = new Date(post.postedAt).toLocaleDateString('pt-BR');
+
+        await notifyOwner({
+          title: `⚠️ Engajamento baixo detectado`,
+          content: `O post de **${postDate}** teve engajamento de **${eng}** (média dos últimos 10: ${Math.round(avgEngagement)}).
+
+> "${shortCaption}..."
+
+Considere impulsionar este conteúdo ou ajustar a estratégia para os próximos posts.`,
+        }).catch(() => {});
+
+        createNotification({
+          type: 'instagram_sync',
+          title: `⚠️ Engajamento abaixo da média`,
+          message: `Post de ${postDate}: ${eng} interações (média: ${Math.round(avgEngagement)}). Considere impulsionar ou ajustar a estratégia.`,
+        }).catch(() => {});
+
+        // Marcar alerta como enviado
+        await db.update(instagramPublishedPosts)
+          .set({ engagementAlertSentAt: new Date() })
+          .where(eq(instagramPublishedPosts.id, post.id));
+
+        console.log(`[Scheduler] Alerta de engajamento enviado para post ${post.id} (${postDate}): ${eng} vs média ${Math.round(avgEngagement)}.`);
+      }
+
+      if (postsToAlert.length === 0) {
+        console.log('[Scheduler] Nenhum post com engajamento abaixo da média encontrado.');
+      }
+    } catch (err: any) {
+      console.error('[Scheduler] Erro na verificação de engajamento:', err.message);
     }
   });
   // Sincronizar métricas reais dos posts publicados às 20h

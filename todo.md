@@ -769,15 +769,21 @@
 - [x] Frontend: modal/drawer para visualizar relatório salvo completo
 - [x] Frontend: opção de excluir relatório (apenas coordenador/superadmin)
 
-## Correção e Melhoria do Sistema de Métricas
+## Correção e Melhoria do Sistema de Métricas (10/05/2026)
 
-- [ ] Schema: adicionar campo `realViews` na tabela `instagram_posts`
-- [ ] DB: executar pnpm db:push para criar o campo no banco
-- [ ] Backend: atualizar procedure `posts.update` para aceitar e salvar `realViews`
-- [ ] Backend: implementar `syncPostMetricsFromGraphAPI` — busca métricas reais (likes, comments, reach, impressions, views) de cada post publicado via Graph API
-- [ ] Backend: adicionar endpoint `instagram.syncPostMetrics` no router
-- [ ] Frontend: adicionar campo "Visualizações" no modal de atualização manual de métricas (Metricas.tsx)
-- [ ] Frontend: exibir visualizações no card de métricas dos posts publicados
-- [ ] Frontend: atualizar cálculo de engajamento para incluir visualizações no resumo
-- [ ] Frontend: adicionar botão "Sincronizar Métricas via API" na seção de atualização de métricas
-- [ ] Frontend: exibir explicação de por que shares/saves ficam 0 (limitação do Apify)
+- [x] Schema: adicionar campo `realViews` na tabela `instagram_posts`
+- [x] DB: executar pnpm db:push para criar o campo no banco
+- [x] Backend: atualizar procedure `posts.update` para aceitar e salvar `realViews`
+- [x] Backend: implementar `syncPublishedPostMetrics` — busca métricas reais via Graph API
+- [x] Backend: adicionar endpoint `instagram.syncPublishedPostMetrics` no router
+- [x] Frontend: adicionar campo "Visualizações" no modal de atualização manual de métricas (Metricas.tsx)
+- [x] Frontend: exibir visualizações no card de métricas dos posts publicados
+- [x] Frontend: adicionar botão "Sync Métricas" na seção de atualização de métricas
+- [x] Importação automática: seed no startup do servidor (55 posts do JSON para instagram_published_posts)
+- [x] Schema: adicionar campo `engagementAlertSentAt` na tabela `instagram_published_posts`
+- [x] DB: executar pnpm db:push para criar o campo no banco
+- [x] Scheduler: verificação de engajamento abaixo da média a cada 6 horas
+- [x] Scheduler: notificação automática quando post com 48h+ tiver engajamento < 50% da média dos últimos 10
+- [x] Backend: endpoint `instagram.getPostsForChart` para o gráfico de views vs alcançe
+- [x] Frontend: aba "Views vs Alcançe" na página Métricas com gráfico de barras agrupadas
+- [x] Frontend: tabela de taxa de retenção de vídeo (Views/Alcançe) por post
